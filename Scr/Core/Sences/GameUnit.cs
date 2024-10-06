@@ -12,6 +12,8 @@ public partial class GameUnit : CharacterBody2D
 	private AnimatedSprite2D _image;
 	private CollisionShape2D _shape;
 	private NavigationAgent2D _navigation;
+	private CollisionShape2D _final;
+	private Area2D _area;
 	
 	private uint _baseCollision;
 	private float _nowHeight;
@@ -22,14 +24,20 @@ public partial class GameUnit : CharacterBody2D
 	private TileMapLayer _map;
 	
 	private Vector2 _nowTarget = Vector2.Zero;
+	
+	
+	private bool _isMoving;
 	public override void _Ready()
 	{
 		AddToGroup("Unit");
 		_image = GetNode<AnimatedSprite2D>("Image");
 		_shape = GetNode<CollisionShape2D>("Shape");
 		_navigation = GetNode<NavigationAgent2D>("Navigation");
-		
+		_navigation.TargetPosition = GlobalPosition;
 		_map = GetNode<TileMapLayer>("../../Tiles");
+		_final = GetNode<CollisionShape2D>("Final/Shape");
+		_final.Shape = new CircleShape2D { Radius = UnitData.Radius * 8 };
+		_area = GetNode<Area2D>("Final");
 
 		_image.SpriteFrames = UnitData.Texture;
 		_shape.Shape = new CircleShape2D{Radius = UnitData.Radius};
@@ -69,8 +77,12 @@ public partial class GameUnit : CharacterBody2D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		_nowTarget = ToLocal(_navigation.GetNextPathPosition());
-		GetDirectionAndSpeed((float)delta);
+		if (_isMoving)
+		{
+			_nowTarget = ToLocal(_navigation.GetNextPathPosition());
+			GetDirectionAndSpeed((float)delta);
+		}
+		Velocity *= (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
 		MoveAndSlide();
 	}
 
@@ -92,20 +104,46 @@ public partial class GameUnit : CharacterBody2D
 
 	public void FindPath(Vector2 targetPosition)
 	{
+		_isMoving = true;
 		_navigation.TargetPosition = targetPosition;
 	}
 
 	private void GetDirectionAndSpeed(float delta)
 	{
-		Velocity *= (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
-		
+		if (_navigation.GetNextPathPosition() == GlobalPosition) return;
 		if ( Math.Abs(_nowTarget.Angle()) > delta *_rotateSpeed)
 		{
-			Rotation += _rotateSpeed * delta  * (_nowTarget.Angle() > _rotateSpeed ? 1 : -1);
+			Rotation += _rotateSpeed * delta  * (_nowTarget.Angle() > delta * _rotateSpeed ? 1 : -1);
 		}
 		else
 		{
 			Velocity += UnitData.MoveSpeed * new Vector2((float)Math.Cos(Rotation),(float)Math.Sin(Rotation)) * delta * 800;
 		}
+	}
+
+	public void CheckTargetReached(Vector2 targetPosition)
+	{
+		if ((_navigation.TargetPosition - targetPosition).Length() > 60) return;
+		_isMoving = false;
+		_navigation.TargetPosition = GlobalPosition;
+		EndFindPath(targetPosition);
+	}
+
+	private void EndFindPath(Vector2 targetPosition)
+	{
+		//if (!_navigation.IsNavigationFinished()) return;
+		foreach (var body in _area.GetOverlappingBodies())
+		{
+			if (body.IsInGroup("Unit")) body.Call(MethodName.CheckTargetReached, targetPosition);
+		}
+		_navigation.TargetPosition = GlobalPosition;
+		
+	}
+
+	public void FindPathFinished()
+	{
+		if (!_isMoving) return;
+		EndFindPath(GlobalPosition);
+		_isMoving = false;
 	}
 }

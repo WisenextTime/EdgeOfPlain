@@ -21,7 +21,7 @@ public class Unit(string id)
 	public UnitMoveType UnitMoveType { get; set; } = UnitMoveType.None;
 	public int AccessableHeight { get; set; } = 0;
 	public float MoveSpeed { get; set; } = 1f;
-	public float RotationSpeed { get; set; } = 1f;
+	public float RotationSpeed { get; set; } = 2f;
 	public float TargetHeight { get; set; } = 0;
 	
 

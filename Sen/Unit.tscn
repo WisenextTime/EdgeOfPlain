@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=5 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
@@ -7,9 +7,12 @@
 resource_local_to_scene = true
 radius = 8.0
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_rfpob"]
+radius = 32.0
+
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
 motion_mode = 1
-wall_min_slide_angle = 1.5708
+wall_min_slide_angle = 3.14159
 script = ExtResource("1_bbciu")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
@@ -19,14 +22,26 @@ shape = SubResource("CircleShape2D_quyo6")
 sprite_frames = ExtResource("2_vkrhv")
 animation = &"Attack"
 autoplay = "Idle"
-frame_progress = 0.155804
+frame_progress = 0.0520713
 
 [node name="Navigation" type="NavigationAgent2D" parent="."]
-path_desired_distance = 16.0
+path_desired_distance = 2.0
 target_desired_distance = 16.0
-path_max_distance = 16.0
+path_max_distance = 10.0
 path_postprocessing = 1
 path_metadata_flags = 0
 simplify_path = true
 simplify_epsilon = 10.0
 debug_enabled = true
+
+[node name="Final" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 225
+monitoring = false
+monitorable = false
+
+[node name="Shape" type="CollisionShape2D" parent="Final"]
+shape = SubResource("CircleShape2D_rfpob")
+debug_color = Color(0.731539, 0.472333, 0, 0.42)
+
+[connection signal="navigation_finished" from="Navigation" to="." method="FindPathFinished"]
