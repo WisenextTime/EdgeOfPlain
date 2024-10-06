@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b8teaavk1tncp"
+
+[deps]
+
+files=["res://Res/Languages/Tiles.en.translation", "res://Res/Languages/Tiles.zh.translation"]
+
+source_file="res://Res/Languages/Tiles.csv"
+dest_files=["res://Res/Languages/Tiles.en.translation", "res://Res/Languages/Tiles.zh.translation"]
+
+[params]
+
+compress=true
+delimiter=0

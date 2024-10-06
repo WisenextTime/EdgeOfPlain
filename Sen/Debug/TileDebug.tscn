@@ -1,0 +1,59 @@
+[gd_scene load_steps=4 format=3 uid="uid://dfal4ri7m3gn5"]
+
+[ext_resource type="Script" path="res://Scr/Debug/TileDebug.cs" id="1_mipkv"]
+[ext_resource type="Texture2D" uid="uid://c7uu2ai33bvu" path="res://Res/Textures/Missing.png" id="2_ps7ck"]
+[ext_resource type="Texture2D" uid="uid://dvckoci8x3xvl" path="res://Res/Textures/None.png" id="3_ufjcs"]
+
+[node name="TileDebug" type="ItemList"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+allow_reselect = true
+auto_height = true
+max_columns = 10
+same_column_width = true
+icon_mode = 0
+fixed_icon_size = Vector2i(32, 32)
+script = ExtResource("1_mipkv")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -28.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 20
+text = "Choose a tile ..."
+
+[node name="Preview" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.7
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Image" type="Sprite2D" parent="Preview"]
+position = Vector2(100, 70)
+scale = Vector2(2, 2)
+texture = ExtResource("2_ps7ck")
+
+[node name="Light" type="PointLight2D" parent="Preview/Image"]
+energy = 0.0
+shadow_color = Color(0, 1, 1, 1)
+shadow_item_cull_mask = 7
+texture = ExtResource("3_ufjcs")
+
+[node name="GlobalLight" type="CanvasModulate" parent="."]
+visible = false
+color = Color(0.391819, 0.391819, 0.391819, 1)

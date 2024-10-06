@@ -1,0 +1,225 @@
+[gd_scene load_steps=15 format=3 uid="uid://bqmp8b4lanby"]
+
+[ext_resource type="Script" path="res://Scr/Core/MapEditor.cs" id="1_ww7qr"]
+[ext_resource type="Texture2D" uid="uid://dq51wnq1mfecj" path="res://Res/Textures/UI/MapEditor/height.png" id="2_45eks"]
+[ext_resource type="Texture2D" uid="uid://bpbg5yltvm72q" path="res://Res/Textures/UI/MapEditor/menu.svg" id="3_fajo6"]
+[ext_resource type="Texture2D" uid="uid://cgnebj6o6uu21" path="res://Res/Textures/UI/MapEditor/choose.svg" id="3_lkm8w"]
+[ext_resource type="Texture2D" uid="uid://dprw01mt7uniq" path="res://Res/Textures/UI/MapEditor/pen.svg" id="4_dbbxc"]
+[ext_resource type="Texture2D" uid="uid://6fjp15ki6myc" path="res://Res/Textures/UI/MapEditor/eraser.svg" id="5_q2n0t"]
+[ext_resource type="Texture2D" uid="uid://dadd3mfr26lo3" path="res://Res/Textures/UI/MapEditor/pick.svg" id="6_s7soi"]
+[ext_resource type="Texture2D" uid="uid://8yqapdbod4b1" path="res://Res/Textures/UI/MapEditor/h_add.svg" id="7_vj5bn"]
+[ext_resource type="Texture2D" uid="uid://c3geif45kkrya" path="res://Res/Textures/UI/MapEditor/h_reduse.svg" id="8_vg8md"]
+[ext_resource type="Texture2D" uid="uid://b1cubnm6g75iv" path="res://Res/Textures/UI/MapEditor/item_add.svg" id="9_aj8qq"]
+[ext_resource type="Texture2D" uid="uid://bmmudxbfo6gl0" path="res://Res/Textures/UI/MapEditor/item_del.svg" id="10_v4g0r"]
+
+[sub_resource type="TileSet" id="TileSet_i6t4f"]
+tile_size = Vector2i(32, 32)
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jyaie"]
+texture = ExtResource("2_45eks")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:1/0 = 0
+0:2/0 = 0
+0:3/0 = 0
+0:4/0 = 0
+0:5/0 = 0
+0:6/0 = 0
+0:7/0 = 0
+0:8/0 = 0
+0:9/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_ac6t6"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_jyaie")
+
+[node name="MapEditor" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_ww7qr")
+
+[node name="Tiles" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_i6t4f")
+
+[node name="Height" type="TileMapLayer" parent="."]
+visible = false
+modulate = Color(1, 1, 1, 0.309804)
+tile_set = SubResource("TileSet_ac6t6")
+
+[node name="Camera" type="Camera2D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Bar" type="ColorRect" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+color = Color(0.128344, 0.128344, 0.128344, 1)
+
+[node name="Info" type="Label" parent="UI/Bar"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="Menu" type="TextureButton" parent="UI/Bar"]
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 3.0
+offset_right = -20.0
+offset_bottom = -3.0
+grow_horizontal = 0
+grow_vertical = 2
+texture_normal = ExtResource("3_fajo6")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="ToolBox" type="ColorRect" parent="UI"]
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 150.0
+offset_bottom = -30.0
+grow_vertical = 2
+color = Color(0.294641, 0.294641, 0.294641, 1)
+
+[node name="TileSelect" type="OptionButton" parent="UI/ToolBox"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -40.0
+offset_top = 20.0
+offset_right = 40.0
+offset_bottom = 80.0
+alignment = 1
+autowrap_mode = 3
+clip_text = true
+icon_alignment = 1
+expand_icon = true
+fit_to_longest_item = false
+allow_reselect = true
+
+[node name="Pens" type="ItemList" parent="UI/ToolBox"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_left = 10.0
+offset_top = 170.0
+offset_right = -10.0
+offset_bottom = 450.0
+grow_horizontal = 2
+allow_reselect = true
+item_count = 8
+max_columns = 2
+same_column_width = true
+fixed_column_width = 53
+icon_mode = 0
+item_0/icon = ExtResource("3_lkm8w")
+item_1/icon = ExtResource("4_dbbxc")
+item_2/icon = ExtResource("5_q2n0t")
+item_3/icon = ExtResource("6_s7soi")
+item_4/icon = ExtResource("7_vj5bn")
+item_5/icon = ExtResource("8_vg8md")
+item_6/icon = ExtResource("9_aj8qq")
+item_7/icon = ExtResource("10_v4g0r")
+
+[node name="Zoom" type="HSlider" parent="UI/ToolBox"]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -16.0
+offset_right = -10.0
+offset_bottom = -29.0
+grow_horizontal = 2
+grow_vertical = 0
+min_value = -4.0
+max_value = 2.0
+step = 0.1
+
+[node name="HeightView" type="CheckButton" parent="UI/ToolBox"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -75.0
+offset_top = 130.0
+offset_right = 75.0
+offset_bottom = 31.0
+grow_horizontal = 2
+text = "UI_HEIGHTVIEW"
+
+[node name="Background" type="ColorRect" parent="UI"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.623529)
+
+[node name="Menu" type="Panel" parent="UI"]
+visible = false
+custom_minimum_size = Vector2(200, 180)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Buttons" type="VBoxContainer" parent="UI/Menu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="UI/Menu/Buttons"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "UI_MENU"
+horizontal_alignment = 1
+
+[node name="Back" type="Button" parent="UI/Menu/Buttons"]
+layout_mode = 2
+text = "UI_BACK"
+
+[node name="Save" type="Button" parent="UI/Menu/Buttons"]
+layout_mode = 2
+text = "UI_SAVE"
+
+[node name="Menu" type="Button" parent="UI/Menu/Buttons"]
+layout_mode = 2
+text = "UI_MAINMENU"
+
+[node name="SaveSuccess" type="AcceptDialog" parent="UI"]
+title = "UI_SAVESUCCESS"
+initial_position = 1
+size = Vector2i(200, 100)
+ok_button_text = "UI_OK"
+
+[connection signal="pressed" from="UI/Bar/Menu" to="." method="OnMenuPressed"]
+[connection signal="value_changed" from="UI/ToolBox/Zoom" to="." method="OnZoomValueChanged"]
+[connection signal="toggled" from="UI/ToolBox/HeightView" to="." method="OnHeightViewChanged"]
+[connection signal="pressed" from="UI/Menu/Buttons/Back" to="." method="OnBackPressed"]
+[connection signal="pressed" from="UI/Menu/Buttons/Save" to="." method="OnSavePressed"]

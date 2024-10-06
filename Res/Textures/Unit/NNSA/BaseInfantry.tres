@@ -1,0 +1,56 @@
+[gd_resource type="SpriteFrames" load_steps=7 format=3 uid="uid://djlxgy1di2cas"]
+
+[ext_resource type="Texture2D" uid="uid://dr8i2bwn3w02o" path="res://Res/Textures/Unit/NNSA/BaseInfantry.png" id="1_ev867"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r3fd3"]
+atlas = ExtResource("1_ev867")
+region = Rect2(0, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_837wo"]
+atlas = ExtResource("1_ev867")
+region = Rect2(36, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_amuup"]
+atlas = ExtResource("1_ev867")
+region = Rect2(0, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ae4sx"]
+atlas = ExtResource("1_ev867")
+region = Rect2(12, 0, 12, 12)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_aclvf"]
+atlas = ExtResource("1_ev867")
+region = Rect2(24, 0, 12, 12)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r3fd3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_837wo")
+}],
+"loop": true,
+"name": &"Attack",
+"speed": 20.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_amuup")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ae4sx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_aclvf")
+}],
+"loop": true,
+"name": &"Move",
+"speed": 5.0
+}]

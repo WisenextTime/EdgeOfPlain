@@ -1,0 +1,116 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Edge Of Plain"
+config/name_localized={
+"zh": "平原边缘"
+}
+config/description="一个rts游戏"
+config/version="1.0"
+run/main_scene="res://Sen/Preloader.tscn"
+config/features=PackedStringArray("4.3", "C#", "Forward Plus")
+boot_splash/bg_color=Color(0, 0, 0, 1)
+boot_splash/use_filter=false
+config/icon="res://icon.svg"
+
+[autoload]
+
+Global="*res://Scr/Core/Global/Global.cs"
+
+[debug]
+
+settings/stdout/print_fps=true
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=540
+window/size/mode=3
+window/size/resizable=false
+window/size/borderless=true
+window/stretch/mode="viewport"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[dotnet]
+
+project/assembly_name="Edge Of Plain"
+
+[file_customization]
+
+folder_colors={
+"res://Res/": "yellow",
+"res://Scr/": "purple",
+"res://Sen/": "green"
+}
+
+[global_group]
+
+Unit="所有单位"
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://Res/Languages/Tiles.en.translation", "res://Res/Languages/Tiles.zh.translation", "res://Res/Languages/UI.en.translation", "res://Res/Languages/UI.zh.translation")
+
+[layer_names]
+
+2d_render/layer_1="Background"
+2d_render/layer_2="Ground"
+2d_render/layer_3="Unit"
+2d_render/layer_4="UI"
+2d_physics/layer_1="Default"
+2d_navigation/layer_1="Height0"
+2d_physics/layer_2="NoPhysic"
+2d_navigation/layer_2="Height1"
+2d_physics/layer_3="AntiLand"
+2d_navigation/layer_3="Height2"
+2d_physics/layer_4="AntiWater"
+2d_navigation/layer_4="Height3"
+2d_physics/layer_5="AntiAir"
+2d_navigation/layer_5="Height4"
+2d_physics/layer_6="UNDER"
+2d_navigation/layer_6="Height5"
+2d_physics/layer_7="GROUND"
+2d_navigation/layer_7="Height6"
+2d_physics/layer_8="AIR"
+2d_navigation/layer_8="Height7"
+2d_physics/layer_9="0"
+2d_navigation/layer_9="Height8"
+2d_physics/layer_10="1"
+2d_navigation/layer_10="Height9"
+2d_physics/layer_11="2"
+2d_physics/layer_12="3"
+2d_physics/layer_13="4"
+2d_navigation/layer_13="GROUND"
+2d_physics/layer_14="5"
+2d_navigation/layer_14="WATER"
+2d_physics/layer_15="6"
+2d_navigation/layer_15="AIR"
+2d_physics/layer_16="7"
+2d_physics/layer_17="8"
+2d_physics/layer_18="9"
+2d_physics/layer_21="AntiHover"
+
+[physics]
+
+3d/default_gravity=0.0
+3d/default_gravity_vector=Vector3(0, 0, 0)
+2d/default_gravity=0.0
+2d/default_gravity_vector=Vector2(0, 0)
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+2d/snap/snap_2d_transforms_to_pixel=true

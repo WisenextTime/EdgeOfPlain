@@ -1,0 +1,49 @@
+<Project Sdk="Godot.NET.Sdk/4.3.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net8.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'ios' ">net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>EdgeOfPlain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove=".idea\**" />
+    <Compile Remove=".godot\**" />
+    <Compile Remove="android\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove=".idea\**" />
+    <EmbeddedResource Remove=".godot\**" />
+    <EmbeddedResource Remove="android\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Res\Maps\" />
+    <Folder Include="Res\Textures\Tile\" />
+    <Folder Include="Scr\Android\" />
+    <Folder Include="Scr\Core\Global\" />
+    <Folder Include="Scr\Server\" />
+    <Folder Include="Scr\Windows\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".export\Debug.apk" />
+    <Content Include=".export\Debug.apk.idsig" />
+    <Content Include=".export\Debug.zip" />
+    <Content Include="Res\Languages\Tiles.csv" />
+    <Content Include="Res\Languages\Tiles.csv.import" />
+    <Content Include="Res\Languages\Tiles.en.translation" />
+    <Content Include="Res\Languages\Tiles.zh.translation" />
+    <Content Include="Res\Languages\UI.csv" />
+    <Content Include="Res\Languages\UI.csv.import" />
+    <Content Include="Res\Languages\UI.en.translation" />
+    <Content Include="Res\Languages\UI.zh.translation" />
+    <Content Include="Sen\Debug\NewDebugMap.tscn" />
+    <Content Include="Sen\Debug\TileDebug.tscn" />
+    <Content Include="Sen\Game.tscn" />
+    <Content Include="Sen\MapEditor.tscn" />
+    <Content Include="Sen\Preloader.tscn" />
+    <Content Include="Sen\Unit.tscn" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="adb" Version="33.0.3" />
+  </ItemGroup>
+</Project>

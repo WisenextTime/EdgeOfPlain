@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://bi0mwjwn1txny"]
+
+[ext_resource type="Script" path="res://Scr/Core/Sences/PreLoader.cs" id="1_sypoe"]
+
+[node name="Preloader" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_sypoe")
+
+[node name="Title" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+bbcode_enabled = true
+text = "[center][font_size=80][color=#000000][outline_size=30][outline_color=#00FFFF] S t a r    S a i l i n g  [/outline_color][/outline_size][/color][/font_size]
+
+[font_size=50][color=#000000][outline_size=30][outline_color=#FFFFFF] E d g e    o f    P l a i n [/outline_color][/outline_size][/color][/font_size]"
+fit_content = true

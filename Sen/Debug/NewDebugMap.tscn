@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dbr2e1ts47o4v"]
+
+[ext_resource type="Script" path="res://Scr/Debug/NewDebugMap.cs" id="1_7crs0"]
+
+[node name="NewDebugMap" type="Node"]
+script = ExtResource("1_7crs0")

@@ -1,0 +1,14 @@
+[gd_resource type="SpriteFrames" load_steps=2 format=3 uid="uid://dt1rqnub46tfc"]
+
+[ext_resource type="Texture2D" uid="uid://c7uu2ai33bvu" path="res://Res/Textures/Missing.png" id="1_klygx"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_klygx")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 5.0
+}]
