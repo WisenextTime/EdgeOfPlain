@@ -22,7 +22,7 @@ shape = SubResource("CircleShape2D_quyo6")
 sprite_frames = ExtResource("2_vkrhv")
 animation = &"Attack"
 autoplay = "Idle"
-frame_progress = 0.0520713
+frame_progress = 0.908645
 
 [node name="Navigation" type="NavigationAgent2D" parent="."]
 path_desired_distance = 2.0

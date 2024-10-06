@@ -117,7 +117,7 @@ public partial class GameUnit : CharacterBody2D
 		}
 		else
 		{
-			Velocity += UnitData.MoveSpeed * new Vector2((float)Math.Cos(Rotation),(float)Math.Sin(Rotation)) * delta * 800;
+			Velocity += UnitData.MoveSpeed * new Vector2((float)Math.Cos(Rotation),(float)Math.Sin(Rotation)) * delta * 1000;
 		}
 	}
 
