@@ -70,14 +70,7 @@ public partial class GameUnit : CharacterBody2D
 	public override void _PhysicsProcess(double delta)
 	{
 		_nowTarget = ToLocal(_navigation.GetNextPathPosition());
-		if (_nowTarget == Vector2.Zero)
-		{
-			if (Velocity!=Vector2.Zero)Velocity = Velocity.Length() < 10 ? Vector2.Zero : Velocity * (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
-		}
-		else{
-			GetDirectionAndSpeed((float)delta);
-		}
-		
+		GetDirectionAndSpeed((float)delta);
 		MoveAndSlide();
 	}
 
