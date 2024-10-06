@@ -19,7 +19,7 @@ public static class Launcher
 		Tile.NewTile(new GroundTile("Stone"){Humidity = 3f});
 		Tile.NewTile(new GroundTile("Mud"){Rough = 1.5f,Humidity = 7f});
 		Tile.NewTile(new WaterTile("Water"));
-		Tile.NewTile(new GroundTile("Ice"){Rough = 0.5f,Temperature = 2f});
+		Tile.NewTile(new GroundTile("Ice"){Rough = 0.3f,Temperature = 2f});
 		Tile.NewTile(new WaterTile("WaterBridge"){TileMoveType = TileMoveType.Bridge});
 		Tile.NewTile(new Tile("Lava")
 		{

@@ -69,13 +69,15 @@ public partial class GameUnit : CharacterBody2D
 
 	public override void _PhysicsProcess(double delta)
 	{
+		_nowTarget = ToLocal(_navigation.GetNextPathPosition());
 		if (_nowTarget == Vector2.Zero)
 		{
 			if (Velocity!=Vector2.Zero)Velocity = Velocity.Length() < 10 ? Vector2.Zero : Velocity * (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
 		}
 		else{
-			GetDirectionAndSpeed(delta);
+			GetDirectionAndSpeed((float)delta);
 		}
+		
 		MoveAndSlide();
 	}
 
@@ -98,20 +100,19 @@ public partial class GameUnit : CharacterBody2D
 	public void FindPath(Vector2 targetPosition)
 	{
 		_navigation.TargetPosition = targetPosition;
-		_nowTarget = _navigation.GetNextPathPosition();
 	}
 
-	private void GetDirectionAndSpeed(double delta)
+	private void GetDirectionAndSpeed(float delta)
 	{
 		Velocity *= (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
-		_nowTarget = _navigation.GetNextPathPosition();
-		if (!( Math.Abs(ToLocal(_nowTarget).Angle()) < 0.5f))
+		
+		if ( Math.Abs(_nowTarget.Angle()) > delta *_rotateSpeed)
 		{
-			Rotation += _rotateSpeed * 10 * (float)delta *ToLocal(_nowTarget).Angle() > 0f ? 1 : -1;
+			Rotation += _rotateSpeed * delta  * (_nowTarget.Angle() > _rotateSpeed ? 1 : -1);
 		}
 		else
 		{
-			Velocity += UnitData.MoveSpeed * 500 * ToLocal(_nowTarget).Normalized() * (float)delta;
+			Velocity += UnitData.MoveSpeed * new Vector2((float)Math.Cos(Rotation),(float)Math.Sin(Rotation)) * delta * 800;
 		}
 	}
 }

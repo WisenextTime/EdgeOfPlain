@@ -9,6 +9,7 @@ radius = 8.0
 
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
 motion_mode = 1
+wall_min_slide_angle = 1.5708
 script = ExtResource("1_bbciu")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
@@ -18,8 +19,14 @@ shape = SubResource("CircleShape2D_quyo6")
 sprite_frames = ExtResource("2_vkrhv")
 animation = &"Attack"
 autoplay = "Idle"
-frame_progress = 0.413811
+frame_progress = 0.0026155
 
 [node name="Navigation" type="NavigationAgent2D" parent="."]
+path_desired_distance = 8.0
+target_desired_distance = 8.0
+path_max_distance = 10.0
 path_postprocessing = 1
+path_metadata_flags = 0
+simplify_path = true
+simplify_epsilon = 10.0
 debug_enabled = true
