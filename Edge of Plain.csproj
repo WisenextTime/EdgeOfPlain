@@ -10,11 +10,13 @@
     <Compile Remove=".idea\**" />
     <Compile Remove=".godot\**" />
     <Compile Remove="android\**" />
+    <Compile Remove=".export\**" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Remove=".idea\**" />
     <EmbeddedResource Remove=".godot\**" />
     <EmbeddedResource Remove="android\**" />
+    <EmbeddedResource Remove=".export\**" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Res\Maps\" />
@@ -25,9 +27,6 @@
     <Folder Include="Scr\Windows\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include=".export\Debug.apk" />
-    <Content Include=".export\Debug.apk.idsig" />
-    <Content Include=".export\Debug.zip" />
     <Content Include="Res\Languages\Tiles.csv" />
     <Content Include="Res\Languages\Tiles.csv.import" />
     <Content Include="Res\Languages\Tiles.en.translation" />

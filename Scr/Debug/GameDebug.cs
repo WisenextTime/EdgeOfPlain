@@ -14,11 +14,15 @@ public partial class GameDebug : Control
 	
 	private Camera2D _camera;
 	private TileMapLayer _tiles;
+	
+	private Navigation _navigation;
+	
 	public override void _Ready()
 	{
 		_tileMap = MapParser.Load(Instance.GameMapPath);
 		_tiles = GetNode<TileMapLayer>("Tiles");
 		_camera = GetNode<Camera2D>("Camera");
+		_navigation = GetNode<Navigation>("Navigation");
 		_camera.GlobalPosition = new Vector2(_tileMap.MapSize.X * 16, _tileMap.MapSize.Y * 16);
 		_getTiles();
 		_setTiles();
@@ -30,6 +34,7 @@ public partial class GameDebug : Control
 				_tileMap.MapSize.Y * 16 + new Random().Next(-100, 100));
 			GetNode("Units").AddChild(newGameUnit.Duplicate());
 		}
+		_navigation.GetTileCost(_tileMap);
 	}
 
 	private void _getTiles()
@@ -203,6 +208,7 @@ public partial class GameDebug : Control
 		//GetTree().Quit();
 	}
 
+	
 	private void _setTiles()
 	{
 		var index = 0;
@@ -219,9 +225,6 @@ public partial class GameDebug : Control
 	{
 		if (@event is not InputEventMouseButton key) return;
 		if (key.ButtonIndex != MouseButton.Left || !key.Pressed) return;
-		foreach (var node in GetTree().GetNodesInGroup("Unit"))
-		{
-			node.Call(GameUnit.MethodName.FindPath,GetGlobalMousePosition());
-		}
+		_navigation.NewAgent(GetTree().GetNodesInGroup("air"),"air");
 	}
 }

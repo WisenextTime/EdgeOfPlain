@@ -26,10 +26,19 @@ public partial class GameUnit : CharacterBody2D
 	private Vector2 _nowTarget = Vector2.Zero;
 	
 	
-	private bool _isMoving;
 	public override void _Ready()
 	{
 		AddToGroup("Unit");
+		AddToGroup(UnitData.UnitMoveType switch
+		{
+			UnitMoveType.None => "none",
+			UnitMoveType.Ground => "ground" + UnitData.TargetHeight.GetType(),
+			UnitMoveType.Water => "water",
+			UnitMoveType.Air => "air",
+			UnitMoveType.Hover => "hover",
+			UnitMoveType.Any => "any",
+			_ => throw new Exception()
+		});
 		_image = GetNode<AnimatedSprite2D>("Image");
 		_shape = GetNode<CollisionShape2D>("Shape");
 		_navigation = GetNode<NavigationAgent2D>("Navigation");
@@ -77,13 +86,6 @@ public partial class GameUnit : CharacterBody2D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		if (_isMoving)
-		{
-			_nowTarget = ToLocal(_navigation.GetNextPathPosition());
-			GetDirectionAndSpeed((float)delta);
-		}
-		Velocity *= (2f-(float)_map.GetCellTileData(_map.GetCoordsForBodyRid(GetRid())).GetCustomData("Rough"))/2f;
-		MoveAndSlide();
 	}
 
 	private void SetLayer()
@@ -100,50 +102,5 @@ public partial class GameUnit : CharacterBody2D
 			> 10 => 0b_100_000_00,
 			_ => 0b_010_000_00,
 		};
-	}
-
-	public void FindPath(Vector2 targetPosition)
-	{
-		_isMoving = true;
-		_navigation.TargetPosition = targetPosition;
-	}
-
-	private void GetDirectionAndSpeed(float delta)
-	{
-		if (_navigation.GetNextPathPosition() == GlobalPosition) return;
-		if ( Math.Abs(_nowTarget.Angle()) > delta *_rotateSpeed)
-		{
-			Rotation += _rotateSpeed * delta  * (_nowTarget.Angle() > delta * _rotateSpeed ? 1 : -1);
-		}
-		else
-		{
-			Velocity += UnitData.MoveSpeed * new Vector2((float)Math.Cos(Rotation),(float)Math.Sin(Rotation)) * delta * 1000;
-		}
-	}
-
-	public void CheckTargetReached(Vector2 targetPosition)
-	{
-		if ((_navigation.TargetPosition - targetPosition).Length() > 60) return;
-		_isMoving = false;
-		_navigation.TargetPosition = GlobalPosition;
-		EndFindPath(targetPosition);
-	}
-
-	private void EndFindPath(Vector2 targetPosition)
-	{
-		//if (!_navigation.IsNavigationFinished()) return;
-		foreach (var body in _area.GetOverlappingBodies())
-		{
-			if (body.IsInGroup("Unit")) body.Call(MethodName.CheckTargetReached, targetPosition);
-		}
-		_navigation.TargetPosition = GlobalPosition;
-		
-	}
-
-	public void FindPathFinished()
-	{
-		if (!_isMoving) return;
-		EndFindPath(GlobalPosition);
-		_isMoving = false;
 	}
 }
