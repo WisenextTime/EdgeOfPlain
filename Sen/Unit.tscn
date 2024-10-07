@@ -1,11 +1,16 @@
-[gd_scene load_steps=4 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=6 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
+[ext_resource type="Script" path="res://Scr/Core/UnitControl/Status.cs" id="3_q01rs"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_quyo6"]
 resource_local_to_scene = true
 radius = 8.0
+
+[sub_resource type="Curve" id="Curve_guoty"]
+_data = [Vector2(0, 0.5), 0.0, 0.0, 0, 1, Vector2(1, 0.5), 0.0, 0.0, 1, 0]
+point_count = 2
 
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
 motion_mode = 1
@@ -20,3 +25,18 @@ sprite_frames = ExtResource("2_vkrhv")
 animation = &"Attack"
 autoplay = "Idle"
 frame_progress = 0.17538
+
+[node name="WayPoint" type="Line2D" parent="."]
+width = 2.0
+width_curve = SubResource("Curve_guoty")
+default_color = Color(0, 0, 1, 1)
+joint_mode = 2
+begin_cap_mode = 1
+end_cap_mode = 2
+antialiased = true
+
+[node name="Status" type="Node" parent="."]
+script = ExtResource("3_q01rs")
+
+[node name="Debug" type="Line2D" parent="."]
+default_color = Color(0, 1, 1, 0.568627)

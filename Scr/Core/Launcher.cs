@@ -40,6 +40,8 @@ public static class Launcher
 			UnitMoveType = UnitMoveType.Ground,
 			TotalFrames = 4,
 			//Mass = 50f
+			MoveSpeed = 1f,
+			RotationSpeed = 5f
 		});
 
 	}

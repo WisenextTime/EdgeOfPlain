@@ -28,7 +28,7 @@ public partial class GameDebug : Control
 		_setTiles();
 
 		var newGameUnit = ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn").Instantiate<GameUnit>();
-		for (var _ = 0; _ < 5; _++)
+		for (var _ = 0; _ < 30; _++)
 		{
 			newGameUnit.GlobalPosition = new Vector2(_tileMap.MapSize.X * 16 + new Random().Next(-100, 100),
 				_tileMap.MapSize.Y * 16 + new Random().Next(-100, 100));
@@ -151,7 +151,14 @@ public partial class GameDebug : Control
 				tileData.SetNavigationPolygon(layerId, polygon);
 				tileData.SetCustomData("Rough", tile.Value.Rough);
 
-
+				
+				if (tile.Value.CanLighted)
+				{
+					tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
+					var shader = (ShaderMaterial)tileData.Material;
+					shader.SetShaderParameter("LightColor",tile.Value.LightColor);
+					shader.SetShaderParameter("LightTexture",tile.Value.LightTexture);
+				}
 
 				if (tile.Value.TileMoveType == TileMoveType.Ground)
 				{
@@ -185,6 +192,11 @@ public partial class GameDebug : Control
 							new Vector2(16, 16),
 							new Vector2(-16, 16)
 						]);
+						if (!tile.Value.CanLighted) continue;
+						tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
+						var shader = (ShaderMaterial)tileData.Material;
+						shader.SetShaderParameter("lightColor",tile.Value.LightColor);
+						shader.SetShaderParameter("lightTexture",tile.Value.LightTexture);
 					}
 				}
 
@@ -225,6 +237,6 @@ public partial class GameDebug : Control
 	{
 		if (@event is not InputEventMouseButton key) return;
 		if (key.ButtonIndex != MouseButton.Left || !key.Pressed) return;
-		_navigation.NewAgent(GetTree().GetNodesInGroup("air"),"air");
+		_navigation.NewAgent(GetTree().GetNodesInGroup("land0"), "land0", GetGlobalMousePosition());
 	}
 }

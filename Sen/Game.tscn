@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Debug/GameDebug.cs" id="1_cpvr6"]
-[ext_resource type="TileSet" uid="uid://cadryxs4ia1wm" path="res://tiles.tres" id="2_xbgcr"]
+[ext_resource type="TileSet" uid="uid://ctndcbh7uhf4q" path="res://tiles.tres" id="2_xbgcr"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
 
 [node name="Game" type="Control"]
@@ -25,3 +25,6 @@ tile_set = ExtResource("2_xbgcr")
 
 [node name="Navigation" type="Node" parent="."]
 script = ExtResource("3_v1nou")
+
+[node name="Enviroment" type="CanvasModulate" parent="."]
+color = Color(0.346569, 0.346569, 0.346569, 1)
