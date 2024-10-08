@@ -1,8 +1,17 @@
-[gd_scene load_steps=4 format=4 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=6 format=3 uid="uid://ccprdm61dkmvk"]
 
-[ext_resource type="Script" path="res://Scr/Debug/GameDebug.cs" id="1_cpvr6"]
+[ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
 [ext_resource type="TileSet" uid="uid://ctndcbh7uhf4q" path="res://tiles.tres" id="2_xbgcr"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
+[ext_resource type="PackedScene" uid="uid://cbpt5mqjnv0c0" path="res://Sen/MiniMap3D.tscn" id="4_r226q"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_djvut"]
+bg_color = Color(0.277528, 0.277528, 0.277528, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.171637, 0.171637, 0.171637, 1)
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -12,15 +21,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-script = ExtResource("1_cpvr6")
+script = ExtResource("1_0smxh")
 
 [node name="Tiles" type="TileMapLayer" parent="."]
-tile_map_data = PackedByteArray("AAD/////CAAAAAAAAAD//wAACAAAAAAAAAAAAAAACAAAAAAAAAAAAP//CAAAAAAAAAD+/wAACAAAAAAAAAD+/wEACAAAAAAAAAD//wEACAAAAAAAAAAAAAEACAAAAAAAAAD+////CAAAAAAAAAD+//7/CAAAAAAAAAD///7/CAAAAAAAAAAAAP7/CAAAAAAAAAABAP7/CAAAAAAAAAABAP//CAAAAAAAAAABAAAACAAAAAAAAAABAAEACAAAAAAAAAD9//7/BgAAAAAAAAD9////BgAAAAAAAAD9/wEABgAAAAAAAAD9/wAABgAAAAAAAAD9/wIABgAAAAAAAAD+/wIABgAAAAAAAAD//wIABgAAAAAAAAAAAAIABgAAAAAAAAABAAIABgAAAAAAAAACAAIABgAAAAAAAAACAAEABgAAAAAAAAACAAAABgAAAAAAAAACAP//BgAAAAAAAAACAP7/BgAAAAAAAAACAP3/BgAAAAAAAAABAP3/BgAAAAAAAAAAAP3/BgAAAAAAAAD///3/BgAAAAAAAAD+//3/BgAAAAAAAAD9//3/BgAAAAAAAAD8//z/AAAAAAAAAAD8//3/AAAAAAAAAAD8//7/AAAAAAAAAAD8////AAAAAAAAAAD7/wAAAAAAAAAAAAD7/wEAAAAAAAAAAAD8/wAAAAAAAAAAAAD8/wEAAAAAAAAAAAD8/wIAAAAAAAAAAAD8/wMAAAAAAAAAAAD9/wMAAAAAAAAAAAD+/wMAAAAAAAAAAAD//wMAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAADAAIAAAAAAAAAAAADAAEAAAAAAAAAAAADAAAAAAAAAAAAAAADAP//AAAAAAAAAAADAP7/AAAAAAAAAAADAP3/AAAAAAAAAAADAPz/AAAAAAAAAAD9//z/AAAAAAAAAAD+//z/AAAAAAAAAAD///z/AAAAAAAAAAAAAPz/AAAAAAAAAAABAPz/AAAAAAAAAAACAPz/AAAAAAAAAAA=")
 tile_set = ExtResource("2_xbgcr")
 
 [node name="Camera" type="Camera2D" parent="."]
-
-[node name="UI" type="CanvasLayer" parent="."]
 
 [node name="Units" type="CanvasGroup" parent="."]
 
@@ -29,3 +35,35 @@ script = ExtResource("3_v1nou")
 
 [node name="Enviroment" type="CanvasModulate" parent="."]
 color = Color(0.364084, 0.364084, 0.364084, 1)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Map" type="Panel" parent="UI"]
+custom_minimum_size = Vector2(240, 135)
+anchors_preset = -1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_top = 10.0
+offset_right = -10.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_djvut")
+
+[node name="MiniMap" type="SubViewportContainer" parent="UI/Map"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="MapSubView" type="SubViewport" parent="UI/Map/MiniMap"]
+handle_input_locally = false
+size = Vector2i(236, 131)
+render_target_update_mode = 4
+
+[node name="Node3D" parent="UI/Map/MiniMap/MapSubView" instance=ExtResource("4_r226q")]

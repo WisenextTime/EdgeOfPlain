@@ -8,8 +8,10 @@ namespace EdgeOfPlain.Scr.Core.Resources;
 
 public class Unit(string id)
 {
-	public string Id {get;protected init;} = id;
+	public string Id {get; } = id;
 	public int Radius { get; set; } = 0;
+	
+	public float SightRadius { get; set; } = 10;
 	
 	//Images
 	public string ImageName { get; set; } = IndexImage.Default;

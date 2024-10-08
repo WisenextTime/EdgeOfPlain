@@ -13,6 +13,9 @@ _data = [Vector2(0, 0.5), 0.0, 0.0, 0, 1, Vector2(1, 0.5), 0.0, 0.0, 1, 0]
 point_count = 2
 
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
+process_thread_group = 2
+process_thread_group_order = 0
+process_thread_messages = 0
 light_mask = 4
 visibility_layer = 4
 z_index = 10
