@@ -24,7 +24,7 @@ public static class Launcher
 		Tile.NewTile(new Tile("Lava")
 		{
 			TileMoveType = TileMoveType.Air,Temperature = 10f,
-			CanLighted = true,LightColor = Color.Color8(255,149,49)
+			CanLighted = true,LightColor = Color.Color8(255,0,0)
 		});
 		Tile.NewTile(new Tile("Void"){TileMoveType = TileMoveType.Void});
 		Tile.NewTile(new GroundTile("FluorescentGrass")

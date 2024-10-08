@@ -154,6 +154,7 @@ public partial class GameDebug : Control
 				
 				if (tile.Value.CanLighted)
 				{
+					tileData.ZIndex = 5;
 					tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
 					var shader = (ShaderMaterial)tileData.Material;
 					shader.SetShaderParameter("LightColor",tile.Value.LightColor);
@@ -193,10 +194,11 @@ public partial class GameDebug : Control
 							new Vector2(-16, 16)
 						]);
 						if (!tile.Value.CanLighted) continue;
+						tileData.ZIndex = 5;
 						tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
 						var shader = (ShaderMaterial)tileData.Material;
-						shader.SetShaderParameter("lightColor",tile.Value.LightColor);
-						shader.SetShaderParameter("lightTexture",tile.Value.LightTexture);
+						shader.SetShaderParameter("LightColor",tile.Value.LightColor);
+						shader.SetShaderParameter("LightTexture",tile.Value.LightTexture);
 					}
 				}
 
