@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://cbpt5mqjnv0c0"]
+
+[ext_resource type="Script" path="res://Scr/Core/Sences/MiniMap3d.cs" id="1_yqx4f"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_g6pxq"]
+sky_top_color = Color(1, 1, 1, 1)
+sky_horizon_color = Color(0.75, 0.75, 0.75, 1)
+ground_bottom_color = Color(0, 0, 0, 1)
+ground_horizon_color = Color(0.75, 0.75, 0.75, 1)
+
+[sub_resource type="Sky" id="Sky_3i3sf"]
+sky_material = SubResource("ProceduralSkyMaterial_g6pxq")
+
+[sub_resource type="Environment" id="Environment_gkxt8"]
+background_mode = 2
+sky = SubResource("Sky_3i3sf")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="MeshLibrary" id="MeshLibrary_7u4pq"]
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_yqx4f")
+
+[node name="Enviroment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_gkxt8")
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 5000, 0)
+projection = 1
+current = true
+size = 1000.0
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = SubResource("MeshLibrary_7u4pq")
