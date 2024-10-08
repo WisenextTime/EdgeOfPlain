@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
+using Godot.Collections;
 using static EdgeOfPlain.Scr.Core.Global.Global;
 
 namespace EdgeOfPlain.Scr.Core.Lib;
@@ -53,5 +56,31 @@ public static class ImageLoader
 			Console.WriteLine(e);
 			throw;
 		}
+	}
+
+	public static Color GetColor(Texture2D image)
+	{
+		var texture = image.GetImage().Data;
+		var colors = (Array<int>)texture["data"];
+		List<Vector3> packedColor =[];
+		for (var i = 0; i <colors.Count/3; i++)
+		{
+			packedColor.Add(new Vector3(colors[3*i], colors[3*i + 1], colors[3*i + 2]));
+		}
+		System.Collections.Generic.Dictionary<Vector3, int> colorList = [];
+		foreach (var color in packedColor.Select((color,index) => new { color, index }))
+		{
+			if (colorList.ContainsKey(packedColor[color.index]))
+			{
+				colorList[color.color]++;
+			}
+			else
+			{
+				colorList.Add(color.color, 1);
+			}
+		}
+
+		var finalColor = colorList.MaxBy(color => color.Value).Key;
+		return new Color(finalColor.X/255, finalColor.Y/255, finalColor.Z/255);
 	}
 }

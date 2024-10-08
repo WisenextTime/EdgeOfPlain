@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=7 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
 [ext_resource type="TileSet" uid="uid://ctndcbh7uhf4q" path="res://tiles.tres" id="2_xbgcr"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
-[ext_resource type="PackedScene" uid="uid://cbpt5mqjnv0c0" path="res://Sen/MiniMap3D.tscn" id="4_r226q"]
+[ext_resource type="Script" path="res://Scr/Core/Sences/MiniMap.cs" id="4_mhqqy"]
+[ext_resource type="TileSet" uid="uid://nvfbtnnx8vao" path="res://Game.tres" id="5_j82jm"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_djvut"]
 bg_color = Color(0.277528, 0.277528, 0.277528, 1)
@@ -22,6 +23,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_0smxh")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.5, -2.18557e-08, 0, -4.37114e-08, 1, -0.5, 0.866025, 3.78552e-08, 0, 0, 0)
+shadow_enabled = true
 
 [node name="Tiles" type="TileMapLayer" parent="."]
 tile_set = ExtResource("2_xbgcr")
@@ -61,9 +66,14 @@ grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
-[node name="MapSubView" type="SubViewport" parent="UI/Map/MiniMap"]
+[node name="MinimapViewport" type="SubViewport" parent="UI/Map/MiniMap"]
 handle_input_locally = false
 size = Vector2i(236, 131)
 render_target_update_mode = 4
+script = ExtResource("4_mhqqy")
 
-[node name="Node3D" parent="UI/Map/MiniMap/MapSubView" instance=ExtResource("4_r226q")]
+[node name="Camera" type="Camera2D" parent="UI/Map/MiniMap/MinimapViewport"]
+
+[node name="Minimap" type="TileMapLayer" parent="UI/Map/MiniMap/MinimapViewport"]
+tile_map_data = PackedByteArray(0, 0, 255, 255, 254, 255, 2, 0, 0, 0, 0, 0, 0, 0)
+tile_set = ExtResource("5_j82jm")

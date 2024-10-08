@@ -9,7 +9,7 @@ namespace EdgeOfPlain.Scr.Core.Sences;
 public partial class Game : Control
 {
 	private Dictionary<string, int> _tileIndex = [];
-	private GameTileMap _tileMap;
+	public GameTileMap TileMap;
 	
 	private Camera2D _camera;
 	private TileMapLayer _tiles;
@@ -18,14 +18,14 @@ public partial class Game : Control
 	
 	public override void _Ready()
 	{
-		_tileMap = MapParser.Load(Instance.GameMapPath);
+		TileMap = MapParser.Load(Instance.GameMapPath);
 		_tiles = GetNode<TileMapLayer>("Tiles");
 		_camera = GetNode<Camera2D>("Camera");
 		_navigation = GetNode<Navigation>("Navigation");
-		_camera.GlobalPosition = new Vector2(_tileMap.MapSize.X * 16, _tileMap.MapSize.Y * 16);
+		_camera.GlobalPosition = new Vector2(TileMap.MapSize.X * 16, TileMap.MapSize.Y * 16);
 		_getTiles();
 		_setTiles();
-		_navigation.GetTileCost(_tileMap);
+		_navigation.GetTileCost(TileMap);
 	}
 
 	private void _getTiles()
@@ -214,11 +214,11 @@ public partial class Game : Control
 	private void _setTiles()
 	{
 		var index = 0;
-		foreach (var tile in _tileMap.MapTiles)
+		foreach (var tile in TileMap.MapTiles)
 		{
-			var pos = new Vector2I((int)(index%_tileMap.MapSize.X), (int)Math.Floor(index/_tileMap.MapSize.X));
+			var pos = new Vector2I((int)(index%TileMap.MapSize.X), (int)Math.Floor(index/TileMap.MapSize.X));
 			_tiles.SetCell(pos, _tileIndex[tile], Vector2I.Zero,
-				Instance.Tiles[tile].TileMoveType == TileMoveType.Ground? _tileMap.MapHeight[index] : 0);
+				Instance.Tiles[tile].TileMoveType == TileMoveType.Ground? TileMap.MapHeight[index] : 0);
 			index++;
 		}
 	}
