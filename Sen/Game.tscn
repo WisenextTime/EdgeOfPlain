@@ -1,18 +1,17 @@
-[gd_scene load_steps=7 format=3 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=13 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
 [ext_resource type="TileSet" uid="uid://ctndcbh7uhf4q" path="res://tiles.tres" id="2_xbgcr"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/MiniMap.cs" id="4_mhqqy"]
 [ext_resource type="TileSet" uid="uid://nvfbtnnx8vao" path="res://Game.tres" id="5_j82jm"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_djvut"]
-bg_color = Color(0.277528, 0.277528, 0.277528, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.171637, 0.171637, 0.171637, 1)
+[ext_resource type="Texture2D" uid="uid://dvmvyua34pmei" path="res://Res/Textures/UI/LargeButtonLeftNormal.png" id="6_edkqw"]
+[ext_resource type="Texture2D" uid="uid://d0l8jhm06wf3o" path="res://Res/Textures/UI/LargeButtonLeftPresseed.png" id="7_ajiq3"]
+[ext_resource type="Texture2D" uid="uid://j1kl0vix788e" path="res://Res/Textures/UI/LargeButtonLeftHover.png" id="8_8xkc8"]
+[ext_resource type="Texture2D" uid="uid://bo8ttxjkh01mc" path="res://Res/Textures/UI/Bar.png" id="9_um1un"]
+[ext_resource type="Texture2D" uid="uid://cudneubm3rnac" path="res://Res/Textures/UI/LargeButtonRightNormal.png" id="10_iytki"]
+[ext_resource type="Texture2D" uid="uid://cgj3mv2gqhguu" path="res://Res/Textures/UI/LargeButtonRightPressed.png" id="11_07rwo"]
+[ext_resource type="Texture2D" uid="uid://di8dl8xppjvba" path="res://Res/Textures/UI/LargeButtonRightHover.png" id="12_iktj1"]
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -43,37 +42,127 @@ color = Color(0.364084, 0.364084, 0.364084, 1)
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="Map" type="Panel" parent="UI"]
-custom_minimum_size = Vector2(240, 135)
-anchors_preset = 1
+[node name="Sidebar" type="ColorRect" parent="UI"]
+custom_minimum_size = Vector2(200, 0)
+anchors_preset = -1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_top = 10.0
-offset_right = -10.0
+anchor_bottom = 0.8
 grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_djvut")
+grow_vertical = 2
+color = Color(0.396889, 0.396889, 0.396889, 1)
 
-[node name="MiniMap" type="SubViewportContainer" parent="UI/Map"]
+[node name="MiniMap" type="SubViewportContainer" parent="UI/Sidebar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 133.0
+grow_horizontal = 2
+stretch = true
+
+[node name="MinimapViewport" type="SubViewport" parent="UI/Sidebar/MiniMap"]
+handle_input_locally = false
+size = Vector2i(196, 131)
+render_target_update_mode = 4
+script = ExtResource("4_mhqqy")
+
+[node name="Camera" type="Camera2D" parent="UI/Sidebar/MiniMap/MinimapViewport"]
+
+[node name="Minimap" type="TileMapLayer" parent="UI/Sidebar/MiniMap/MinimapViewport"]
+tile_map_data = PackedByteArray(0, 0, 255, 255, 254, 255, 2, 0, 0, 0, 0, 0, 0, 0)
+tile_set = ExtResource("5_j82jm")
+
+[node name="SelectButtons" type="GridContainer" parent="UI/Sidebar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 2.0
+offset_top = 135.0
+offset_right = -2.0
+grow_horizontal = 2
+columns = 3
+
+[node name="Left" type="TextureButton" parent="UI/Sidebar/SelectButtons"]
+custom_minimum_size = Vector2(30, 40)
+layout_mode = 2
+texture_normal = ExtResource("6_edkqw")
+texture_pressed = ExtResource("7_ajiq3")
+texture_hover = ExtResource("8_8xkc8")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Bar" type="TextureRect" parent="UI/Sidebar/SelectButtons"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+texture = ExtResource("9_um1un")
+expand_mode = 2
+
+[node name="Text" type="Label" parent="UI/Sidebar/SelectButtons/Bar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "BUILDINGS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Right" type="TextureButton" parent="UI/Sidebar/SelectButtons"]
+custom_minimum_size = Vector2(30, 40)
+layout_mode = 2
+texture_normal = ExtResource("10_iytki")
+texture_pressed = ExtResource("11_07rwo")
+texture_hover = ExtResource("12_iktj1")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="UnitsList" type="ItemList" parent="UI/Sidebar"]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 2.0
-offset_top = 2.0
+offset_top = 180.0
 offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
-grow_vertical = 2
-stretch = true
+max_text_lines = 2
+max_columns = 3
+same_column_width = true
+icon_mode = 0
 
-[node name="MinimapViewport" type="SubViewport" parent="UI/Map/MiniMap"]
-handle_input_locally = false
-size = Vector2i(236, 131)
-render_target_update_mode = 4
-script = ExtResource("4_mhqqy")
+[node name="OperationBar" type="ColorRect" parent="UI"]
+anchors_preset = -1
+anchor_left = 1.0
+anchor_top = 0.8
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -250.0
+grow_horizontal = 0
+grow_vertical = 0
+color = Color(0.262932, 0.262932, 0.262932, 1)
 
-[node name="Camera" type="Camera2D" parent="UI/Map/MiniMap/MinimapViewport"]
+[node name="Hidden" type="TextureButton" parent="UI/OperationBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 50.0
+offset_bottom = -2.0
+texture_normal = ExtResource("10_iytki")
+texture_pressed = ExtResource("11_07rwo")
+texture_hover = ExtResource("12_iktj1")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="Minimap" type="TileMapLayer" parent="UI/Map/MiniMap/MinimapViewport"]
-tile_map_data = PackedByteArray(0, 0, 255, 255, 254, 255, 2, 0, 0, 0, 0, 0, 0, 0)
-tile_set = ExtResource("5_j82jm")
+[node name="GroupBar" type="ColorRect" parent="UI"]
+anchors_preset = -1
+offset_right = 250.0
+offset_bottom = 100.0
+color = Color(0.294641, 0.294641, 0.294641, 1)

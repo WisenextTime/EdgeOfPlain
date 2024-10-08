@@ -25,7 +25,7 @@ public partial class MiniMap : SubViewport
 		GetTiles();
 		DrawMap();
 		_camera.Position = new Vector2(_mapData.MapSize.X/2, _mapData.MapSize.Y/2);
-		_camera.Zoom = new Vector2(236/_mapData.MapSize.X, 131/_mapData.MapSize.Y);
+		_camera.Zoom = new Vector2(Size.X/_mapData.MapSize.X, Size.Y/_mapData.MapSize.Y);
 	}
 
 	private void GetTiles()
