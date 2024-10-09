@@ -15,12 +15,8 @@ public partial class Navigation : Node
 		NavigationAgent.GetTileCost(map);
 	}
 
-	public void NewAgent(Array<Node> units,string type,Vector2 position)
+	public void NewAgent(GameUnit unit,string type,Vector2 position)
 	{
-		foreach (var unit in units)
-		{
-			var gameUnit = (GameUnit)unit;
-		    gameUnit.NewPath("move",NavigationAgent.GetFlows(type, gameUnit.GlobalPosition, position));
-		}
+		unit.NewPath("move",NavigationAgent.GetFlows(type, unit.GlobalPosition, position));
 	}
 }

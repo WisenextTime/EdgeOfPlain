@@ -1,31 +1,62 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using EdgeOfPlain.Scr.Core.Resources;
 using Godot;
 using static EdgeOfPlain.Scr.Core.Global.Global;
+using Color = System.Drawing.Color;
 
 namespace EdgeOfPlain.Scr.Core.Sences;
 
 public partial class Game : Control
 {
+	//[Signal] public delegate void UnselectedEventHandler(int team);
+	//[Signal] public delegate void SelectedEventHandler(Rect2 range, int team);
+	
+	public int TeamId; 
+	
 	private Dictionary<string, int> _tileIndex = [];
 	public GameTileMap TileMap;
-	
-	private Camera2D _camera;
+
+	public Camera2D GameCamera;
 	private TileMapLayer _tiles;
+	private Label _fpsLabel;
+	private Line2D _selectBar;
+
+	public Navigation Navigation;
 	
-	private Navigation _navigation;
+	private bool _mouseLeftPressed;
+	private bool _mouseRightPressed;
+	
+	private Vector2 _startPosition;
+
+	public float MapZoomPow;
 	
 	public override void _Ready()
 	{
 		TileMap = MapParser.Load(Instance.GameMapPath);
 		_tiles = GetNode<TileMapLayer>("Tiles");
-		_camera = GetNode<Camera2D>("Camera");
-		_navigation = GetNode<Navigation>("Navigation");
-		_camera.GlobalPosition = new Vector2(TileMap.MapSize.X * 16, TileMap.MapSize.Y * 16);
+		GameCamera = GetNode<Camera2D>("Camera");
+		Navigation = GetNode<Navigation>("Navigation");
+		GameCamera.GlobalPosition = new Vector2(TileMap.MapSize.X * 16, TileMap.MapSize.Y * 16);
+		_fpsLabel = GetNode<Label>("UI/FPS");
+		_selectBar = GetNode<Line2D>("SelectBar");
 		_getTiles();
 		_setTiles();
-		_navigation.GetTileCost(TileMap);
+		Navigation.GetTileCost(TileMap);
+		
+		//Debug
+		//*
+		{
+			var newGameUnit = ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn").Instantiate<GameUnit>();
+			for (var _ = 0; _ < 500; _++)
+			{
+				newGameUnit.GlobalPosition = new Vector2(TileMap.MapSize.X * 16 + new Random().Next(-1000, 1000),
+					TileMap.MapSize.Y * 16 + new Random().Next(-1000, 1000));
+				GetNode("Units").AddChild(newGameUnit.Duplicate());
+			}
+		}
+		//*/
 	}
 
 	private void _getTiles()
@@ -145,7 +176,6 @@ public partial class Game : Control
 				
 				if (tile.Value.CanLighted)
 				{
-					tileData.ZIndex = 5;
 					tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
 					var shader = (ShaderMaterial)tileData.Material;
 					shader.SetShaderParameter("LightColor",tile.Value.LightColor);
@@ -185,7 +215,6 @@ public partial class Game : Control
 							new Vector2(-16, 16)
 						]);
 						if (!tile.Value.CanLighted) continue;
-						tileData.ZIndex = 5;
 						tileData.Material = (Material)ResourceLoader.Load<ShaderMaterial>("res://Res/Shaders/LightMateral.tres").Duplicate();
 						var shader = (ShaderMaterial)tileData.Material;
 						shader.SetShaderParameter("LightColor",tile.Value.LightColor);
@@ -220,6 +249,116 @@ public partial class Game : Control
 			_tiles.SetCell(pos, _tileIndex[tile], Vector2I.Zero,
 				Instance.Tiles[tile].TileMoveType == TileMoveType.Ground? TileMap.MapHeight[index] : 0);
 			index++;
+		}
+	}
+
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		switch (@event)
+		{
+			
+			case InputEventMouseButton mouseInput:
+				switch (mouseInput.ButtonIndex)
+				{
+					case MouseButton.Right:
+						_mouseRightPressed = mouseInput.Pressed;
+						if (mouseInput.Pressed)
+						{
+							GetTree().CallGroup("Unit", GameUnit.MethodName.MoveToTarget,GetGlobalMousePosition());
+						}
+						break;
+					case MouseButton.Left:
+						_mouseLeftPressed = mouseInput.Pressed;
+						if (mouseInput.Pressed)
+						{
+							_startPosition = GetGlobalMousePosition();
+						}
+						else
+						{
+							SelectUnits();
+						}
+						break;
+					case MouseButton.WheelUp:
+						MapZoomPow = Math.Min(3, MapZoomPow+0.2f);
+						GameCamera.Zoom = Vector2.One * Mathf.Pow(2,MapZoomPow);
+						break;
+					case MouseButton.WheelDown:
+						MapZoomPow = Math.Max(-2, MapZoomPow-0.2f);
+						GameCamera.Zoom = Vector2.One * Mathf.Pow(2,MapZoomPow);
+						break;
+				}
+				break;
+			case InputEventMouseMotion mouseInput:
+				if (_mouseRightPressed)
+				{
+					GameCamera.GlobalPosition -= mouseInput.Relative / GameCamera.Zoom.X;
+					if (GameCamera.GlobalPosition.X < 0)
+					{
+						GameCamera.GlobalPosition = new Vector2(0, GameCamera.GlobalPosition.Y);
+					}
+
+					if (GameCamera.GlobalPosition.Y < 0)
+					{
+						GameCamera.GlobalPosition = new Vector2(GameCamera.GlobalPosition.X, 0);
+					}
+
+					if (GameCamera.GlobalPosition.X > TileMap.MapSize.X*32)
+					{
+						GameCamera.GlobalPosition = new Vector2(TileMap.MapSize.X*32, GameCamera.GlobalPosition.Y);
+					}
+
+					if (GameCamera.GlobalPosition.Y > TileMap.MapSize.Y*32)
+					{
+						GameCamera.GlobalPosition = new Vector2(GameCamera.GlobalPosition.X, TileMap.MapSize.Y*32);
+					}
+				}
+				break;
+		}
+	}
+
+	private void SelectUnits()
+	{
+		//EmitSignal(SignalName.Unselected);
+		//EmitSignal(SignalName.Selected, new Rect2(_startPosition, GetGlobalMousePosition() - _startPosition));
+		GetTree().CallGroup("Unit", GameUnit.MethodName.Unselect, TeamId);
+		GetTree().CallGroup("Unit", GameUnit.MethodName.Select, TeamId,
+			new Rect2(_startPosition, GetGlobalMousePosition() - _startPosition));
+	}
+
+	public override void _Process(double delta)
+	{
+		_fpsLabel.Text = $"FPS :  {(int)Engine.GetFramesPerSecond()}";
+		_fpsLabel.Modulate = Engine.GetFramesPerSecond() > 60? Colors.Green :
+			Engine.GetFramesPerSecond() > 30? Colors.Yellow : Colors.Red;
+		_selectBar.Width = 5 / GameCamera.Zoom.X;
+		_selectBar.ClearPoints();
+		if (_mouseLeftPressed)
+		{
+			_selectBar.AddPoint(_startPosition);
+			_selectBar.AddPoint(new Vector2(_startPosition.X, GetGlobalMousePosition().Y));
+			_selectBar.AddPoint(GetGlobalMousePosition());
+			_selectBar.AddPoint(new Vector2(GetGlobalMousePosition().X, _startPosition.Y));
+		}
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
+		var window = GetTree().Root;
+		if (window.GetMousePosition().X < 10 && GameCamera.GlobalPosition.X >=0)
+		{
+			GameCamera.GlobalPosition +=Vector2.Left * 10;
+		}
+		else if (window.GetMousePosition().X > window.Size.X - 10 && GameCamera.GlobalPosition.X <= TileMap.MapSize.X * 32)
+		{
+			GameCamera.GlobalPosition += Vector2.Right * 10;
+		}
+		else if (window.GetMousePosition().Y < 10 && GameCamera.GlobalPosition.Y >=0)
+		{
+			GameCamera.GlobalPosition +=Vector2.Up * 10;
+		}
+		else if (window.GetMousePosition().Y > window.Size.Y - 10  && GameCamera.GlobalPosition.Y <= TileMap.MapSize.Y * 32)
+		{
+			GameCamera.GlobalPosition += Vector2.Down * 10;
 		}
 	}
 }

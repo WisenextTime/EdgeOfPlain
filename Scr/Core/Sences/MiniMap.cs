@@ -14,18 +14,24 @@ public partial class MiniMap : SubViewport
 	private TileMapLayer _tileMap;
 	private System.Collections.Generic.Dictionary<string,int> _tileIndex = [];
 	private GameTileMap _mapData;
+	private Line2D _rect;
+	private Vector2 _windowSize;
+	private Game _parent;
 
 	public override async void _Ready()
 	{
-		var parent = GetTree().Root.GetNode<Game>("Game");
-		await ToSignal(parent,"ready");
-		_mapData = parent.TileMap;
+		_parent = GetTree().Root.GetNode<Game>("Game");
+		await ToSignal(_parent,Node.SignalName.Ready);
+		_mapData = _parent.TileMap;
 		_tileMap = GetNode<TileMapLayer>("Minimap");
 		_camera = GetNode<Camera2D>("Camera");
+		_rect = GetNode<Line2D>("Rect");
+		_windowSize = GetTree().Root.Size;
 		GetTiles();
 		DrawMap();
 		_camera.Position = new Vector2(_mapData.MapSize.X/2, _mapData.MapSize.Y/2);
-		_camera.Zoom = new Vector2(Size.X/_mapData.MapSize.X, Size.Y/_mapData.MapSize.Y);
+		var zoom = Math.Min(Size.X / _mapData.MapSize.X, Size.Y / _mapData.MapSize.Y);
+		_camera.Zoom = new Vector2(zoom, zoom);
 	}
 
 	private void GetTiles()
@@ -57,4 +63,16 @@ public partial class MiniMap : SubViewport
 			index++;
 		}
 	}
+
+	public override void _Process(double delta)
+	{
+		_rect.ClearPoints();
+		var tureSize = _windowSize / _parent.GameCamera.Zoom.X / 32;
+		var truePosition = _parent.GameCamera.Position / 32;
+		_rect.AddPoint(new Vector2(truePosition.X-tureSize.X/2, truePosition.Y-tureSize.Y/2));
+		_rect.AddPoint(new Vector2(truePosition.X-tureSize.X/2, truePosition.Y+tureSize.Y/2));
+		_rect.AddPoint(new Vector2(truePosition.X+tureSize.X/2, truePosition.Y+tureSize.Y/2));
+		_rect.AddPoint(new Vector2(truePosition.X+tureSize.X/2, truePosition.Y-tureSize.Y/2));
+	}
+	
 }

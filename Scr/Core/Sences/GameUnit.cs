@@ -12,11 +12,14 @@ using static EdgeOfPlain.Scr.Core.Global.Global;
 namespace EdgeOfPlain.Scr.Core.Sences;
 public partial class GameUnit : CharacterBody2D
 {
+	public int TeamId;
+	public bool Selected;
 	public Unit UnitData { get; set; } = Instance.Units["NNSA/BaseInfantry"];
 	private AnimatedSprite2D _image;
 	private CollisionShape2D _shape;
 	private Line2D _wayTarget;
 	private Status _status;
+	private Line2D _selectedLine;
 	
 	private uint _baseCollision;
 	private float _nowHeight;
@@ -31,6 +34,16 @@ public partial class GameUnit : CharacterBody2D
 
 	public string NowStatus = "idle";
 	private float _rough = 1f;
+
+	public string MoveType => UnitData.UnitMoveType switch
+	{
+		UnitMoveType.None => "none",
+		UnitMoveType.Ground => $"land{UnitData.AccessableHeight}",
+		UnitMoveType.Water => "water",
+		UnitMoveType.Air => "air",
+		UnitMoveType.Hover => "hover",
+		_ => "any",
+	};
 	
 	public override void _Ready()
 	{
@@ -54,6 +67,14 @@ public partial class GameUnit : CharacterBody2D
 		
 		_image.SpriteFrames = UnitData.Texture;
 		_shape.Shape = new CircleShape2D{Radius = UnitData.Radius};
+		
+		_selectedLine = GetNode<Line2D>("SelectedLine");
+		_selectedLine.AddPoint(new Vector2(0, UnitData.Radius * 1.414f));
+		_selectedLine.AddPoint(new Vector2(UnitData.Radius * 1.414f, 0));
+		_selectedLine.AddPoint(new Vector2(0, -UnitData.Radius * 1.414f));
+		_selectedLine.AddPoint(new Vector2(-UnitData.Radius * 1.414f, 0));
+		_selectedLine.Visible = false;
+		
 		_baseCollision = CollisionMask = UnitData.UnitMoveType switch
 		{
 			UnitMoveType.Any => 0b_000_000_00,
@@ -133,6 +154,8 @@ public partial class GameUnit : CharacterBody2D
 				_wayTarget.AddPoint(ToLocal(Path[^1]));
 				break;
 		}
+
+		_selectedLine.Visible = Selected;
 	}
 
 	public override void _PhysicsProcess(double delta)
@@ -143,7 +166,7 @@ public partial class GameUnit : CharacterBody2D
 		{ 
 			case "moving" :
 				Move((float)delta);
-				Debug();
+				//Debug();
 				MoveAndSlide();
 				break; 
 			case "attacking" : 
@@ -175,5 +198,24 @@ public partial class GameUnit : CharacterBody2D
 		{
 			debugLine.AddPoint(ToLocal(point));
 		}
+	}
+
+	public void Unselect(int team)
+	{
+		if (team != TeamId) return;
+		Selected = false;
+	}
+
+	public void Select(int team, Rect2 range)
+	{
+		if (team != TeamId) return;
+		if (!range.HasPoint(GlobalPosition)) return;
+		Selected = true;
+	}
+
+	public void MoveToTarget(Vector2 target)
+	{
+		if (!Selected) return;
+		GetTree().Root.GetNode<Game>("Game").Navigation.NewAgent(this,MoveType,target);
 	}
 }

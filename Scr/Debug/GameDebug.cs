@@ -235,10 +235,10 @@ public partial class GameDebug : Control
 		}
 	}
 
-	public override void _UnhandledInput(InputEvent @event)
-	{
-		if (@event is not InputEventMouseButton key) return;
-		if (key.ButtonIndex != MouseButton.Left || !key.Pressed) return;
-		_navigation.NewAgent(GetTree().GetNodesInGroup("land0"), "land0", GetGlobalMousePosition());
-	}
+	//public override void _UnhandledInput(InputEvent @event)
+	//{
+	//	if (@event is not InputEventMouseButton key) return;
+	//	if (key.ButtonIndex != MouseButton.Left || !key.Pressed) return;
+	//	_navigation.NewAgent(GetTree().GetNodesInGroup("land0"), "land0", GetGlobalMousePosition());
+	//}
 }

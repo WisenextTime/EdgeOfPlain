@@ -23,10 +23,6 @@ grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_0smxh")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866025, -0.5, -2.18557e-08, 0, -4.37114e-08, 1, -0.5, 0.866025, 3.78552e-08, 0, 0, 0)
-shadow_enabled = true
-
 [node name="Tiles" type="TileMapLayer" parent="."]
 tile_set = ExtResource("2_xbgcr")
 
@@ -44,13 +40,14 @@ color = Color(0.364084, 0.364084, 0.364084, 1)
 
 [node name="Sidebar" type="ColorRect" parent="UI"]
 custom_minimum_size = Vector2(200, 0)
-anchors_preset = -1
+anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
-anchor_bottom = 0.8
+anchor_bottom = 1.0
+offset_bottom = -100.0
 grow_horizontal = 0
 grow_vertical = 2
-color = Color(0.396889, 0.396889, 0.396889, 1)
+color = Color(0.396078, 0.396078, 0.396078, 0.180392)
 
 [node name="MiniMap" type="SubViewportContainer" parent="UI/Sidebar"]
 layout_mode = 1
@@ -74,6 +71,10 @@ script = ExtResource("4_mhqqy")
 [node name="Minimap" type="TileMapLayer" parent="UI/Sidebar/MiniMap/MinimapViewport"]
 tile_map_data = PackedByteArray(0, 0, 255, 255, 254, 255, 2, 0, 0, 0, 0, 0, 0, 0)
 tile_set = ExtResource("5_j82jm")
+
+[node name="Rect" type="Line2D" parent="UI/Sidebar/MiniMap/MinimapViewport"]
+closed = true
+width = 2.0
 
 [node name="SelectButtons" type="GridContainer" parent="UI/Sidebar"]
 layout_mode = 1
@@ -137,32 +138,30 @@ same_column_width = true
 icon_mode = 0
 
 [node name="OperationBar" type="ColorRect" parent="UI"]
-anchors_preset = -1
+anchors_preset = 3
 anchor_left = 1.0
-anchor_top = 0.8
+anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -250.0
+offset_left = -200.0
+offset_top = -100.0
 grow_horizontal = 0
 grow_vertical = 0
-color = Color(0.262932, 0.262932, 0.262932, 1)
-
-[node name="Hidden" type="TextureButton" parent="UI/OperationBar"]
-layout_mode = 1
-anchors_preset = -1
-anchor_bottom = 1.0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 50.0
-offset_bottom = -2.0
-texture_normal = ExtResource("10_iytki")
-texture_pressed = ExtResource("11_07rwo")
-texture_hover = ExtResource("12_iktj1")
-ignore_texture_size = true
-stretch_mode = 0
+color = Color(0.262745, 0.262745, 0.262745, 0.160784)
 
 [node name="GroupBar" type="ColorRect" parent="UI"]
 anchors_preset = -1
 offset_right = 250.0
 offset_bottom = 100.0
-color = Color(0.294641, 0.294641, 0.294641, 1)
+color = Color(0.294118, 0.294118, 0.294118, 0.313726)
+
+[node name="FPS" type="Label" parent="UI"]
+anchors_preset = -1
+offset_left = 260.0
+text = "FPS:100"
+
+[node name="SelectBar" type="Line2D" parent="."]
+top_level = true
+closed = true
+width = 3.0
+default_color = Color(0, 1, 1, 1)

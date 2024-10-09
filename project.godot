@@ -26,10 +26,6 @@ config/icon="res://icon.svg"
 
 Global="*res://Scr/Core/Global/Global.cs"
 
-[debug]
-
-settings/stdout/print_fps=true
-
 [display]
 
 window/size/viewport_width=960
@@ -37,7 +33,6 @@ window/size/viewport_height=540
 window/size/mode=3
 window/size/resizable=false
 window/size/borderless=true
-window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 window/handheld/orientation=4
 
@@ -102,6 +97,7 @@ locale/translations=PackedStringArray("res://Res/Languages/Tiles.en.translation"
 
 [physics]
 
+2d/physics_engine="Rapier2D"
 3d/default_gravity=0.0
 3d/default_gravity_vector=Vector3(0, 0, 0)
 2d/default_gravity=0.0
