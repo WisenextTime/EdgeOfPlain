@@ -19,4 +19,14 @@ public partial class Navigation : Node
 	{
 		unit.NewPath("move",NavigationAgent.GetFlows(type, unit.GlobalPosition, position));
 	}
+
+	public void NewAttackAgent(GameUnit unit,string type,GameUnit target)
+	{
+		unit.NewPath("attack",NavigationAgent.GetFlows(type, unit.GlobalPosition, target.GlobalPosition), target);
+	}
+
+	public Vector2[] SyncAttackAgent(GameUnit unit, string type, Vector2 target)
+	{
+		return NavigationAgent.GetFlows(type, unit.GlobalPosition, target);
+	}
 }

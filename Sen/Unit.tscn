@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=8 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
 [ext_resource type="Script" path="res://Scr/Core/UnitControl/Status.cs" id="3_q01rs"]
+[ext_resource type="Script" path="res://Scr/Core/UnitControl/SelectedRange.cs" id="4_tcj54"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_quyo6"]
 resource_local_to_scene = true
@@ -12,13 +13,18 @@ radius = 8.0
 _data = [Vector2(0, 0.5), 0.0, 0.0, 0, 1, Vector2(1, 0.5), 0.0, 0.0, 1, 0]
 point_count = 2
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_e08iv"]
+resource_local_to_scene = true
+radius = 100.0
+
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
 light_mask = 4
 visibility_layer = 4
 z_index = 10
 z_as_relative = false
+input_pickable = true
 motion_mode = 1
-wall_min_slide_angle = 3.14159
+wall_min_slide_angle = 1.5708
 safe_margin = 2.0
 script = ExtResource("1_bbciu")
 
@@ -29,7 +35,7 @@ shape = SubResource("CircleShape2D_quyo6")
 sprite_frames = ExtResource("2_vkrhv")
 animation = &"Attack"
 autoplay = "Idle"
-frame_progress = 0.17538
+frame_progress = 0.373109
 
 [node name="WayPoint" type="Line2D" parent="."]
 width = 2.0
@@ -50,3 +56,23 @@ default_color = Color(0, 1, 1, 0.568627)
 closed = true
 width = 1.0
 default_color = Color(0, 1, 0, 1)
+
+[node name="SelectRange" type="Control" parent="."]
+clip_contents = true
+layout_mode = 3
+anchors_preset = 0
+offset_right = 16.0
+offset_bottom = 16.0
+script = ExtResource("4_tcj54")
+metadata/_edit_use_anchors_ = true
+
+[node name="AttackRange" type="Area2D" parent="."]
+
+[node name="Shape" type="CollisionShape2D" parent="AttackRange"]
+shape = SubResource("CircleShape2D_e08iv")
+debug_color = Color(0.67451, 0.505882, 0, 0.105882)
+
+[connection signal="mouse_entered" from="." to="." method="MouseEnter"]
+[connection signal="mouse_exited" from="." to="." method="MouseExit"]
+[connection signal="LeftSelected" from="SelectRange" to="." method="LeftSelect"]
+[connection signal="RightSelected" from="SelectRange" to="." method="RightSelect"]

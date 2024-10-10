@@ -41,7 +41,8 @@ public static class Launcher
 			TotalFrames = 4,
 			//Mass = 50f
 			MoveSpeed = 1f,
-			RotationSpeed = 5f
+			RotationSpeed = 5f,
+			AttackRange = 100
 		});
 
 	}

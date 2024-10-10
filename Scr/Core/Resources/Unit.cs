@@ -26,6 +26,9 @@ public class Unit(string id)
 	public float RotationSpeed { get; set; } = 2f;
 	public float TargetHeight { get; set; } = 0;
 	
+	//Attack
+	public float AttackRange { get; set; } = 0;
+	
 
 	public static void NewUnit(Unit unit)
 	{

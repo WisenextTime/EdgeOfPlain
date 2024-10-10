@@ -160,11 +160,11 @@ public class FlowPathfinding
 		var path = nowAgent.GetPointPath(trueStart, trueTarget, true);
 		path[0] = start;
 		path[^1] = sourceTarget;
-		path = SimplfiedPath(path);
+		path = SimplifiedPath(path);
 		return path;
 	}
 
-	private static Vector2[] SimplfiedPath(Vector2[] source)
+	private static Vector2[] SimplifiedPath(Vector2[] source)
 	{
 		var result = new List<Vector2>();
 		foreach (var point in source.Select((value, index) => new { value, index }))

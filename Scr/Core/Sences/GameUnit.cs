@@ -10,9 +10,11 @@ using Godot.Collections;
 using static EdgeOfPlain.Scr.Core.Global.Global;
 
 namespace EdgeOfPlain.Scr.Core.Sences;
+
 public partial class GameUnit : CharacterBody2D
 {
 	public int TeamId;
+	public int TeamGroup;
 	public bool Selected;
 	public Unit UnitData { get; set; } = Instance.Units["NNSA/BaseInfantry"];
 	private AnimatedSprite2D _image;
@@ -20,7 +22,8 @@ public partial class GameUnit : CharacterBody2D
 	private Line2D _wayTarget;
 	private Status _status;
 	private Line2D _selectedLine;
-	
+	private Area2D _attackRange;
+
 	private uint _baseCollision;
 	private float _nowHeight;
 
@@ -28,12 +31,14 @@ public partial class GameUnit : CharacterBody2D
 	private float _rotateSpeed;
 
 	private TileMapLayer _map;
-	
+
 	private Vector2 _nowTarget = Vector2.Zero;
 	public Vector2[] Path = [];
 
 	public string NowStatus = "idle";
 	private float _rough = 1f;
+
+	private bool _touchedMouse;
 
 	public string MoveType => UnitData.UnitMoveType switch
 	{
@@ -44,9 +49,16 @@ public partial class GameUnit : CharacterBody2D
 		UnitMoveType.Hover => "hover",
 		_ => "any",
 	};
-	
+
 	public override void _Ready()
 	{
+		//Debug
+		//*
+		if (TeamId == 1)
+		{
+			Modulate = Colors.Black;
+		}
+		//*/
 		AddToGroup("Unit");
 		AddToGroup(UnitData.UnitMoveType switch
 		{
@@ -62,19 +74,22 @@ public partial class GameUnit : CharacterBody2D
 		_shape = GetNode<CollisionShape2D>("Shape");
 		_wayTarget = GetNode<Line2D>("WayPoint");
 		_status = GetNode<Status>("Status");
-		_status.StatusList.Add(new KeyValuePair<string, object>("idle",0));
-		_map =GetTree().Root.GetNode<TileMapLayer>("Game/Tiles");
-		
+		_status.StatusList.Add(new KeyValuePair<string, object>("idle", 0));
+		_map = GetTree().Root.GetNode<TileMapLayer>("Game/Tiles");
+
 		_image.SpriteFrames = UnitData.Texture;
-		_shape.Shape = new CircleShape2D{Radius = UnitData.Radius};
-		
+		_shape.Shape = new CircleShape2D { Radius = UnitData.Radius };
+
+		_attackRange = GetNode < Area2D > ("AttackRange");
+		_attackRange.GetNode<CollisionShape2D>("Shape").Shape = new CircleShape2D { Radius = UnitData.AttackRange};
+
 		_selectedLine = GetNode<Line2D>("SelectedLine");
 		_selectedLine.AddPoint(new Vector2(0, UnitData.Radius * 1.414f));
 		_selectedLine.AddPoint(new Vector2(UnitData.Radius * 1.414f, 0));
 		_selectedLine.AddPoint(new Vector2(0, -UnitData.Radius * 1.414f));
 		_selectedLine.AddPoint(new Vector2(-UnitData.Radius * 1.414f, 0));
 		_selectedLine.Visible = false;
-		
+
 		_baseCollision = CollisionMask = UnitData.UnitMoveType switch
 		{
 			UnitMoveType.Any => 0b_000_000_00,
@@ -126,13 +141,18 @@ public partial class GameUnit : CharacterBody2D
 		};
 	}
 
-	public void NewPath(string type,Vector2[] path)
+	public void NewPath(string type, Vector2[] path, object data = null)
 	{
 		switch (type)
 		{
 			case "move":
 			{
-				_status.StatusList.Add(new KeyValuePair<string, object>("moving",path.ToArray()));
+				_status.StatusList.Add(new KeyValuePair<string, object>("moving", path.ToArray()));
+				break;
+			}
+			case "attack":
+			{
+				_status.StatusList.Add(new KeyValuePair<string, object>("attacking", data));
 				break;
 			}
 		}
@@ -143,12 +163,12 @@ public partial class GameUnit : CharacterBody2D
 		_wayTarget.ClearPoints();
 		switch (NowStatus)
 		{
-			case "moving" :
+			case "moving":
 				_wayTarget.DefaultColor = Colors.Green;
 				_wayTarget.AddPoint(Vector2.Zero);
 				_wayTarget.AddPoint(ToLocal(Path[^1]));
 				break;
-			case "attacking" :
+			case "attacking":
 				_wayTarget.DefaultColor = Colors.Red;
 				_wayTarget.AddPoint(Vector2.Zero);
 				_wayTarget.AddPoint(ToLocal(Path[^1]));
@@ -160,25 +180,42 @@ public partial class GameUnit : CharacterBody2D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		_rough = (float)_map.GetCellTileData((Vector2I)(GlobalPosition/32)).GetCustomData("Rough");
+		_rough = (float)_map.GetCellTileData((Vector2I)(GlobalPosition / 32)).GetCustomData("Rough");
 		Velocity *= _rough * 0.5f;
-		switch (NowStatus) 
-		{ 
-			case "moving" :
+		switch (NowStatus)
+		{
+			case "moving":
 				Move((float)delta);
+				_image.Play("Move");
 				//Debug();
 				MoveAndSlide();
-				break; 
-			case "attacking" : 
+				break;
+			case "attacking":
+				var target = (GameUnit)_status.StatusList[0].Value;
+				if (GlobalPosition.DistanceTo(target.GlobalPosition) <= UnitData.AttackRange)
+				{
+					Attacking(target);
+				}
+				else
+				{
+					Move((float)delta);
+					_image.Play("Move");
+					//Debug();
+					MoveAndSlide();
+				}
+				_image.Play("Attack");
+				break;
+			case "idle":
+				_image.Play("Idle");
 				break;
 		}
-		
+
 	}
 
 	private void Move(float delta)
 	{
 		var nextPoint = ToLocal(Path[0]);
-		
+
 		var abstractPosition = ExactMath.GetAbstractPosition(GlobalPosition, Path[0]);
 		if (Math.Abs(nextPoint.Angle()) > 2 * _rotateSpeed * delta)
 		{
@@ -216,6 +253,45 @@ public partial class GameUnit : CharacterBody2D
 	public void MoveToTarget(Vector2 target)
 	{
 		if (!Selected) return;
-		GetTree().Root.GetNode<Game>("Game").Navigation.NewAgent(this,MoveType,target);
+		GetTree().Root.GetNode<Game>("Game").Navigation.NewAgent(this, MoveType, target);
+	}
+
+	public async void LeftSelect()
+	{
+		if (GetTree().Root.GetNode<Game>("Game").TeamId != TeamId || !_touchedMouse) return;
+		if (!Input.IsKeyPressed(Key.Shift))
+		{
+			GetTree().CallGroup("Unit", MethodName.Unselect, TeamId);
+			await ToSignal(GetTree().CreateTimer(0.1),Timer.SignalName.Timeout);
+		}
+		Selected = true;
+	}
+
+	public async void RightSelect()
+	{
+		if (GetTree().Root.GetNode<Game>("Game").TeamGroup == TeamGroup || !_touchedMouse) return;
+		await ToSignal(GetTree().CreateTimer(0.1),Timer.SignalName.Timeout);
+		GetTree().CallGroup("Unit", MethodName.Attack, GetTree().Root.GetNode<Game>("Game").TeamId, this);
+	}
+
+	public void MouseEnter()
+	{
+		_touchedMouse = true;
+	}
+
+	public void MouseExit()
+	{
+		_touchedMouse = false;
+	}
+
+	public void Attack(int team,GameUnit target)
+	{
+		if (team != TeamId || !Selected) return;
+		GetTree().Root.GetNode<Game>("Game").Navigation.NewAttackAgent(this, MoveType, target);
+	}
+
+	public void Attacking(GameUnit target)
+	{
+		
 	}
 }

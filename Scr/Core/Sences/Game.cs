@@ -14,6 +14,7 @@ public partial class Game : Control
 	//[Signal] public delegate void SelectedEventHandler(Rect2 range, int team);
 	
 	public int TeamId; 
+	public int TeamGroup;
 	
 	private Dictionary<string, int> _tileIndex = [];
 	public GameTileMap TileMap;
@@ -29,11 +30,14 @@ public partial class Game : Control
 	private bool _mouseRightPressed;
 	
 	private Vector2 _startPosition;
+	private Vector2 _rightStartPosition;
 
 	public float MapZoomPow;
-	
+	private Window _window;
+
 	public override void _Ready()
 	{
+		_window = GetTree().Root;
 		TileMap = MapParser.Load(Instance.GameMapPath);
 		_tiles = GetNode<TileMapLayer>("Tiles");
 		GameCamera = GetNode<Camera2D>("Camera");
@@ -49,11 +53,20 @@ public partial class Game : Control
 		//*
 		{
 			var newGameUnit = ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn").Instantiate<GameUnit>();
-			for (var _ = 0; _ < 500; _++)
+			for (var _ = 0; _ < 5; _++)
 			{
-				newGameUnit.GlobalPosition = new Vector2(TileMap.MapSize.X * 16 + new Random().Next(-1000, 1000),
-					TileMap.MapSize.Y * 16 + new Random().Next(-1000, 1000));
+				newGameUnit.GlobalPosition = new Vector2(TileMap.MapSize.X * 16 + new Random().Next(-100, -50),
+					TileMap.MapSize.Y * 16 + new Random().Next(-50, 50));
 				GetNode("Units").AddChild(newGameUnit.Duplicate());
+			}
+
+			newGameUnit.TeamId = 1;
+			newGameUnit.TeamGroup = 1;
+			for (var _ = 0; _ < 5; _++)
+			{
+				newGameUnit.GlobalPosition = new Vector2(TileMap.MapSize.X * 16 + new Random().Next(200, 300),
+					TileMap.MapSize.Y * 16 + new Random().Next(-50, 50));
+				GetNode("Units").AddChild(newGameUnit);
 			}
 		}
 		//*/
@@ -264,6 +277,10 @@ public partial class Game : Control
 						_mouseRightPressed = mouseInput.Pressed;
 						if (mouseInput.Pressed)
 						{
+							_rightStartPosition = _window.GetMousePosition();
+						}
+						else if((_rightStartPosition - _window.GetMousePosition()).Length() < 10)
+						{
 							GetTree().CallGroup("Unit", GameUnit.MethodName.MoveToTarget,GetGlobalMousePosition());
 						}
 						break;
@@ -320,7 +337,11 @@ public partial class Game : Control
 	{
 		//EmitSignal(SignalName.Unselected);
 		//EmitSignal(SignalName.Selected, new Rect2(_startPosition, GetGlobalMousePosition() - _startPosition));
-		GetTree().CallGroup("Unit", GameUnit.MethodName.Unselect, TeamId);
+		if (!Input.IsKeyPressed(Key.Shift))
+		{
+			GetTree().CallGroup("Unit", GameUnit.MethodName.Unselect, TeamId);
+		}
+
 		GetTree().CallGroup("Unit", GameUnit.MethodName.Select, TeamId,
 			new Rect2(_startPosition, GetGlobalMousePosition() - _startPosition));
 	}
@@ -343,20 +364,20 @@ public partial class Game : Control
 
 	public override void _PhysicsProcess(double delta)
 	{
-		var window = GetTree().Root;
-		if (window.GetMousePosition().X < 10 && GameCamera.GlobalPosition.X >=0)
+		_window = GetTree().Root;
+		if (_window.GetMousePosition().X < 10 && GameCamera.GlobalPosition.X >=0)
 		{
 			GameCamera.GlobalPosition +=Vector2.Left * 10;
 		}
-		else if (window.GetMousePosition().X > window.Size.X - 10 && GameCamera.GlobalPosition.X <= TileMap.MapSize.X * 32)
+		else if (_window.GetMousePosition().X > _window.Size.X - 10 && GameCamera.GlobalPosition.X <= TileMap.MapSize.X * 32)
 		{
 			GameCamera.GlobalPosition += Vector2.Right * 10;
 		}
-		else if (window.GetMousePosition().Y < 10 && GameCamera.GlobalPosition.Y >=0)
+		else if (_window.GetMousePosition().Y < 10 && GameCamera.GlobalPosition.Y >=0)
 		{
 			GameCamera.GlobalPosition +=Vector2.Up * 10;
 		}
-		else if (window.GetMousePosition().Y > window.Size.Y - 10  && GameCamera.GlobalPosition.Y <= TileMap.MapSize.Y * 32)
+		else if (_window.GetMousePosition().Y > _window.Size.Y - 10  && GameCamera.GlobalPosition.Y <= TileMap.MapSize.Y * 32)
 		{
 			GameCamera.GlobalPosition += Vector2.Down * 10;
 		}
