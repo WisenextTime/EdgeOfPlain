@@ -31,11 +31,13 @@ public partial class Game : Control
 	private float _cameraZoom;
 	private Vector2 startPos;
 	private Label _fpsLabel;
+	private Window _window;
 
 	private Vector2 _lastMousePos;
 	
 	public override void _Ready()
 	{
+		_window = GetTree().Root;
 		TileMap = MapParser.Load(Instance.GameMapPath);
 		Navigation = GetNode<Navigation>("Navigation");
 		Tiles = GetNode<TileMapLayer>("Tiles");
@@ -59,6 +61,16 @@ public partial class Game : Control
 			nowUnit.TeamId = 0;
 			nowUnit.TeamGroup = 0;
 			nowUnit.GlobalPosition = new Vector2(new Random().Next(1000, 1200), new Random().Next(1300, 1900));
+			GetNode("Units").AddChild(nowUnit);
+		}
+		
+		for (var _ = 0; _ <= 100; _++)
+		{
+			var unit = (PackedScene)ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn").Duplicate();
+			var nowUnit = (GameUnit)unit.Instantiate();
+			nowUnit.TeamId = 1;
+			nowUnit.TeamGroup = 1;
+			nowUnit.GlobalPosition = new Vector2(new Random().Next(2200, 2400), new Random().Next(1300, 1900));
 			GetNode("Units").AddChild(nowUnit);
 		}
 	}
@@ -153,7 +165,11 @@ public partial class Game : Control
 								GetTree().CallGroup("Unit", GameUnit.MethodName.OnDeselected,
 									new Rect2(startPos, GetGlobalMousePosition() - startPos));
 							}
-
+							var unit = (GameUnit)GetTree().GetFirstNodeInGroup("Selected");
+							if (unit != null)
+							{
+								unit.Selected = true;
+							}
 							GetTree().CallGroup("Unit", GameUnit.MethodName.OnSelected,
 								new Rect2(startPos, GetGlobalMousePosition() - startPos));
 							_selectLine.ClearPoints();
@@ -168,8 +184,18 @@ public partial class Game : Control
 						}
 						else if(GetTree().Root.GetMousePosition().DistanceSquaredTo(_lastMousePos) < 64f)
 						{
-							GetTree().CallGroup("Unit", GameUnit.MethodName.NewWayPoint, "move",
-								new Array { GetGlobalMousePosition() });
+							var unit = (GameUnit)GetTree().GetFirstNodeInGroup("Selected");
+							if(unit==null)
+							{
+								GetTree().CallGroup("Unit", GameUnit.MethodName.NewWayPoint, "Move",
+									new Array { GetGlobalMousePosition() });
+							}
+							else
+							{
+								if (unit.TeamGroup == TeamGroup) return;
+								GetTree().CallGroup("Unit", GameUnit.MethodName.NewWayPoint, "Attack",
+									new Array { unit });
+							}
 						}
 						break;
 					case MouseButton.Middle:
@@ -209,5 +235,16 @@ public partial class Game : Control
 			_selectLine.AddPoint(GetGlobalMousePosition());
 			_selectLine.AddPoint(new Vector2(GetGlobalMousePosition().X, startPos.Y));
 		}
+
+		if (_window.GetMousePosition().X < 10 && GameCamera.GlobalPosition.X >= 0)
+			_window = GetTree().Root;
+		if (_window.GetMousePosition().X < 10 && GameCamera.GlobalPosition.X >= 0)
+			GameCamera.GlobalPosition += Vector2.Left * 10 / GameCamera.Zoom.X;
+		if (_window.GetMousePosition().X > _window.Size.X - 10 && GameCamera.GlobalPosition.X <= TileMap.MapSize.X * 32)
+			GameCamera.GlobalPosition += Vector2.Right * 10 / GameCamera.Zoom.X;
+		if (_window.GetMousePosition().Y < 10 && GameCamera.GlobalPosition.Y >= 0)
+			GameCamera.GlobalPosition += Vector2.Up * 10 / GameCamera.Zoom.X;
+		if (_window.GetMousePosition().Y > _window.Size.Y - 10 && GameCamera.GlobalPosition.Y <= TileMap.MapSize.Y * 32)
+			GameCamera.GlobalPosition += Vector2.Down * 10 / GameCamera.Zoom.X;
 	}
 }

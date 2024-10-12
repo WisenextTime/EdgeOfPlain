@@ -14,6 +14,6 @@ public partial class PreLoader : Control
 		Launcher.LoadUnits();
 		Instance.GameMapPath = "res://Res/Maps/TestMap.tilemap";
 		//GetTree().ChangeSceneToFile("res://Sen/MapEditor.tscn");
-		GetTree().ChangeSceneToFile("res://Sen/Game.tscn");
+		GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile,"res://Sen/Game.tscn");
 	}
 }

@@ -25,9 +25,11 @@ public partial class GameUnit : CharacterBody2D
 	private Game _game;
 	private Line2D _selectedLine;
 	private Line2D _wayLine;
+	private ProgressBar _hpBar;
 
 	public bool Selected;
 	public Vector2[] Path;
+	public GameUnit Target;
 
 	public string State = "Idle";
 
@@ -39,6 +41,7 @@ public partial class GameUnit : CharacterBody2D
 	public float TrueHeight;
 	private uint OriginMask;
 
+	public bool TouchedMouse;
 	public override void _Ready()
 	{
 		_game = GetNode<Game>("/root/Game");
@@ -52,6 +55,7 @@ public partial class GameUnit : CharacterBody2D
 		_selectedLine.AddPoint(Vector2.Down * UnitData.Radius);
 		_selectedLine.AddPoint(Vector2.Right * UnitData.Radius);
 		_wayLine = GetNode<Line2D>("WayLine");
+		_hpBar = GetNode<ProgressBar>("HpBar");
 		
 		_rotateSpeed = UnitData.RotationSpeed;
 		_speed = UnitData.MoveSpeed;
@@ -82,23 +86,28 @@ public partial class GameUnit : CharacterBody2D
 	public override void _Process(double delta)
 	{
 		_selectedLine.Visible = Selected;
+		var shader = (ShaderMaterial)_sprite.Material;
+		shader.SetShaderParameter("TeamId",TeamId);
 		if (TeamId == _game.TeamId)
 		{
 			_selectedLine.DefaultColor = Colors.LimeGreen;
+			_hpBar.Modulate = Colors.LimeGreen;
 		}
 		else if (TeamGroup == _game.TeamGroup)
 		{
 			_selectedLine.DefaultColor = Colors.Yellow;
+			_hpBar.Modulate = Colors.Yellow;
 		}
 		else if (TeamId == -1)
 		{
 			_selectedLine.DefaultColor = Colors.White;
+			_hpBar.Modulate = Colors.White;
 		}
 		else
 		{
 			_selectedLine.DefaultColor = Colors.Red;
+			_hpBar.Modulate = Colors.Red;
 		}
-		
 		_wayLine.ClearPoints();
 		switch (State)
 		{
@@ -110,7 +119,16 @@ public partial class GameUnit : CharacterBody2D
 				_wayLine.AddPoint(ToLocal(Path[^1]));
 				break;
 			}
+			case "Attack":
+			{
+				if (Target == null) return;
+				_wayLine.DefaultColor = Colors.Red;
+				_wayLine.AddPoint(Vector2.Zero);
+				_wayLine.AddPoint(ToLocal(Target.GlobalPosition));
+				break;
+			}
 		}
+		_hpBar.Visible = IsInGroup("Selected") || Selected;
 	}
 
 	public void OnSelected(Rect2 range)
@@ -124,18 +142,14 @@ public partial class GameUnit : CharacterBody2D
 		if (range.HasPoint(GlobalPosition)) return;
 		Selected = false;
 	}
-
-	public GameUnit OnTarget(Rect2 range)
-	{
-		return range.HasPoint(GlobalPosition) ? this : null;
-	}
-
 	public void NewWayPoint(string type, Array args)
 	{
 		if (State == "Freezed" || !Selected) return;
 		switch (type)
 		{
 			case "Attack":
+				Target = (GameUnit)args[0];
+				State = "Attack";
 				break;
 			case  "Defend":
 				break;
@@ -165,6 +179,7 @@ public partial class GameUnit : CharacterBody2D
 		{
 			case "Idle":
 			{
+				_sprite.Play("Idle");
 				break;
 			}
 			case "Move":
@@ -190,6 +205,22 @@ public partial class GameUnit : CharacterBody2D
 						}
 					}
 				}
+				_sprite.Play("Move");
+				break;
+			}
+			case "Attack":
+			{
+				if (Target == null)
+				{
+					State = "Idle";
+					return;
+				}
+				Path = _game.Navigation.GetPath(GlobalPosition, Target.GlobalPosition,UnitData.UnitMoveType);
+				if (ToLocal(Target.GlobalPosition).Length() > UnitData.AttackRange)
+				{
+					Move((float)delta);
+					_sprite.Play("Move");
+				}
 				break;
 			}
 		}
@@ -210,16 +241,29 @@ public partial class GameUnit : CharacterBody2D
 
 	private void Move(float delta)
 	{
-		var nextPoint = ToLocal(Path[0]);
+		if(Path==null || Path.Length == 0) return;
+		var nextPoint = _sprite.ToLocal(Path[0]);
 		
 		var abstractPosition = ExactMath.GetAbstractPosition(GlobalPosition, Path[0]);
 		if (Math.Abs(nextPoint.Angle()) > 2 * _rotateSpeed * delta)
 		{
-			Rotation += _rotateSpeed * delta * (nextPoint.Angle() > 0 ? 0.5f : -0.5f);
+			_sprite.Rotation += _rotateSpeed * delta * (nextPoint.Angle() > 0 ? 0.5f : -0.5f);
 		}
 		else
 		{
 			Velocity += abstractPosition.Normalized() * _speed * delta / _rough * 600;
 		}
+	}
+
+	public void MouseEnter()
+	{
+		TouchedMouse = true;
+		AddToGroup("Selected");
+	}
+
+	public void MouseExit()
+	{
+		TouchedMouse = false;
+		RemoveFromGroup("Selected");
 	}
 }
