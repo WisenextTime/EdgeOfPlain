@@ -44,7 +44,7 @@ public partial class MiniMap : SubViewport
 			source.TextureRegionSize = new Vector2I(1, 1);
 			var color = ImageLoader.GetColor(tile.Value.Texture);
 			var newImage = new GradientTexture1D{Width = 1,Gradient = new Gradient{Colors = [color,color],Offsets = [0,1]}};
-			GD.Print(newImage.Gradient.GetColors());
+			//GD.Print(newImage.Gradient.GetColors());
 			source.Texture = (Texture2D)newImage.Duplicate();
 			source.CreateTile(Vector2I.Zero);
 			_tileIndex.Add(tile.Key, _tileIndex.Count);

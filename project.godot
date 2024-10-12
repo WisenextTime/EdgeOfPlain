@@ -52,6 +52,10 @@ folder_colors={
 
 Unit="所有单位"
 
+[input_devices]
+
+pointing/android/enable_pan_and_scale_gestures=true
+
 [internationalization]
 
 locale/translations=PackedStringArray("res://Res/Languages/Tiles.en.translation", "res://Res/Languages/Tiles.zh.translation", "res://Res/Languages/UI.en.translation", "res://Res/Languages/UI.zh.translation")
@@ -63,37 +67,14 @@ locale/translations=PackedStringArray("res://Res/Languages/Tiles.en.translation"
 2d_render/layer_3="Unit"
 2d_render/layer_4="UI"
 2d_physics/layer_1="Default"
-2d_navigation/layer_1="Height0"
 2d_physics/layer_2="NoPhysic"
-2d_navigation/layer_2="Height1"
 2d_physics/layer_3="AntiLand"
-2d_navigation/layer_3="Height2"
 2d_physics/layer_4="AntiWater"
-2d_navigation/layer_4="Height3"
 2d_physics/layer_5="AntiAir"
-2d_navigation/layer_5="Height4"
-2d_physics/layer_6="UNDER"
-2d_navigation/layer_6="Height5"
+2d_physics/layer_6="AntiHover"
 2d_physics/layer_7="GROUND"
-2d_navigation/layer_7="Height6"
-2d_physics/layer_8="AIR"
-2d_navigation/layer_8="Height7"
-2d_physics/layer_9="0"
-2d_navigation/layer_9="Height8"
-2d_physics/layer_10="1"
-2d_navigation/layer_10="Height9"
-2d_physics/layer_11="2"
-2d_physics/layer_12="3"
-2d_physics/layer_13="4"
-2d_navigation/layer_13="GROUND"
-2d_physics/layer_14="5"
-2d_navigation/layer_14="WATER"
-2d_physics/layer_15="6"
-2d_navigation/layer_15="AIR"
-2d_physics/layer_16="7"
-2d_physics/layer_17="8"
-2d_physics/layer_18="9"
-2d_physics/layer_21="AntiHover"
+2d_physics/layer_8="UNDER"
+2d_physics/layer_9="AIR"
 
 [physics]
 

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Numerics;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-
+using Godot;
 using static EdgeOfPlain.Scr.Core.Global.Global;
+using FileAccess = System.IO.FileAccess;
+using Vector2 = System.Numerics.Vector2;
 
 namespace EdgeOfPlain.Scr.Core.Resources;
 
@@ -64,7 +65,8 @@ public static class MapParser
 
 	public static void Save(GameTileMap map, string filePath)
 	{
-		var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+		var trueFilePath = ProjectSettings.GlobalizePath(filePath);
+		var fileStream = new FileStream(trueFilePath, FileMode.Create, FileAccess.Write);
 #pragma warning disable SYSLIB0011
 		BinaryFormatter formatter = new();
 #pragma warning restore SYSLIB0011
@@ -76,10 +78,11 @@ public static class MapParser
 
 	public static GameTileMap Load(string filePath)
 	{
+		var trueFilePath = ProjectSettings.GlobalizePath(filePath);
 #pragma warning disable SYSLIB0011
 		BinaryFormatter formatter = new();
 #pragma warning restore SYSLIB0011
-		var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+		var fileStream = new FileStream(trueFilePath, FileMode.Open, FileAccess.Read);
 #pragma warning disable SYSLIB0011
 		var mapData = formatter.Deserialize(fileStream) as Dictionary<string,object>;
 #pragma warning restore SYSLIB0011

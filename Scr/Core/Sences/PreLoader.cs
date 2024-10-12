@@ -12,7 +12,7 @@ public partial class PreLoader : Control
 	{
 		Launcher.LoadTiles();
 		Launcher.LoadUnits();
-		Instance.GameMapPath = "C://StarsSailing/EdgeOfPlain/maps/TestMap.tileMap";
+		Instance.GameMapPath = "res://Res/Maps/TestMap.tilemap";
 		//GetTree().ChangeSceneToFile("res://Sen/MapEditor.tscn");
 		GetTree().ChangeSceneToFile("res://Sen/Game.tscn");
 	}

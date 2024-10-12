@@ -1,10 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=16 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
-[ext_resource type="TileSet" uid="uid://ctndcbh7uhf4q" path="res://tiles.tres" id="2_xbgcr"]
+[ext_resource type="TileSet" uid="uid://dbaakbi02k0m4" path="res://tiles.tres" id="2_xbgcr"]
+[ext_resource type="Texture2D" uid="uid://dq51wnq1mfecj" path="res://Res/Textures/UI/MapEditor/height.png" id="3_exoqv"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/MiniMap.cs" id="4_mhqqy"]
-[ext_resource type="TileSet" uid="uid://nvfbtnnx8vao" path="res://Game.tres" id="5_j82jm"]
+[ext_resource type="TileSet" uid="uid://bpphjk2jfnlsj" path="res://Game.tres" id="5_j82jm"]
 [ext_resource type="Texture2D" uid="uid://dvmvyua34pmei" path="res://Res/Textures/UI/LargeButtonLeftNormal.png" id="6_edkqw"]
 [ext_resource type="Texture2D" uid="uid://d0l8jhm06wf3o" path="res://Res/Textures/UI/LargeButtonLeftPresseed.png" id="7_ajiq3"]
 [ext_resource type="Texture2D" uid="uid://j1kl0vix788e" path="res://Res/Textures/UI/LargeButtonLeftHover.png" id="8_8xkc8"]
@@ -12,6 +13,35 @@
 [ext_resource type="Texture2D" uid="uid://cudneubm3rnac" path="res://Res/Textures/UI/LargeButtonRightNormal.png" id="10_iytki"]
 [ext_resource type="Texture2D" uid="uid://cgj3mv2gqhguu" path="res://Res/Textures/UI/LargeButtonRightPressed.png" id="11_07rwo"]
 [ext_resource type="Texture2D" uid="uid://di8dl8xppjvba" path="res://Res/Textures/UI/LargeButtonRightHover.png" id="12_iktj1"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6pw7x"]
+texture = ExtResource("3_exoqv")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:1/0 = 0
+0:1/0/custom_data_0 = 1
+0:2/0 = 0
+0:2/0/custom_data_0 = 2
+0:3/0 = 0
+0:3/0/custom_data_0 = 3
+0:4/0 = 0
+0:4/0/custom_data_0 = 4
+0:5/0 = 0
+0:5/0/custom_data_0 = 5
+0:6/0 = 0
+0:6/0/custom_data_0 = 6
+0:7/0 = 0
+0:7/0/custom_data_0 = 7
+0:8/0 = 0
+0:8/0/custom_data_0 = 8
+0:9/0 = 0
+0:9/0/custom_data_0 = 9
+
+[sub_resource type="TileSet" id="TileSet_yh62h"]
+tile_size = Vector2i(32, 32)
+custom_data_layer_0/name = "Height"
+custom_data_layer_0/type = 2
+sources/0 = SubResource("TileSetAtlasSource_6pw7x")
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -25,6 +55,11 @@ script = ExtResource("1_0smxh")
 
 [node name="Tiles" type="TileMapLayer" parent="."]
 tile_set = ExtResource("2_xbgcr")
+
+[node name="Height" type="TileMapLayer" parent="."]
+visible = false
+modulate = Color(1, 1, 1, 0.258824)
+tile_set = SubResource("TileSet_yh62h")
 
 [node name="Camera" type="Camera2D" parent="."]
 

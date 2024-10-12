@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using EdgeOfPlain.Scr.Core.Lib;
@@ -9,24 +10,28 @@ namespace EdgeOfPlain.Scr.Core.Sences;
 
 public partial class Navigation : Node
 {
-	public FlowPathfinding NavigationAgent = new();
-	public void GetTileCost(GameTileMap map)
+	private Game _parent;
+	public FlowPathfinding FlowPathfinding;
+
+	public override async void _Ready()
 	{
-		NavigationAgent.GetTileCost(map);
+		_parent = GetTree().Root.GetNode<Game>("Game");
+		await ToSignal(_parent, Node.SignalName.Ready);
+		FlowPathfinding = new FlowPathfinding
+			(new Vector2I((int)_parent.TileMap.MapSize.X, (int)_parent.TileMap.MapSize.Y),_parent.TileMap);
 	}
 
-	public void NewAgent(GameUnit unit,string type,Vector2 position)
+	public Vector2[] GetPath(Vector2 fromPos, Vector2 toPos,Global.Global.UnitMoveType type)
 	{
-		unit.NewPath("move",NavigationAgent.GetFlows(type, unit.GlobalPosition, position));
-	}
-
-	public void NewAttackAgent(GameUnit unit,string type,GameUnit target)
-	{
-		unit.NewPath("attack",NavigationAgent.GetFlows(type, unit.GlobalPosition, target.GlobalPosition), target);
-	}
-
-	public Vector2[] SyncAttackAgent(GameUnit unit, string type, Vector2 target)
-	{
-		return NavigationAgent.GetFlows(type, unit.GlobalPosition, target);
+		var stringType = type switch
+		{
+			Global.Global.UnitMoveType.Ground => "Land",
+			Global.Global.UnitMoveType.Water => "Water",
+			Global.Global.UnitMoveType.Air => "Air",
+			Global.Global.UnitMoveType.Hover => "Hover",
+			Global.Global.UnitMoveType.Any => "ANy",
+			_ => "None"
+		};
+		return FlowPathfinding.GetPath(fromPos, toPos, stringType);
 	}
 }

@@ -1,8 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=7 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
-[ext_resource type="Script" path="res://Scr/Core/UnitControl/Status.cs" id="3_q01rs"]
 [ext_resource type="Script" path="res://Scr/Core/UnitControl/SelectedRange.cs" id="4_tcj54"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_quyo6"]
@@ -45,9 +44,6 @@ joint_mode = 2
 begin_cap_mode = 1
 end_cap_mode = 2
 antialiased = true
-
-[node name="Status" type="Node" parent="."]
-script = ExtResource("3_q01rs")
 
 [node name="Debug" type="Line2D" parent="."]
 default_color = Color(0, 1, 1, 0.568627)
