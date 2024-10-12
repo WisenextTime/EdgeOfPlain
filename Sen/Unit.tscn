@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=10 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
+[ext_resource type="Shader" path="res://Res/Shaders/TeamColor.gdshader" id="2_fku5g"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_quyo6"]
@@ -15,6 +16,29 @@ point_count = 2
 resource_local_to_scene = true
 radius = 100.0
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jindk"]
+shader = ExtResource("2_fku5g")
+shader_parameter/TeamId = -1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ygamb"]
+bg_color = Color(1, 1, 1, 0)
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 1)
+expand_margin_left = 1.0
+expand_margin_top = 1.0
+expand_margin_right = 1.0
+expand_margin_bottom = 1.0
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_rd4ab"]
+color = Color(1, 1, 1, 1)
+grow_begin = 0.0
+grow_end = 0.0
+thickness = 3
+
 [node name="Unit" type="CharacterBody2D" groups=["Unit"]]
 light_mask = 4
 visibility_layer = 4
@@ -28,12 +52,6 @@ script = ExtResource("1_bbciu")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_quyo6")
-
-[node name="Image" type="AnimatedSprite2D" parent="."]
-sprite_frames = ExtResource("2_vkrhv")
-animation = &"Attack"
-autoplay = "Idle"
-frame_progress = 0.373109
 
 [node name="WayLine" type="Line2D" parent="."]
 width = 2.0
@@ -57,6 +75,23 @@ default_color = Color(0, 1, 0, 1)
 [node name="Shape" type="CollisionShape2D" parent="AttackRange"]
 shape = SubResource("CircleShape2D_e08iv")
 debug_color = Color(0.67451, 0.505882, 0, 0.105882)
+
+[node name="Image" type="AnimatedSprite2D" parent="."]
+material = SubResource("ShaderMaterial_jindk")
+sprite_frames = ExtResource("2_vkrhv")
+animation = &"Attack"
+autoplay = "Idle"
+frame_progress = 0.373109
+
+[node name="HpBar" type="ProgressBar" parent="."]
+z_index = 1
+custom_minimum_size = Vector2(32, 0)
+offset_top = 16.0
+grow_horizontal = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_ygamb")
+theme_override_styles/fill = SubResource("StyleBoxLine_rd4ab")
+value = 100.0
+show_percentage = false
 
 [connection signal="mouse_entered" from="." to="." method="MouseEnter"]
 [connection signal="mouse_exited" from="." to="." method="MouseExit"]

@@ -83,7 +83,7 @@ public class FlowPathfinding
 		var path = nowNavigation.GetPointPath
 			(new Vector2I((int)(fromPos.X/32), (int)(fromPos.Y/32)), new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)), true);
 		nowNavigation.SetPointSolid(new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)),origin);
-		path[0] = fromPos;
+		path = path.Skip(1).ToArray();
 		path[^1] = toPos;
 		return path;
 	}
