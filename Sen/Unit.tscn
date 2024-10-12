@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://bx7xhsnl7l5ga"]
+[gd_scene load_steps=6 format=3 uid="uid://bx7xhsnl7l5ga"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/GameUnit.cs" id="1_bbciu"]
 [ext_resource type="SpriteFrames" uid="uid://djlxgy1di2cas" path="res://Res/Textures/Unit/NNSA/BaseInfantry.tres" id="2_vkrhv"]
-[ext_resource type="Script" path="res://Scr/Core/UnitControl/SelectedRange.cs" id="4_tcj54"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_quyo6"]
 resource_local_to_scene = true
@@ -36,7 +35,7 @@ animation = &"Attack"
 autoplay = "Idle"
 frame_progress = 0.373109
 
-[node name="WayPoint" type="Line2D" parent="."]
+[node name="WayLine" type="Line2D" parent="."]
 width = 2.0
 width_curve = SubResource("Curve_guoty")
 default_color = Color(0, 0, 1, 1)
@@ -53,15 +52,6 @@ closed = true
 width = 1.0
 default_color = Color(0, 1, 0, 1)
 
-[node name="SelectRange" type="Control" parent="."]
-clip_contents = true
-layout_mode = 3
-anchors_preset = 0
-offset_right = 16.0
-offset_bottom = 16.0
-script = ExtResource("4_tcj54")
-metadata/_edit_use_anchors_ = true
-
 [node name="AttackRange" type="Area2D" parent="."]
 
 [node name="Shape" type="CollisionShape2D" parent="AttackRange"]
@@ -70,5 +60,3 @@ debug_color = Color(0.67451, 0.505882, 0, 0.105882)
 
 [connection signal="mouse_entered" from="." to="." method="MouseEnter"]
 [connection signal="mouse_exited" from="." to="." method="MouseExit"]
-[connection signal="LeftSelected" from="SelectRange" to="." method="LeftSelect"]
-[connection signal="RightSelected" from="SelectRange" to="." method="RightSelect"]

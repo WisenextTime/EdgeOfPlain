@@ -25,19 +25,21 @@ public partial class Game : Control
 	private Dictionary<string, int> _tileIndex = [];
 	public GameTileMap TileMap;
 	public Camera2D GameCamera;
-	private TileMapLayer _tiles;
-	private TileMapLayer _height;
+	public TileMapLayer Tiles;
+	public TileMapLayer Height;
 	private Line2D _selectLine;
 	private float _cameraZoom;
 	private Vector2 startPos;
 	private Label _fpsLabel;
 
+	private Vector2 _lastMousePos;
+	
 	public override void _Ready()
 	{
 		TileMap = MapParser.Load(Instance.GameMapPath);
 		Navigation = GetNode<Navigation>("Navigation");
-		_tiles = GetNode<TileMapLayer>("Tiles");
-		_height = GetNode<TileMapLayer>("Height");
+		Tiles = GetNode<TileMapLayer>("Tiles");
+		Height = GetNode<TileMapLayer>("Height");
 		_selectLine = GetNode<Line2D>("SelectBar");
 		_fpsLabel = GetNode<Label>("UI/FPS");
 		GameCamera = GetNode<Camera2D>("Camera");
@@ -64,7 +66,7 @@ public partial class Game : Control
 	private void GetTiles()
 	{
 		var tileSet = new TileSet();
-		_tiles.TileSet = tileSet;
+		Tiles.TileSet = tileSet;
 		tileSet.TileSize = Vector2I.One * 32;
 		//0000_00
 		//HASL
@@ -125,8 +127,8 @@ public partial class Game : Control
 		foreach (var tile in TileMap.MapTiles.Select((tile, index) => (tile, index)))
 		{
 			var pos = new Vector2I((int)(tile.index%TileMap.MapSize.X),(int)(tile.index/TileMap.MapSize.X));
-			_tiles.SetCell(pos, _tileIndex[tile.tile],Vector2I.Zero);
-			_height.SetCell(pos,0, new Vector2I(0,TileMap.MapHeight[tile.index]));
+			Tiles.SetCell(pos, _tileIndex[tile.tile],Vector2I.Zero);
+			Height.SetCell(pos,0, new Vector2I(0,TileMap.MapHeight[tile.index]));
 		}
 	}
 
@@ -148,16 +150,27 @@ public partial class Game : Control
 						{
 							if (!Input.IsKeyPressed(Key.Shift))
 							{
-								GetTree().CallGroup("Unit",GameUnit.MethodName.OnDeselected,new Rect2(startPos,GetGlobalMousePosition()));
+								GetTree().CallGroup("Unit", GameUnit.MethodName.OnDeselected,
+									new Rect2(startPos, GetGlobalMousePosition() - startPos));
 							}
-							GetTree().CallGroup("Unit",GameUnit.MethodName.OnSelected,new Rect2(startPos,GetGlobalMousePosition()));
+
+							GetTree().CallGroup("Unit", GameUnit.MethodName.OnSelected,
+								new Rect2(startPos, GetGlobalMousePosition() - startPos));
 							_selectLine.ClearPoints();
 						}
 						break;
 					case MouseButton.Right:
 						MouseRightPressed = button.Pressed;
-						if (button.Pressed)return;
-						GetTree().CallGroup("Unit",GameUnit.MethodName.NewWayPoint,"move",new Array{GetGlobalMousePosition()});
+
+						if (button.Pressed)
+						{
+							_lastMousePos = GetTree().Root.GetMousePosition();
+						}
+						else if(GetTree().Root.GetMousePosition().DistanceSquaredTo(_lastMousePos) < 64f)
+						{
+							GetTree().CallGroup("Unit", GameUnit.MethodName.NewWayPoint, "move",
+								new Array { GetGlobalMousePosition() });
+						}
 						break;
 					case MouseButton.Middle:
 						MouseMiddlePressed = button.Pressed;

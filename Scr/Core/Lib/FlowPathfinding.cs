@@ -19,8 +19,7 @@ public class FlowPathfinding
 
 	public FlowPathfinding(Vector2I size,GameTileMap tileMap)
 	{
-		AirLayer.Region = SeaLayer.Region = HoverLayer.Region = new Rect2I(Vector2I.Zero, size);
-		LandLayer.Region = new Rect2I(Vector2I.Zero, size * 2);
+		LandLayer.Region = AirLayer.Region = SeaLayer.Region = HoverLayer.Region = new Rect2I(Vector2I.Zero, size);
 		LandLayer.CellSize = AirLayer.CellSize = SeaLayer.CellSize = HoverLayer.CellSize = Vector2.One * 32;
 		LandLayer.Offset = AirLayer.Offset = SeaLayer.Offset = HoverLayer.Offset = Vector2.One * 16;
 		LandLayer.Update();
@@ -39,19 +38,19 @@ public class FlowPathfinding
 				case TileMoveType.Ground:
 				{
 					SeaLayer.SetPointSolid(pos);
-					LandLayer.SetPointWeightScale(pos*2,Instance.Tiles[tile.tile].Rough);
+					LandLayer.SetPointWeightScale(pos,Instance.Tiles[tile.tile].Rough);
 					break;
 				}
 				case TileMoveType.Air:
 				{
 					SeaLayer.SetPointSolid(pos);
-					LandLayer.SetPointSolid(pos*2);
+					LandLayer.SetPointSolid(pos);
 					HoverLayer.SetPointSolid(pos);
 					break;
 				}
 				case TileMoveType.Water:
 				{
-					LandLayer.SetPointSolid(pos*2);
+					LandLayer.SetPointSolid(pos);
 					break;
 				}
 				case TileMoveType.Bridge:
@@ -61,7 +60,7 @@ public class FlowPathfinding
 				case TileMoveType.Void:
 				{
 					SeaLayer.SetPointSolid(pos);
-					LandLayer.SetPointSolid(pos*2);
+					LandLayer.SetPointSolid(pos);
 					HoverLayer.SetPointSolid(pos);
 					AirLayer.SetPointSolid(pos);
 					break;
@@ -82,8 +81,10 @@ public class FlowPathfinding
 		var origin = nowNavigation.IsPointSolid(new Vector2I((int)(toPos.X / 32), (int)(toPos.Y / 32)));
 		nowNavigation.SetPointSolid(new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)),false);
 		var path = nowNavigation.GetPointPath
-			(new Vector2I((int)(fromPos.X/32), (int)(fromPos.Y/32)), new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)));
+			(new Vector2I((int)(fromPos.X/32), (int)(fromPos.Y/32)), new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)), true);
 		nowNavigation.SetPointSolid(new Vector2I((int)(toPos.X/32), (int)(toPos.Y/32)),origin);
+		path[0] = fromPos;
+		path[^1] = toPos;
 		return path;
 	}
 }
