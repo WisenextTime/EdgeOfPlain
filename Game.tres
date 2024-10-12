@@ -1,0 +1,121 @@
+[gd_resource type="TileSet" load_steps=28 format=3]
+
+[sub_resource type="Gradient" id="Gradient_62qjk"]
+colors = PackedColorArray(0.364706, 0.65098, 0.219608, 1, 0.364706, 0.65098, 0.219608, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_4x3fu"]
+gradient = SubResource("Gradient_62qjk")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0doq8"]
+texture = SubResource("GradientTexture1D_4x3fu")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_xrdwo"]
+colors = PackedColorArray(0.45098, 0.423529, 0.152941, 1, 0.45098, 0.423529, 0.152941, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_7badp"]
+gradient = SubResource("Gradient_xrdwo")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_rmoi1"]
+texture = SubResource("GradientTexture1D_7badp")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_pplbl"]
+colors = PackedColorArray(0.294118, 0.14902, 0, 1, 0.294118, 0.14902, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_yqwrq"]
+gradient = SubResource("Gradient_pplbl")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_n2kex"]
+texture = SubResource("GradientTexture1D_yqwrq")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_n886j"]
+colors = PackedColorArray(0.219608, 0.419608, 0.65098, 1, 0.219608, 0.419608, 0.65098, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_32j5h"]
+gradient = SubResource("Gradient_n886j")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_g3b8u"]
+texture = SubResource("GradientTexture1D_32j5h")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_3k5bb"]
+colors = PackedColorArray(0.32549, 0.623529, 0.960784, 1, 0.32549, 0.623529, 0.960784, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_n81kl"]
+gradient = SubResource("Gradient_3k5bb")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vxhh4"]
+texture = SubResource("GradientTexture1D_n81kl")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_ut2mn"]
+colors = PackedColorArray(0.254902, 0.47451, 0.54902, 1, 0.254902, 0.47451, 0.54902, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rs70g"]
+gradient = SubResource("Gradient_ut2mn")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_hk01f"]
+texture = SubResource("GradientTexture1D_rs70g")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_wc1h5"]
+colors = PackedColorArray(1, 0.584314, 0.192157, 1, 1, 0.584314, 0.192157, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_mf604"]
+gradient = SubResource("Gradient_wc1h5")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_uo40y"]
+texture = SubResource("GradientTexture1D_mf604")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_lc15t"]
+colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_1p4fa"]
+gradient = SubResource("Gradient_lc15t")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_phyyl"]
+texture = SubResource("GradientTexture1D_1p4fa")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[sub_resource type="Gradient" id="Gradient_7o00b"]
+colors = PackedColorArray(0.172549, 0.431373, 0.384314, 1, 0.172549, 0.431373, 0.384314, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_yli7o"]
+gradient = SubResource("Gradient_7o00b")
+width = 1
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_46we0"]
+texture = SubResource("GradientTexture1D_yli7o")
+texture_region_size = Vector2i(1, 1)
+0:0/0 = 0
+
+[resource]
+tile_size = Vector2i(1, 1)
+sources/0 = SubResource("TileSetAtlasSource_0doq8")
+sources/1 = SubResource("TileSetAtlasSource_rmoi1")
+sources/2 = SubResource("TileSetAtlasSource_n2kex")
+sources/3 = SubResource("TileSetAtlasSource_g3b8u")
+sources/4 = SubResource("TileSetAtlasSource_vxhh4")
+sources/5 = SubResource("TileSetAtlasSource_hk01f")
+sources/6 = SubResource("TileSetAtlasSource_uo40y")
+sources/7 = SubResource("TileSetAtlasSource_phyyl")
+sources/8 = SubResource("TileSetAtlasSource_46we0")
