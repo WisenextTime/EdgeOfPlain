@@ -44,6 +44,7 @@ light_mask = 4
 visibility_layer = 4
 z_index = 10
 z_as_relative = false
+collision_priority = 10.0
 input_pickable = true
 motion_mode = 1
 wall_min_slide_angle = 1.5708

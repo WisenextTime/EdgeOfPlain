@@ -15,12 +15,12 @@ public class Unit(string id)
 	
 	//Images
 	public string ImageName { get; set; } = IndexImage.Default;
-	public SpriteFrames Texture => ImageLoader.LoadAnimatedImage(ImageName, "unit", Id);
+	public SpriteFrames Texture => ImageLoader.LoadAnimatedImage(ImageName, "Unit", Id);
 	public int TotalFrames { get; set; } = 1;
 	
 	//Movement
 	//public float Mass = 1;
-	public UnitMoveType UnitMoveType { get; set; } = UnitMoveType.None;
+	public UnitMoveType UnitMoveType { get; set; }
 	public int AccessableHeight { get; set; } = 0;
 	public float MoveSpeed { get; set; } = 1f;
 	public float RotationSpeed { get; set; } = 2f;
