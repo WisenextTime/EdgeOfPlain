@@ -16,6 +16,7 @@ config/name_localized={
 }
 config/description="一个rts游戏"
 config/version="1.0"
+config/tags=PackedStringArray("demo")
 run/main_scene="res://Sen/Preloader.tscn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 boot_splash/bg_color=Color(0, 0, 0, 1)
