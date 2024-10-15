@@ -29,7 +29,7 @@ public partial class Navigation : Node
 			Global.Global.UnitMoveType.Water => "Water",
 			Global.Global.UnitMoveType.Air => "Air",
 			Global.Global.UnitMoveType.Hover => "Hover",
-			Global.Global.UnitMoveType.Any => "ANy",
+			Global.Global.UnitMoveType.Any => "ANy",// ? ANy
 			_ => "None"
 		};
 		return FlowPathfinding.GetPath(fromPos, toPos, stringType);

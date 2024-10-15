@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=17 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
 [ext_resource type="TileSet" uid="uid://wf8wm1a1e1pv" path="res://tiles.tres" id="2_xbgcr"]
@@ -42,6 +42,17 @@ tile_size = Vector2i(32, 32)
 custom_data_layer_0/name = "Height"
 custom_data_layer_0/type = 2
 sources/0 = SubResource("TileSetAtlasSource_6pw7x")
+
+[sub_resource type="GDScript" id="GDScript_th4jf"]
+script/source = "extends Label
+
+
+func _process(_delta: float) -> void:
+	var fps := Engine.get_frames_per_second()
+	text = \"FPS ： %d\" % fps
+	modulate = Color.RED if fps < 30 else (Color.YELLOW if fps < 60 else Color.GREEN)
+	pass
+"
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -192,6 +203,7 @@ color = Color(0.294118, 0.294118, 0.294118, 0.313726)
 [node name="FPS" type="Label" parent="UI"]
 offset_left = 260.0
 text = "FPS:100"
+script = SubResource("GDScript_th4jf")
 
 [node name="SelectBar" type="Line2D" parent="."]
 top_level = true
