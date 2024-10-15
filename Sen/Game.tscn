@@ -1,11 +1,10 @@
-[gd_scene load_steps=17 format=3 uid="uid://ccprdm61dkmvk"]
+[gd_scene load_steps=16 format=3 uid="uid://ccprdm61dkmvk"]
 
 [ext_resource type="Script" path="res://Scr/Core/Sences/Game.cs" id="1_0smxh"]
-[ext_resource type="TileSet" uid="uid://wf8wm1a1e1pv" path="res://tiles.tres" id="2_xbgcr"]
 [ext_resource type="Texture2D" uid="uid://dq51wnq1mfecj" path="res://Res/Textures/UI/MapEditor/height.png" id="3_exoqv"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/Navigation.cs" id="3_v1nou"]
 [ext_resource type="Script" path="res://Scr/Core/Sences/MiniMap.cs" id="4_mhqqy"]
-[ext_resource type="TileSet" uid="uid://v3evdsp1sksw" path="res://Game.tres" id="5_j82jm"]
+[ext_resource type="Script" path="res://Scr/Core/Sences/MiniMapPrinter.cs" id="5_nivws"]
 [ext_resource type="Texture2D" uid="uid://dvmvyua34pmei" path="res://Res/Textures/UI/LargeButtonLeftNormal.png" id="6_edkqw"]
 [ext_resource type="Texture2D" uid="uid://d0l8jhm06wf3o" path="res://Res/Textures/UI/LargeButtonLeftPresseed.png" id="7_ajiq3"]
 [ext_resource type="Texture2D" uid="uid://j1kl0vix788e" path="res://Res/Textures/UI/LargeButtonLeftHover.png" id="8_8xkc8"]
@@ -65,7 +64,6 @@ mouse_filter = 2
 script = ExtResource("1_0smxh")
 
 [node name="Tiles" type="TileMapLayer" parent="."]
-tile_set = ExtResource("2_xbgcr")
 
 [node name="Height" type="TileMapLayer" parent="."]
 visible = false
@@ -114,9 +112,8 @@ script = ExtResource("4_mhqqy")
 
 [node name="Camera" type="Camera2D" parent="UI/Sidebar/MiniMap/MinimapViewport"]
 
-[node name="Minimap" type="TileMapLayer" parent="UI/Sidebar/MiniMap/MinimapViewport"]
-tile_map_data = PackedByteArray(0, 0, 255, 255, 254, 255, 2, 0, 0, 0, 0, 0, 0, 0)
-tile_set = ExtResource("5_j82jm")
+[node name="Minimap" type="Node2D" parent="UI/Sidebar/MiniMap/MinimapViewport"]
+script = ExtResource("5_nivws")
 
 [node name="Rect" type="Line2D" parent="UI/Sidebar/MiniMap/MinimapViewport"]
 closed = true
