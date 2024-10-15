@@ -236,7 +236,7 @@ public partial class GameUnit : CharacterBody2D
                     State = UnitState.Idle;
                     return;
                 }
-                Path = new(_game.Navigation.GetPath(GlobalPosition, Target.GlobalPosition, UnitData.UnitMoveType));
+                Path = new Queue<Vector2>(_game.Navigation.GetPath(GlobalPosition, Target.GlobalPosition, UnitData.UnitMoveType));
                 if (ToLocal(Target.GlobalPosition).Length() > UnitData.AttackRange)
                 {
                     Move((float)delta);
@@ -248,12 +248,10 @@ public partial class GameUnit : CharacterBody2D
         if (otherCollision?.GetCollider() is not CharacterBody2D otherUnit) MoveAndSlide();
         else if (Path is not null && Path.Count > 0)
         {
-            if (++_faultCount > 100)
-            {
-                Path.Dequeue();
-                if (Path.Count == 0) Path = null;
-                _faultCount = 0;
-            }
+            if (++_faultCount <= 100) return;
+            Path.Dequeue();
+            if (Path.Count == 0) Path = null;
+            _faultCount = 0;
         }
     }
 
@@ -289,12 +287,14 @@ public partial class GameUnit : CharacterBody2D
     {
         TouchedMouse = true;
         AddToGroup("Selected");
+        _hpBar.Visible = true;
     }
 
     public void MouseExit()
     {
         TouchedMouse = false;
         RemoveFromGroup("Selected");
+        _hpBar.Visible = _selected;
     }
 }
 

@@ -52,16 +52,16 @@ public partial class Game : Control
 
     private void DebugUnits(int a, int b)
     {
-        var unitPreafab = ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn");
+        var unitPrefab = ResourceLoader.Load<PackedScene>("res://Sen/Unit.tscn");
         for (var _ = 0; _ < a; _++)
         {
-            var nowUnit = unitPreafab.Instantiate<GameUnit>();
+            var nowUnit = unitPrefab.Instantiate<GameUnit>();
             nowUnit.TeamId = 0;
             nowUnit.TeamGroup = 0;
             Vector2 targetPos;
             do
             {
-                targetPos = new(new Random().Next(1000, 1200), new Random().Next(1300, 1900));
+                targetPos = new Vector2(new Random().Next(1000, 1200), new Random().Next(1300, 1900));
             } while (GetNode("Units").GetChildren().Cast<GameUnit>().Any(c => (c.GlobalPosition - targetPos).LengthSquared() < Mathf.Pow(Math.Max(nowUnit.UnitData.Radius, c.UnitData.Radius), 3)));
             nowUnit.GlobalPosition = targetPos;
             GetNode("Units").AddChild(nowUnit);
@@ -69,7 +69,7 @@ public partial class Game : Control
 
         for (var _ = 0; _ < b; _++)
         {
-            var nowUnit = unitPreafab.Instantiate<GameUnit>();
+            var nowUnit = unitPrefab.Instantiate<GameUnit>();
             nowUnit.TeamId = 1;
             nowUnit.TeamGroup = 1;
             nowUnit.GlobalPosition = new Vector2(new Random().Next(2200, 2400), new Random().Next(1300, 1900));
