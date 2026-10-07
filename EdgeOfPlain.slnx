@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="EdgeOfPlain.Core/EdgeOfPlain.Core.csproj" />
+  <Project Path="EdgeOfPlain.Client/EdgeOfPlain.Client.csproj" />
+</Solution>
