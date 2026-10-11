@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using EdgeOfPlain.Core.Definitions;
 using Tomlyn.Serialization;
 
 namespace EdgeOfPlain.Core.World;

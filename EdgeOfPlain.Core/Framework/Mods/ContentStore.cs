@@ -20,13 +20,6 @@ public static class ContentStore
 
 	public static void Seal() => _frozen = _byId.ToFrozenDictionary(StringComparer.Ordinal);
 
-	/// <summary>Drops all content and unseals. For tests and mod reloading, not for normal startup.</summary>
-	public static void Clear()
-	{
-		_byId.Clear();
-		_frozen = null;
-	}
-
 	public static ContentDef? Get(string id)
 		=> _frozen is not null 
 			? _frozen.TryGetValue(id, out var def) ? def : null
