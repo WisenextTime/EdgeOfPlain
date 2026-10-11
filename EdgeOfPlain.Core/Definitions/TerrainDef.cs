@@ -4,10 +4,6 @@ using Tomlyn.Serialization;
 
 namespace EdgeOfPlain.Core.Definitions;
 
-/// <summary>
-/// Semantic terrain kind: the only layer gameplay logic ever reads. Atlas tiles reference it by id,
-/// so any number of visual variants can share one definition.
-/// </summary>
 [ContentTypeName("terrain")]
 [method: TomlConstructor]
 public class TerrainDef(string id) : ContentDef(id)
