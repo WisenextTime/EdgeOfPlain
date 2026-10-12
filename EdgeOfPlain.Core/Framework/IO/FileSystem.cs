@@ -36,7 +36,7 @@ public abstract class FileSystem : IDisposable, IAsyncDisposable
 		return FileExistsCoreAsync(NormalizePath(path), cancellationToken);
 	}
 
-	protected virtual ValueTask<bool> FileExistsCoreAsync(string path, CancellationToken cancellationToken) 
+	protected virtual ValueTask<bool> FileExistsCoreAsync(string path, CancellationToken cancellationToken)
 		=> new(FileExistsCore(path));
 
 	public bool DirectoryExists(string path)
@@ -178,14 +178,14 @@ public abstract class FileSystem : IDisposable, IAsyncDisposable
 	public string ReadAllText(string path)
 	{
 		using var stream = OpenRead(path);
-		using var reader = new StreamReader(stream, _utf8, detectEncodingFromByteOrderMarks: true);
+		using var reader = new StreamReader(stream, _utf8, true);
 		return reader.ReadToEnd();
 	}
 
 	public async ValueTask<string> ReadAllTextAsync(string path, CancellationToken cancellationToken = default)
 	{
 		await using var stream = await OpenReadAsync(path, cancellationToken).ConfigureAwait(false);
-		using var reader = new StreamReader(stream, _utf8, detectEncodingFromByteOrderMarks: true);
+		using var reader = new StreamReader(stream, _utf8, true);
 		return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 	}
 
@@ -267,11 +267,11 @@ public abstract class FileSystem : IDisposable, IAsyncDisposable
 
 	public IEnumerable<string> EnumerateFiles(string path = "", string pattern = "*",
 		SearchOption searchOption = SearchOption.TopDirectoryOnly)
-		=> Enumerate(path, pattern, searchOption, wantDirectories: false);
+		=> Enumerate(path, pattern, searchOption, false);
 
 	public IEnumerable<string> EnumerateDirectories(string path = "", string pattern = "*",
 		SearchOption searchOption = SearchOption.TopDirectoryOnly)
-		=> Enumerate(path, pattern, searchOption, wantDirectories: true);
+		=> Enumerate(path, pattern, searchOption, true);
 
 	public void Dispose()
 	{
@@ -325,7 +325,7 @@ public abstract class FileSystem : IDisposable, IAsyncDisposable
 		foreach (var entry in EnumerateEntries(path))
 		{
 			if (entry.IsDirectory == wantDirectories &&
-			    FileSystemName.MatchesSimpleExpression(pattern, GetName(entry.Path), ignoreCase: !IsCaseSensitive))
+			    FileSystemName.MatchesSimpleExpression(pattern, GetName(entry.Path), !IsCaseSensitive))
 				yield return entry.Path;
 
 			if (!entry.IsDirectory || searchOption != SearchOption.AllDirectories) continue;

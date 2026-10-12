@@ -45,7 +45,7 @@ public sealed class TileGridConverter : TomlConverter<int[,]>
 	private static byte[] Compress(byte[] data)
 	{
 		using var output = new MemoryStream();
-		using (var deflate = new DeflateStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
+		using (var deflate = new DeflateStream(output, CompressionLevel.SmallestSize, true))
 			deflate.Write(data, 0, data.Length);
 		return output.ToArray();
 	}

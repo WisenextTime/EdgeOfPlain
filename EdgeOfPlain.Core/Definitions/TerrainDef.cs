@@ -17,6 +17,7 @@ public class TerrainDef(string id) : ContentDef(id)
 		Air = 1 << 2,
 		Cliff = 1 << 3,
 	}
+
 	public PassageMask Passage { get; set; } = PassageMask.None;
 	public int MoveCost { get; set; } = 1;
 	public List<string> Tags { get; set; } = [];

@@ -8,11 +8,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\EdgeOfPlain.Core\EdgeOfPlain.Core.csproj" />
+		<ProjectReference Include="..\EdgeOfPlain.Core\EdgeOfPlain.Core.csproj"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SFML.Net" Version="3.0.0" />
+		<PackageReference Include="SFML.Net" Version="3.0.0"/>
 	</ItemGroup>
 
 </Project>

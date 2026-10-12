@@ -92,7 +92,7 @@ public static class FileIO
 		{
 			< 0 => new ArgumentException($"resource path '{sourcePath}' has no '{SchemeSeparator}' head", nameof(sourcePath)),
 			0 => new ArgumentException($"resource path '{sourcePath}' has an empty head", nameof(sourcePath)),
-			_ => new ArgumentException($"no file system is registered for head '{sourcePath[..separator]}'", nameof(sourcePath))
+			_ => new ArgumentException($"no file system is registered for head '{sourcePath[..separator]}'", nameof(sourcePath)),
 		};
 	}
 
@@ -289,7 +289,7 @@ public static class FileIO
 		return (source.FileSystem, source.Path, destination.Path);
 	}
 
-	private static void ValidateHead(string head) 
+	private static void ValidateHead(string head)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(head);
 

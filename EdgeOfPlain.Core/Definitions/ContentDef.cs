@@ -25,7 +25,7 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class ContentTypeNameAttribute(string name) : Attribute
-{ 
+{
 	public string Name { get; } = name;
 }
 

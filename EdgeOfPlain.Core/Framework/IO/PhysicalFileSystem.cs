@@ -56,6 +56,6 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 			=> new FileSystemEntry(Path.GetRelativePath(Root, info.FullName).Replace('\\', '/'), info is DirectoryInfo));
 	}
 
-	private string Resolve(string path) 
+	private string Resolve(string path)
 		=> path.Length == 0 ? Root : Path.Combine(Root, path.Replace('/', Path.DirectorySeparatorChar));
 }

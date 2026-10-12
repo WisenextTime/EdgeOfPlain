@@ -2,7 +2,7 @@ using System;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
-public interface IMod<T> where T : IMod<T>, new()
+public interface IMod
 {
 	ModInfo ModInfo { get; }
 	Type[]? RegisterTypes { get; }

@@ -7,13 +7,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Arch" Version="2.1.0" />
-	  <PackageReference Include="Tomlyn" Version="2.10.1" />
+		<PackageReference Include="Arch" Version="2.1.0"/>
+		<PackageReference Include="Tomlyn" Version="2.10.1"/>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Assets\Textures\Tiles\" />
-	  <Folder Include="Content\" />
+		<Folder Include="Assets\Textures\Tiles\"/>
 	</ItemGroup>
 
 </Project>

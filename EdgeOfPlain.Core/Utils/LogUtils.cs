@@ -9,5 +9,5 @@ public static class LogUtils
 	public static void LogMessage(string message, LogType type = LogType.Info)
 	{
 		Console.WriteLine($"[{DateTime.Now:hh:mm:ss}] [{type.ToString()}] {message}");
-	} 
+	}
 }
