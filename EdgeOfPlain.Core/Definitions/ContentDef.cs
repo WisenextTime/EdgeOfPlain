@@ -13,13 +13,14 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 {
 	public string Id { get; } = id;
 
+	[TomlIgnore]
 	public string FullId => ToString();
 
 	[TomlIgnore]
 	public ModInfo SourceMod { get; internal set; }
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
-
+	
 	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.ByType[GetType()]}({Id})";
 }
 

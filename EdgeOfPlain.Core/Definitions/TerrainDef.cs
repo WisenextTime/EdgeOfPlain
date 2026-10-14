@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Tomlyn.Serialization;
 
 namespace EdgeOfPlain.Core.Definitions;
@@ -20,6 +19,5 @@ public class TerrainDef(string id) : ContentDef(id)
 
 	public PassageMask Passage { get; set; } = PassageMask.None;
 	public int MoveCost { get; set; } = 1;
-	public List<string> Tags { get; set; } = [];
 	public bool Allows(PassageMask required) => (Passage & required) != PassageMask.None;
 }

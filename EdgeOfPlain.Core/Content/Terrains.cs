@@ -9,9 +9,14 @@ internal static class Terrains
 	{
 		Passage = TerrainDef.PassageMask.Air | TerrainDef.PassageMask.Ground,
 	};
+	public static TerrainDef Water => new("water")
+	{
+		Passage = TerrainDef.PassageMask.Water | TerrainDef.PassageMask.Air,
+	};
 
 	public static void RegisterAll(ModContext context)
 	{
 		context.AddContent(Ground);
+		context.AddContent(Water);
 	}
 }
