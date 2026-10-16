@@ -46,10 +46,6 @@ public sealed class OverlayFileSystem : FileSystem
 		IndexLayer(_layers.Count - 1);
 	}
 
-	/// <summary>
-	/// Removes every override layer contributed by <paramref name="layerName"/> and rebuilds the
-	/// shadow index, so a mod that fails to load leaves no overridden file behind.
-	/// </summary>
 	public bool RemoveOverrideLayers(string layerName)
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);

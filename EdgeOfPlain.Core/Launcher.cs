@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using EdgeOfPlain.Core.Framework.Events;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
@@ -16,22 +17,18 @@ public abstract class Launcher
 	public const string DataHead = "data";
 	public const string ModHead = "mod";
 
+	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
+
 	protected abstract FileSystem BaseAssetsSystem { get; }
 	protected abstract string DataDirectory { get; }
 	protected abstract string ModDirectory { get; }
 
 	protected ModFileSystem AssetFileSystem { get; } = new();
 	protected ModLoader Mods { get; private set; } = null!;
-
-	/// <summary>事件总线：场景切换、窗口尺寸变化、地图加载等都从这里广播。</summary>
 	public EventBus Events { get; } = new();
 
 	public SceneManager Scenes { get; }
-
-	/// <summary>宿主把平台事件喂给它，场景只读地查询。</summary>
 	public InputState Input { get; } = new();
-
-	/// <summary>固定步长循环，在 <see cref="Launch"/> 里创建。</summary>
 	public GameLoop Loop { get; private set; } = null!;
 
 	protected Launcher() => Scenes = new SceneManager(Events);
@@ -63,22 +60,16 @@ public abstract class Launcher
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
 	}
 
-	/// <summary>每帧绘制场景之前应用的清屏颜色。</summary>
 	protected virtual ColorF ClearColor => ColorF.Black;
 
-	/// <summary>宿主提供渲染管线实现；Core 只通过 <see cref="IRenderPipeline"/> 描述要画什么。</summary>
+	protected virtual bool PumpsEventsInLoop => true;
+
 	protected abstract IRenderPipeline CreatePipeline(IGameWindow window);
 
-	/// <summary>宿主提供栈底的第一个场景。</summary>
 	protected abstract IScene CreateInitialScene();
 
-	/// <summary>循环的时间源；测试或录制回放时覆写它就能精确驱动逻辑帧。</summary>
 	protected virtual ITimeSource CreateTimeSource() => new StopwatchTimeSource();
 
-	/// <summary>
-	/// 主循环：逻辑固定步长、渲染可变帧率，两者在同一线程上交替执行。
-	/// 每个渲染帧最多补跑若干个逻辑步，剩余零头作为 <see cref="RenderTime.Alpha"/> 交给渲染插值。
-	/// </summary>
 	protected void Launch(IGameWindow window)
 	{
 		ArgumentNullException.ThrowIfNull(window);
@@ -93,7 +84,12 @@ public abstract class Launcher
 		while (window.IsOpen)
 		{
 			Input.BeginFrame();
-			window.PollEvents();
+
+			if (PumpsEventsInLoop)
+			{
+				window.PollEvents();
+				Input.ApplyPending();
+			}
 
 			var size = window.Size;
 			if (size != previousSize)
@@ -104,8 +100,6 @@ public abstract class Launcher
 
 			Loop.BeginFrame();
 
-			// 输入每个渲染帧处理一次，而不是每个逻辑步：一个渲染帧里补跑多个逻辑步时，
-			// "刚按下"不会被重复消费。
 			Scenes.HandleInput(Input);
 			while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
 
@@ -115,5 +109,39 @@ public abstract class Launcher
 			pipeline.End();
 			window.Present();
 		}
+	}
+
+	protected void LaunchWithEventPump(IGameWindow window)
+	{
+		ArgumentNullException.ThrowIfNull(window);
+
+		Exception? failure = null;
+		var completed = 0;
+
+		var game = new Thread(() =>
+		{
+			try
+			{
+				window.ActivateContext();
+				Launch(window);
+			}
+			catch (Exception e)
+			{
+				failure = e;
+			}
+			finally
+			{
+				Volatile.Write(ref completed, 1);
+			}
+		})
+		{
+			IsBackground = true,
+			Name = "game-loop",
+		};
+		game.Start();
+		while (window.IsOpen && Volatile.Read(ref completed) == 0) window.WaitForEvents(_eventPumpTimeout);
+		game.Join();
+
+		if (failure is not null) throw new AggregateException("The game loop terminated with an error.", failure);
 	}
 }

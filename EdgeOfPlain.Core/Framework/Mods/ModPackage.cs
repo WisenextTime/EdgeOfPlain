@@ -34,14 +34,11 @@ public sealed class ModPackage : IDisposable
 
 	public string ModId { get; }
 	public string ZipPath { get; }
-
-	/// <summary>The zip root. <c>Asset/</c> and <c>Overrider/</c> are views onto it; the loader extracts assemblies from here.</summary>
 	public FileSystem Root => _zip;
 
 	public FileSystem Assets { get; }
 	public IReadOnlyDictionary<string, FileSystem> Overriders { get; }
 
-	/// <summary>The manifest, with its id and dependency ids normalized. Null only when no manifest exists.</summary>
 	public ModInfo? Info { get; }
 
 	public bool HasAssets => Assets.DirectoryExists(string.Empty);
@@ -59,9 +56,6 @@ public sealed class ModPackage : IDisposable
 				var parsed = TomlSerializer.Deserialize<ModInfo>(zip.ReadAllText(ManifestName), ManifestOptions);
 				if (string.IsNullOrEmpty(parsed.Id))
 					throw new InvalidDataException($"{ManifestName} in '{zipPath}' has a invalid id");
-
-				// The file system resolves namespaces case-insensitively, so every id entering the mod
-				// system is normalized once, here; ModManager can then compare ids ordinally.
 				info = Normalize(parsed);
 			}
 

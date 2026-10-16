@@ -217,7 +217,6 @@ public static class ModManager
 		return waiting ? DependencyState.Waiting : DependencyState.Satisfied;
 	}
 
-	/// <summary>Rolls back a registration, used when part of a package could not be registered.</summary>
 	internal static void UnregisterMod(IMod mod)
 	{
 		_infos.Remove(mod);

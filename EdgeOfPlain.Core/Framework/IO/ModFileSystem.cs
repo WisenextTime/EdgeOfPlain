@@ -71,8 +71,6 @@ public sealed class ModFileSystem : FileSystem
 	}
 
 	public OverlayFileSystem? GetNamespace(string name) => _namespaces.GetValueOrDefault(NormalizeNamespace(name));
-
-	/// <summary>Removes the override layers a mod contributed to every namespace. Returns how many namespaces changed.</summary>
 	public int RemoveOverrideLayers(string layerName)
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);

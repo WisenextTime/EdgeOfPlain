@@ -7,8 +7,6 @@ namespace EdgeOfPlain.Client.Resource;
 
 public static class TextureOperatorBuilder
 {
-	// sRGB stays off on purpose: neither RenderWindow nor RenderTexture is sRGB-capable, so an sRGB
-	// texture would be sampled into linear space and stored raw, drawing every texture darker than authored.
 	private static readonly Func<Stream, Texture> _loader = stream => new Texture(stream, false);
 	private static readonly Action<Stream, Texture> _saver = (stream, texture) =>
 	{

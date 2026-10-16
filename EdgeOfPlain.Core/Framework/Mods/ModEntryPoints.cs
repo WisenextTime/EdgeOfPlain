@@ -68,7 +68,6 @@ internal static class ModEntryPoints
 
 		foreach (var file in Directory.EnumerateFiles(directory, "*.dll", SearchOption.AllDirectories))
 		{
-			// runtimes/ holds native payload, never managed entry points.
 			var relative = Path.GetRelativePath(directory, file).Replace('\\', '/');
 			if (relative.StartsWith("runtimes/", StringComparison.OrdinalIgnoreCase)) continue;
 			if (!IsManagedAssembly(file)) continue;

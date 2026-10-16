@@ -20,7 +20,6 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		_window.Closed += (_, _) => _window.Close();
 		_window.Resized += (_, _) => ApplyViewport();
 
-		// 平台事件在这里转成普通 .NET 事件，由 SfmlInput 翻译进 Core 的 InputState。
 		_window.KeyPressed += (_, e) => KeyPressed?.Invoke(e.Code);
 		_window.KeyReleased += (_, e) => KeyReleased?.Invoke(e.Code);
 		_window.MouseButtonPressed += (_, e) => MouseButtonPressed?.Invoke(e.Button);
@@ -71,6 +70,12 @@ public sealed class GameWindow : IGameWindow, IDisposable
 	}
 
 	public void PollEvents() => _window.DispatchEvents();
+
+	public void WaitForEvents(TimeSpan timeout)
+		=> _window.WaitAndDispatchEvents(
+			timeout <= TimeSpan.Zero ? Time.Zero : Time.FromSeconds((float)timeout.TotalSeconds));
+
+	public void ActivateContext() => _window.SetActive(true);
 
 	public void Clear(ColorF color) => _window.Clear(new SfColor(color.R, color.G, color.B, color.A));
 

@@ -28,14 +28,14 @@ public static class SfmlInput
 		ArgumentNullException.ThrowIfNull(window);
 		ArgumentNullException.ThrowIfNull(input);
 
-		window.KeyPressed += code => input.OnKeyDown(Map(code));
-		window.KeyReleased += code => input.OnKeyUp(Map(code));
-		window.MouseButtonPressed += button => input.OnMouseButtonDown(Map(button));
-		window.MouseButtonReleased += button => input.OnMouseButtonUp(Map(button));
-		window.MouseMoved += input.OnMouseMoved;
-		window.MouseWheelScrolled += input.OnScroll;
+		window.KeyPressed += code => input.PostKeyDown(Map(code));
+		window.KeyReleased += code => input.PostKeyUp(Map(code));
+		window.MouseButtonPressed += button => input.PostMouseButtonDown(Map(button));
+		window.MouseButtonReleased += button => input.PostMouseButtonUp(Map(button));
+		window.MouseMoved += input.PostMouseMoved;
+		window.MouseWheelScrolled += input.PostScroll;
 
-		window.FocusLost += input.Reset;
+		window.FocusLost += input.PostReset;
 	}
 
 	private static Key[] BuildKeys()

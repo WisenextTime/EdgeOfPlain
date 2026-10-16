@@ -7,7 +7,7 @@ using EdgeOfPlain.Core.Framework.Time;
 
 namespace EdgeOfPlain.Client.Scenes;
 
-public sealed class TestScene : Scene
+public sealed class TestScene : SpriteScene
 {
 	private readonly RenderMetadata _ground = new()
 	{
@@ -39,12 +39,12 @@ public sealed class TestScene : Scene
 		_current = new Vector2(300f + MathF.Sin((float)time.TotalSeconds * 1.5f) * 120f, 150f);
 	}
 
-	public override void Draw(IRenderPipeline pipeline, RenderTime time)
+	protected override void Draw(ISpriteBatch sprites, RenderTime time)
 	{
 		var position = Vector2.Lerp(_previous, _current, time.Alpha);
 
-		pipeline.Draw(_ground, 0, 0);
-		pipeline.Draw(_block, 200, 200);
-		pipeline.Draw(_unit, position.X, position.Y);
+		sprites.Draw(_ground, 0, 0);
+		sprites.Draw(_block, 200, 200);
+		sprites.Draw(_unit, position.X, position.Y);
 	}
 }

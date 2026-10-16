@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 
 namespace EdgeOfPlain.Core.Framework.Graphics;
@@ -11,6 +12,10 @@ public interface IGameWindow
 	Rectangle Viewport { get; set; }
 
 	void PollEvents();
+
+	void WaitForEvents(TimeSpan timeout);
+
+	void ActivateContext();
 
 	void Clear(ColorF color);
 

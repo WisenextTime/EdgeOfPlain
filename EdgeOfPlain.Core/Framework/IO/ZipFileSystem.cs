@@ -43,7 +43,6 @@ public sealed class ZipFileSystem : FileSystem
 		directories.Add(string.Empty);
 
 		var children = new Dictionary<string, List<FileSystemEntry>>(StringComparer.OrdinalIgnoreCase);
-		// The root is not an entry: registering it as a child of itself makes recursive enumeration loop forever.
 		foreach (var path in directories)
 			if (path.Length != 0)
 				ResourcePathTree.AddChild(children, path, isDirectory: true);

@@ -8,7 +8,7 @@ using SFML.System;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public sealed class TestRenderPipeline(IRenderTarget target) : IRenderPipeline
+public sealed class TestRenderPipeline(IRenderTarget target) : ISpriteBatch
 {
 	private const float DefaultQuadSize = 16f;
 
