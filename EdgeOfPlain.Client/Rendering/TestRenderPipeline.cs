@@ -67,7 +67,7 @@ public sealed class TestRenderPipeline(IRenderTarget target) : IRenderPipeline
 	{
 		if (_textures.TryGetValue(path, out var cached)) return cached;
 
-		var texture = ResourceManager.LoadResource<Texture>(path);
+		var texture = AssetsManager.LoadResource<Texture>(path);
 		_textures[path] = texture;
 		return texture;
 	}

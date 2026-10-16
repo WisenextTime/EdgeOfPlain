@@ -22,6 +22,17 @@ public abstract class FileSystem : IDisposable, IAsyncDisposable
 
 	public StringComparer PathComparer => IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
+	/// <summary>
+	/// Maps a path to a real on-disk path. Only physical file systems can do this; callers that
+	/// genuinely need a disk path (loading assemblies) should use it to fail explicitly instead of
+	/// casting to <see cref="PhysicalFileSystem"/> everywhere.
+	/// </summary>
+	public virtual bool TryGetPhysicalPath(string path, out string physicalPath)
+	{
+		physicalPath = string.Empty;
+		return false;
+	}
+
 	public bool FileExists(string path)
 	{
 		ThrowIfDisposed();

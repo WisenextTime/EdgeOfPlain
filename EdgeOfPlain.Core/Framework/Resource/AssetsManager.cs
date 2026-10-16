@@ -16,7 +16,7 @@ public sealed record ResourceOperator<T>(
 	Func<Stream, CancellationToken, ValueTask<T>>? AsyncLoader = null,
 	Func<Stream, T, CancellationToken, ValueTask>? AsyncSaver = null) : ResourceOperator;
 
-public static class ResourceManager
+public static class AssetsManager
 {
 	private static readonly Lock _gate = new();
 	private static readonly Dictionary<Type, ResourceOperator> _registry = [];

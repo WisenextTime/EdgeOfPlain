@@ -3,29 +3,31 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using EdgeOfPlain.Core.Content;
+using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Utils;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
-public static class ContentLoader
+public static class ModManager
 {
 	private static readonly List<IMod> _registeredMods = [];
+	private static Dictionary<IMod, ModInfo> _infos = [];
 	public static bool IsLoaded { get; private set; }
-
-	private static readonly string[] _internalRetentionIds = ["base"];
+	private static readonly IReadOnlySet<string> _internalRetentionIds = ModFileSystem.ReservedNamespaces;
 
 	public static IReadOnlyList<IMod> LoadedMods => _loadedMods.AsReadOnly();
 	private static readonly List<IMod> _loadedMods = [];
 
-	public static void RegisterMod(IMod mod)
+	public static void RegisterMod(IMod mod, ModInfo info)
 	{
 		CheckLoaded();
 		ArgumentNullException.ThrowIfNull(mod);
-		if (string.IsNullOrEmpty(mod.ModInfo.Id)) throw new Exception("Mod must have a non-empty id.");
-		if (_internalRetentionIds.Contains(mod.ModInfo.Id))
-			throw new Exception($"Mod {mod.ModInfo.Id} uses a internal retention id.");
-		if (_registeredMods.Exists(registered => string.Equals(registered.ModInfo.Id, mod.ModInfo.Id, StringComparison.Ordinal)))
-			throw new Exception($"Mod {mod.ModInfo.Id} has already existed.");
+		if (string.IsNullOrEmpty(info.Id)) throw new Exception("Mod must have a non-empty id.");
+		if (_internalRetentionIds.Contains(info.Id))
+			throw new Exception($"Mod {info.Id} uses a internal retention id.");
+		if (_registeredMods.Exists(registered => string.Equals(registered.ModInfo.Id, info.Id, StringComparison.Ordinal)))
+			throw new Exception($"Mod {info.Id} has already existed.");
+		_infos.Add(mod, info);
 		_registeredMods.Add(mod);
 	}
 
@@ -214,6 +216,18 @@ public static class ContentLoader
 
 		return waiting ? DependencyState.Waiting : DependencyState.Satisfied;
 	}
+
+	/// <summary>Rolls back a registration, used when part of a package could not be registered.</summary>
+	internal static void UnregisterMod(IMod mod)
+	{
+		_infos.Remove(mod);
+		_registeredMods.Remove(mod);
+	}
+
+	public static ModInfo GetModInfo(IMod mod)
+		=> _infos.TryGetValue(mod, out var info)
+			? info
+			: throw new InvalidOperationException($"Mod '{mod.GetType().FullName}' has not been registered.");
 
 	private static int CompareModIds(IMod left, IMod right)
 		=> string.Compare(left.ModInfo.Id, right.ModInfo.Id, StringComparison.Ordinal);

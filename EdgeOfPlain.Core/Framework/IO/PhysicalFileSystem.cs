@@ -13,6 +13,12 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 
 	public override bool IsCaseSensitive => !OperatingSystem.IsWindows();
 
+	public override bool TryGetPhysicalPath(string path, out string physicalPath)
+	{
+		physicalPath = Resolve(NormalizePath(path));
+		return true;
+	}
+
 	protected override bool FileExistsCore(string path) => File.Exists(Resolve(path));
 
 	protected override bool DirectoryExistsCore(string path) => Directory.Exists(Resolve(path));

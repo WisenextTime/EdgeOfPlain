@@ -37,4 +37,5 @@ public struct TileData
 	}
 
 	public int[]? Animation { get; set; }
+	public int[]? Random { get; set; }
 }

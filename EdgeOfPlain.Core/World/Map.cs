@@ -14,9 +14,15 @@ public class Map(int width, int height)
 	public Version MapVersion { get; set; } = DefaultMapVersion;
 	[TomlConverter(typeof(TileGridConverter))]
 	public ushort[,] Tiles { get; set; } = new ushort[width, height];
-	public List<string> Tilesets { get; set; } = [];
+	public List<TileSetData> Tilesets { get; set; } = [];
 	public int Width => Tiles.GetLength(0);
 	public int Height => Tiles.GetLength(1);
+}
+
+public struct TileSetData
+{
+	public string TileSet { get; set; }
+	public ushort FirstGid { get; set; }
 }
 
 public sealed class TileGridConverter : TomlConverter<ushort[,]>

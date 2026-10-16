@@ -4,7 +4,5 @@ public interface IRenderPipeline
 {
 	void Begin();
 
-	void Draw(RenderMetadata metadata, float x, float y);
-
 	void End();
 }
