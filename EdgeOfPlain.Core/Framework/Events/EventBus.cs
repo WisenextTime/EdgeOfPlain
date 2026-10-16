@@ -4,12 +4,12 @@ using System.Threading;
 
 namespace EdgeOfPlain.Core.Framework.Events;
 
-public sealed class EventBus
+public static class EventBus
 {
-	private readonly Lock _gate = new();
-	private readonly Dictionary<Type, object> _handlers = [];
+	private static readonly Lock _gate = new();
+	private static readonly Dictionary<Type, object> _handlers = [];
 
-	public EventSubscription Subscribe<T>(Action<T> handler) where T : notnull
+	public static EventSubscription Subscribe<T>(Action<T> handler) where T : notnull
 	{
 		ArgumentNullException.ThrowIfNull(handler);
 
@@ -29,7 +29,7 @@ public sealed class EventBus
 		return new EventSubscription(() => Remove(handler));
 	}
 
-	public void Publish<T>(T message) where T : notnull
+	public static void Publish<T>(T message) where T : notnull
 	{
 		if (!_handlers.TryGetValue(typeof(T), out var boxed)) return;
 		var actions = ((Handlers<T>)boxed).Actions;
@@ -37,17 +37,17 @@ public sealed class EventBus
 		
 	}
 
-	public bool HasSubscribers<T>() => _handlers.ContainsKey(typeof(T));
+	public static bool HasSubscribers<T>() => _handlers.ContainsKey(typeof(T));
 
-	public int SubscriberCount<T>() where T : notnull => 
+	public static int SubscriberCount<T>() where T : notnull => 
 		_handlers.TryGetValue(typeof(T), out var boxed) ? ((Handlers<T>)boxed).Actions.Length : 0;
 
-	public void Clear()
+	public static void Clear()
 	{
 		lock (_gate) _handlers.Clear();
 	}
 
-	private void Remove<T>(Action<T> handler) where T : notnull
+	private static void Remove<T>(Action<T> handler) where T : notnull
 	{
 		lock (_gate)
 		{

@@ -1,0 +1,14 @@
+type = "tileset"
+
+id = "TestTile"
+width = 256
+height =128
+
+[tileData."0"]
+random = ["0,1,2,3"]
+
+[tileData."4"]
+renderer = "grass"
+
+[tileData."5"]
+terrain = "water"

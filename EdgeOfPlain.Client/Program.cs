@@ -36,7 +36,7 @@ public class Program : Launcher
 	public void RunWithEventPump(IGameWindow window) => LaunchWithEventPump(window);
 
 	protected override IRenderPipeline CreatePipeline(IGameWindow window)
-		=> new TestRenderPipeline(((GameWindow)window).Target);
+		=> new TestRenderPipeline(((GameWindow)window).Target, () => window.Camera);
 
 	protected override IScene CreateInitialScene() => new TestScene();
 

@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using EdgeOfPlain.Core.Framework.Graphics;
 
 namespace EdgeOfPlain.Core.Framework.Graphics;
 
@@ -10,6 +11,10 @@ public interface IGameWindow
 	Size Size { get; }
 
 	Rectangle Viewport { get; set; }
+
+	Camera2D Camera { get; set; }
+
+	void ResetCamera();
 
 	void PollEvents();
 

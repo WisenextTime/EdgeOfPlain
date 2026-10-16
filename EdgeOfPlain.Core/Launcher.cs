@@ -25,13 +25,10 @@ public abstract class Launcher
 
 	protected ModFileSystem AssetFileSystem { get; } = new();
 	protected ModLoader Mods { get; private set; } = null!;
-	public EventBus Events { get; } = new();
 
-	public SceneManager Scenes { get; }
+	public SceneManager Scenes { get; } = new();
 	public InputState Input { get; } = new();
 	public GameLoop Loop { get; private set; } = null!;
-
-	protected Launcher() => Scenes = new SceneManager(Events);
 
 	protected void Init()
 	{
@@ -94,7 +91,7 @@ public abstract class Launcher
 			var size = window.Size;
 			if (size != previousSize)
 			{
-				Events.Publish(new WindowResizedEvent(previousSize, size));
+				EventBus.Publish(new WindowResizedEvent(previousSize, size));
 				previousSize = size;
 			}
 

@@ -12,14 +12,7 @@ public sealed class SceneManager
 {
 	private readonly List<IScene> _scenes = [];
 	private readonly List<SceneCommand> _pending = [];
-	private readonly EventBus _events;
 	private SceneContext? _context;
-
-	public SceneManager(EventBus events)
-	{
-		ArgumentNullException.ThrowIfNull(events);
-		_events = events;
-	}
 
 	public IReadOnlyList<IScene> Scenes => _scenes;
 
@@ -30,7 +23,7 @@ public sealed class SceneManager
 	public void Attach(IGameWindow window)
 	{
 		ArgumentNullException.ThrowIfNull(window);
-		_context ??= new SceneContext(window, this, _events);
+		_context ??= new SceneContext(window, this);
 	}
 
 	public void Push(IScene scene)
@@ -114,7 +107,7 @@ public sealed class SceneManager
 			case SceneChangeKind.Pop:
 				if (previous is null) return;
 				Exit(previous);
-				_events.Publish(new SceneChangedEvent(SceneChangeKind.Pop, previous, Active));
+				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Pop, previous, Active));
 				break;
 
 			case SceneChangeKind.Replace:
@@ -128,12 +121,12 @@ public sealed class SceneManager
 				if (found < 0) return;
 
 				for (var index = _scenes.Count - 1; index > found; index--) Exit(_scenes[index]);
-				_events.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
+				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
 				break;
 
 			case SceneChangeKind.Clear:
 				while (_scenes.Count > 0) Exit(_scenes[^1]);
-				_events.Publish(new SceneChangedEvent(SceneChangeKind.Clear, previous, null));
+				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Clear, previous, null));
 				break;
 		}
 	}
@@ -142,7 +135,7 @@ public sealed class SceneManager
 	{
 		_scenes.Add(scene);
 		scene.Enter(Context);
-		_events.Publish(new SceneChangedEvent(kind, previous, scene));
+		EventBus.Publish(new SceneChangedEvent(kind, previous, scene));
 	}
 
 	private void Exit(IScene scene)

@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Numerics;
 using EdgeOfPlain.Core.Framework.Graphics;
 using SFML.Graphics;
 using SFML.System;
@@ -13,6 +14,7 @@ public sealed class GameWindow : IGameWindow, IDisposable
 	private readonly RenderWindow _window;
 	private Rectangle _viewport;
 	private bool _viewportDirty;
+	private Camera2D? _camera;
 
 	public GameWindow(uint width, uint height, string title)
 	{
@@ -31,7 +33,7 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		_window.LostFocus += (_, _) => FocusLost?.Invoke();
 
 		_viewport = new Rectangle(0, 0, (int)width, (int)height);
-		ApplyViewport();
+		ApplyView();
 	}
 
 	public event Action<Keyboard.Key>? KeyPressed;
@@ -67,8 +69,23 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		set
 		{
 			_viewport = value;
-			ApplyViewport();
+			ApplyView();
 		}
+	}
+	public Camera2D Camera
+	{
+		get => _camera ?? PixelSpaceCamera();
+		set
+		{
+			_camera = value;
+			ApplyView();
+		}
+	}
+
+	public void ResetCamera()
+	{
+		_camera = null;
+		ApplyView();
 	}
 
 	public void PollEvents() => _window.DispatchEvents();
@@ -93,7 +110,7 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		if (_viewportDirty)
 		{
 			_viewportDirty = false;
-			ApplyViewport();
+			ApplyView();
 		}
 
 		_window.Clear(new SfColor(color.R, color.G, color.B, color.A));
@@ -103,15 +120,25 @@ public sealed class GameWindow : IGameWindow, IDisposable
 
 	public void Dispose() => _window.Dispose();
 
-	private void ApplyViewport()
+	private Camera2D PixelSpaceCamera()
+	{
+		var size = Size;
+		return new Camera2D(new Vector2(size.Width / 2f, size.Height / 2f));
+	}
+
+	private void ApplyView()
 	{
 		var size = Size;
 		if (size.Width <= 0 || size.Height <= 0) return;
 
+		var camera = Camera;
+		var worldSize = camera.WorldSize(new Vector2(size.Width, size.Height));
+
 		_window.SetView(new View(
-			new Vector2f(_viewport.X + _viewport.Width / 2f, _viewport.Y + _viewport.Height / 2f),
-			new Vector2f(_viewport.Width, _viewport.Height))
+			new Vector2f(camera.Position.X, camera.Position.Y),
+			new Vector2f(worldSize.X, worldSize.Y))
 		{
+			Rotation = Angle.FromRadians(camera.Rotation),
 			Viewport = new FloatRect(
 				new Vector2f((float)_viewport.X / size.Width, (float)_viewport.Y / size.Height),
 				new Vector2f((float)_viewport.Width / size.Width, (float)_viewport.Height / size.Height)),

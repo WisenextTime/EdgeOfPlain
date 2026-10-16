@@ -8,23 +8,52 @@ using SFML.System;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public sealed class TestRenderPipeline(IRenderTarget target) : ISpriteBatch
+public sealed class TestRenderPipeline(IRenderTarget target, Func<Camera2D>? camera = null) : ISpriteBatch
 {
 	private const float DefaultQuadSize = 16f;
 
 	private readonly Dictionary<string, Texture> _textures = new();
 	private readonly List<DrawEntry> _pending = [];
+	private Camera2D? _appliedCamera;
 
-	public void Begin() => _pending.Clear();
+	public void Begin()
+	{
+		_pending.Clear();
+		_appliedCamera = null;
+	}
 
 	public void Draw(RenderMetadata metadata, float x, float y)
-		=> _pending.Add(new DrawEntry(metadata, new Vector2f(x, y)));
+		=> _pending.Add(new DrawEntry(metadata, new Vector2f(x, y), camera?.Invoke()));
 
 	public void End()
 	{
 		_pending.Sort(static (a, b) => a.Metadata.Layer.CompareTo(b.Metadata.Layer));
 
-		foreach (var entry in _pending) Render(entry);
+		foreach (var entry in _pending)
+		{
+			ApplyCamera(entry.Camera);
+			Render(entry);
+		}
+
+		_pending.Clear();
+	}
+
+	private void ApplyCamera(Camera2D? requested)
+	{
+		if (requested is not { } camera || _appliedCamera == camera) return;
+
+		_appliedCamera = camera;
+
+		var size = target.Size;
+		var pixels = new Vector2(size.X, size.Y);
+		var current = target.GetView();
+
+		target.SetView(new View(ToVector(camera.Position), ToVector(camera.WorldSize(pixels)))
+		{
+			Rotation = Angle.FromRadians(camera.Rotation),
+			Viewport = current.Viewport,
+			Scissor = current.Scissor,
+		});
 	}
 
 	private void Render(DrawEntry entry)
@@ -96,5 +125,5 @@ public sealed class TestRenderPipeline(IRenderTarget target) : ISpriteBatch
 
 	private static float ToDegrees(float radians) => radians * (180f / MathF.PI);
 
-	private readonly record struct DrawEntry(RenderMetadata Metadata, Vector2f Position);
+	private readonly record struct DrawEntry(RenderMetadata Metadata, Vector2f Position, Camera2D? Camera);
 }
