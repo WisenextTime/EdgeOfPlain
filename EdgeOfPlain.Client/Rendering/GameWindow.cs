@@ -20,9 +20,32 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		_window.Closed += (_, _) => _window.Close();
 		_window.Resized += (_, _) => ApplyViewport();
 
+		// 平台事件在这里转成普通 .NET 事件，由 SfmlInput 翻译进 Core 的 InputState。
+		_window.KeyPressed += (_, e) => KeyPressed?.Invoke(e.Code);
+		_window.KeyReleased += (_, e) => KeyReleased?.Invoke(e.Code);
+		_window.MouseButtonPressed += (_, e) => MouseButtonPressed?.Invoke(e.Button);
+		_window.MouseButtonReleased += (_, e) => MouseButtonReleased?.Invoke(e.Button);
+		_window.MouseMoved += (_, e) => MouseMoved?.Invoke(e.Position.X, e.Position.Y);
+		_window.MouseWheelScrolled += (_, e) => MouseWheelScrolled?.Invoke(e.Delta);
+		_window.LostFocus += (_, _) => FocusLost?.Invoke();
+
 		_viewport = new Rectangle(0, 0, (int)width, (int)height);
 		ApplyViewport();
 	}
+
+	public event Action<Keyboard.Key>? KeyPressed;
+
+	public event Action<Keyboard.Key>? KeyReleased;
+
+	public event Action<Mouse.Button>? MouseButtonPressed;
+
+	public event Action<Mouse.Button>? MouseButtonReleased;
+
+	public event Action<float, float>? MouseMoved;
+
+	public event Action<float>? MouseWheelScrolled;
+
+	public event Action? FocusLost;
 
 	public IRenderTarget Target => _window;
 
