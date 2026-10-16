@@ -17,6 +17,8 @@ public interface IGameWindow
 
 	void ActivateContext();
 
+	void DeactivateContext();
+
 	void Clear(ColorF color);
 
 	void Present();

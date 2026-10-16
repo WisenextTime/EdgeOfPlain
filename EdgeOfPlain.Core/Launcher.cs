@@ -118,6 +118,8 @@ public abstract class Launcher
 		Exception? failure = null;
 		var completed = 0;
 
+		window.DeactivateContext();
+
 		var game = new Thread(() =>
 		{
 			try

@@ -12,13 +12,15 @@ public sealed class GameWindow : IGameWindow, IDisposable
 {
 	private readonly RenderWindow _window;
 	private Rectangle _viewport;
+	private bool _viewportDirty;
 
 	public GameWindow(uint width, uint height, string title)
 	{
 		_window = new RenderWindow(new VideoMode(new Vector2u(width, height)), title, Styles.Default, State.Windowed);
 		_window.SetFramerateLimit(60);
 		_window.Closed += (_, _) => _window.Close();
-		_window.Resized += (_, _) => ApplyViewport();
+
+		_window.Resized += (_, _) => _viewportDirty = true;
 
 		_window.KeyPressed += (_, e) => KeyPressed?.Invoke(e.Code);
 		_window.KeyReleased += (_, e) => KeyReleased?.Invoke(e.Code);
@@ -75,9 +77,27 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		=> _window.WaitAndDispatchEvents(
 			timeout <= TimeSpan.Zero ? Time.Zero : Time.FromSeconds((float)timeout.TotalSeconds));
 
-	public void ActivateContext() => _window.SetActive(true);
+	public void ActivateContext()
+	{
+		if (_window.SetActive(true)) return;
 
-	public void Clear(ColorF color) => _window.Clear(new SfColor(color.R, color.G, color.B, color.A));
+		throw new InvalidOperationException(
+			"Failed to activate the OpenGL context on this thread. " +
+			"The thread that created the window is most likely still holding it: call DeactivateContext() there first.");
+	}
+
+	public void DeactivateContext() => _window.SetActive(false);
+
+	public void Clear(ColorF color)
+	{
+		if (_viewportDirty)
+		{
+			_viewportDirty = false;
+			ApplyViewport();
+		}
+
+		_window.Clear(new SfColor(color.R, color.G, color.B, color.A));
+	}
 
 	public void Present() => _window.Display();
 
