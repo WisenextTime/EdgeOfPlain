@@ -27,10 +27,11 @@ public sealed class ModFileSystem : FileSystem
 		ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
 		var normalized = name.ToLowerInvariant();
-		return normalized.Any(character => char.IsWhiteSpace(character) || character is '/' or '\\' or ':')
-			? throw new ArgumentException($"Namespace '{name}' cannot contain whitespace、'/'、'\\' or ':'", nameof(name))
-			: normalized;
 
+		return normalized.Any(character => char.IsWhiteSpace(character) || character is '/' or '\\' or ':')
+			? throw new ArgumentException(
+				$"Namespace '{name}' cannot contain whitespace, '/', '\\' or ':'", nameof(name))
+			: normalized;
 	}
 
 	public OverlayFileSystem RegisterNamespace(string name, FileSystem content)
@@ -101,7 +102,14 @@ public sealed class ModFileSystem : FileSystem
 		=> Resolve(path, out var innerPath).OpenRead(innerPath);
 
 	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
-		=> Resolve(path, out var innerPath).EnumerateEntries(innerPath);
+	{
+		var overlay = Resolve(path, out var innerPath);
+		var separator = path.IndexOf('/');
+		var name = separator < 0 ? path : path[..separator];
+
+		return overlay.EnumerateEntries(innerPath)
+			.Select(entry => entry with { Path = $"{name}/{entry.Path}" });
+	}
 
 	private OverlayFileSystem Resolve(string path, out string innerPath)
 	{

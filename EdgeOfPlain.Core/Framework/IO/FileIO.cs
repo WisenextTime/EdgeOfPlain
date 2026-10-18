@@ -261,21 +261,27 @@ public static class FileIO
 	public static IEnumerable<FileSystemEntry> EnumerateEntries(string sourcePath)
 	{
 		var (fileSystem, path) = Resolve(sourcePath);
-		return fileSystem.EnumerateEntries(path);
+		var head = Head(sourcePath);
+		return fileSystem.EnumerateEntries(path)
+			.Select(entry => entry with { Path = $"{head}{SchemeSeparator}{entry.Path}" });
 	}
 
 	public static IEnumerable<string> EnumerateFiles(string sourcePath, string pattern = "*",
 		SearchOption searchOption = SearchOption.TopDirectoryOnly)
 	{
 		var (fileSystem, path) = Resolve(sourcePath);
-		return fileSystem.EnumerateFiles(path, pattern, searchOption);
+		var head = Head(sourcePath);
+		return fileSystem.EnumerateFiles(path, pattern, searchOption)
+			.Select(file => $"{head}{SchemeSeparator}{file}");
 	}
 
 	public static IEnumerable<string> EnumerateDirectories(string sourcePath, string pattern = "*",
 		SearchOption searchOption = SearchOption.TopDirectoryOnly)
 	{
 		var (fileSystem, path) = Resolve(sourcePath);
-		return fileSystem.EnumerateDirectories(path, pattern, searchOption);
+		var head = Head(sourcePath);
+		return fileSystem.EnumerateDirectories(path, pattern, searchOption)
+			.Select(directory => $"{head}{SchemeSeparator}{directory}");
 	}
 
 	private static (FileSystem FileSystem, string Source, string Destination) ResolvePair(string sourcePath, string destinationPath)
@@ -288,6 +294,9 @@ public static class FileIO
 
 		return (source.FileSystem, source.Path, destination.Path);
 	}
+
+	private static string Head(string sourcePath)
+		=> sourcePath[..sourcePath.IndexOf(SchemeSeparator, StringComparison.Ordinal)];
 
 	private static void ValidateHead(string head)
 	{

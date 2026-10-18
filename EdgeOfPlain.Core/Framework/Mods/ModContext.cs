@@ -9,13 +9,13 @@ public class ModContext : IDisposable
 	private List<ContentDef> _registeredDefs = [];
 	public bool IsDisposed { get; private set; }
 
-	public ModContext(IMod sourceMod)
+	public ModContext(Mod sourceMod)
 	{
 		ArgumentNullException.ThrowIfNull(sourceMod);
 		SourceMod = sourceMod;
 	}
 
-	private IMod SourceMod { get; }
+	private Mod SourceMod { get; }
 
 	public void AddContent(ContentDef content)
 	{

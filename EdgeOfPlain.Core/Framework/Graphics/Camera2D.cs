@@ -8,7 +8,7 @@ public readonly record struct Camera2D(Vector2 Position, float Zoom = 1f, float 
 {
 	public const float MinZoom = 0.0001f;
 
-	public static Camera2D Default => new(Vector2.Zero, 1f, 0f);
+	public static Camera2D Default => new(Vector2.Zero);
 
 	public Vector2 WorldSize(Vector2 targetPixels)
 	{

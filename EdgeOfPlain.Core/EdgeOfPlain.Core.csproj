@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
@@ -12,7 +12,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="Assets\**" />
-	  <EmbeddedResource Include="Assets\**" />
+	  <EmbeddedResource Include="Assets\**" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
 	</ItemGroup>
 
 </Project>

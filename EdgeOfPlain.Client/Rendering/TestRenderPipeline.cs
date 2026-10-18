@@ -8,13 +8,20 @@ using SFML.System;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public sealed class TestRenderPipeline(IRenderTarget target, Func<Camera2D>? camera = null) : ISpriteBatch
+public sealed class TestRenderPipeline(IRenderTarget target, Func<Camera2D>? camera = null) : ISpriteBatch, IDisposable
 {
 	private const float DefaultQuadSize = 16f;
 
 	private readonly Dictionary<string, Texture> _textures = new();
 	private readonly List<DrawEntry> _pending = [];
 	private Camera2D? _appliedCamera;
+
+	public void Dispose()
+	{
+		foreach (var texture in _textures.Values) texture.Dispose();
+		_textures.Clear();
+		_pending.Clear();
+	}
 
 	public void Begin()
 	{

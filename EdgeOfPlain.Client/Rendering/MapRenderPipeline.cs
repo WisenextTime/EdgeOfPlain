@@ -1,3 +1,4 @@
+using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.World;
 
@@ -19,4 +20,9 @@ public class MapRenderPipeline : IRenderPipeline
 	{
 		
 	}
+}
+
+public class TileRenderer(TileRendererDef def)
+{
+	public TileRendererDef Definition { get; } = def;
 }

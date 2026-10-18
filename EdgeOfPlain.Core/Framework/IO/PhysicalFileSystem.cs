@@ -11,7 +11,7 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 {
 	public string Root { get; } = Path.GetFullPath(root);
 
-	public override bool IsCaseSensitive => !OperatingSystem.IsWindows();
+	public override bool IsCaseSensitive => !OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS();
 
 	public override bool TryGetPhysicalPath(string path, out string physicalPath)
 	{
@@ -58,7 +58,10 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 
 	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
 	{
-		return new DirectoryInfo(Resolve(path)).EnumerateFileSystemInfos().Select(info
+		var directory = new DirectoryInfo(Resolve(path));
+		if (!directory.Exists) return [];
+
+		return directory.EnumerateFileSystemInfos().Select(info
 			=> new FileSystemEntry(Path.GetRelativePath(Root, info.FullName).Replace('\\', '/'), info is DirectoryInfo));
 	}
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
 using EdgeOfPlain.Core.Framework.Mods;
 using Tomlyn;
 using Tomlyn.Serialization;
@@ -21,7 +22,7 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
 	
-	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.ByType[GetType()]}({Id})";
+	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.Discriminator(GetType())}({Id})";
 }
 
 [AttributeUsage(AttributeTargets.Class)]
@@ -32,14 +33,43 @@ public sealed class ContentTypeNameAttribute(string name) : Attribute
 
 public static class ContentSerializer
 {
+	private static readonly Lock _gate = new();
 	private static TomlSerializerOptions _options = CreateOptions();
+	private static int _version = ContentTypeRegistry.Version;
 
-	public static void ResetOptions() => _options = CreateOptions();
+	public static void ResetOptions()
+	{
+		lock (_gate)
+		{
+			_options = CreateOptions();
+			_version = ContentTypeRegistry.Version;
+		}
+	}
 
 	public static TDef? Deserialize<TDef>(string toml) where TDef : ContentDef
-		=> TomlSerializer.Deserialize<TDef>(toml, _options);
+		=> TomlSerializer.Deserialize<TDef>(toml, CurrentOptions);
 
-	public static string Serialize(ContentDef def) => TomlSerializer.Serialize(def, _options);
+	public static string Serialize(ContentDef def) => TomlSerializer.Serialize(def, CurrentOptions);
+
+	private static TomlSerializerOptions CurrentOptions
+	{
+		get
+		{
+			var version = ContentTypeRegistry.Version;
+			if (version == Volatile.Read(ref _version)) return _options;
+
+			lock (_gate)
+			{
+				if (version != _version)
+				{
+					_options = CreateOptions();
+					_version = version;
+				}
+
+				return _options;
+			}
+		}
+	}
 
 	private static TomlSerializerOptions CreateOptions()
 	{

@@ -23,7 +23,15 @@ public sealed class SceneManager
 	public void Attach(IGameWindow window)
 	{
 		ArgumentNullException.ThrowIfNull(window);
-		_context ??= new SceneContext(window, this);
+
+		if (_context is { } attached)
+		{
+			if (!ReferenceEquals(attached.Window, window))
+				throw new InvalidOperationException("The scene manager is already attached to another window.");
+			return;
+		}
+
+		_context = new SceneContext(window, this);
 	}
 
 	public void Push(IScene scene)
@@ -134,7 +142,17 @@ public sealed class SceneManager
 	private void Enter(IScene scene, IScene? previous, SceneChangeKind kind)
 	{
 		_scenes.Add(scene);
-		scene.Enter(Context);
+
+		try
+		{
+			scene.Enter(Context);
+		}
+		catch
+		{
+			_scenes.RemoveAt(_scenes.Count - 1);
+			throw;
+		}
+
 		EventBus.Publish(new SceneChangedEvent(kind, previous, scene));
 	}
 

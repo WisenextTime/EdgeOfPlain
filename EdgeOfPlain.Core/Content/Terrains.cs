@@ -5,11 +5,12 @@ namespace EdgeOfPlain.Core.Content;
 
 internal static class Terrains
 {
-	public static TerrainDef Ground => new("ground")
+	public static TerrainDef Ground { get; } = new("ground")
 	{
 		Passage = TerrainDef.PassageMask.Air | TerrainDef.PassageMask.Ground,
 	};
-	public static TerrainDef Water => new("water")
+
+	public static TerrainDef Water { get; } = new("water")
 	{
 		Passage = TerrainDef.PassageMask.Water | TerrainDef.PassageMask.Air,
 	};

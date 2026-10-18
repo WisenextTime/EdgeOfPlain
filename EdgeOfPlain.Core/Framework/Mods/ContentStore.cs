@@ -11,30 +11,59 @@ public static class ContentStore
 	private static readonly Dictionary<string, ContentDef> _byId = new(StringComparer.Ordinal);
 	private static FrozenDictionary<string, ContentDef>? _frozen;
 
+	public static bool IsSealed => _frozen is not null;
+
+	public static int Count => _frozen?.Count ?? _byId.Count;
+
 	internal static void Add(ContentDef def)
 	{
-		if (_frozen is not null) throw new InvalidOperationException("content store is already sealed");
+		ArgumentNullException.ThrowIfNull(def);
+		ThrowIfSealed();
 
-		if (!_byId.TryAdd(def.Id, def)) throw new InvalidOperationException($"duplicate content id '{def.Id}'");
+		if (!_byId.TryAdd(def.Id, def))
+			throw new InvalidOperationException($"Content id '{def.Id}' is already registered");
 	}
 
-	internal static void Seal() => _frozen = _byId.ToFrozenDictionary(StringComparer.Ordinal);
+	internal static void Seal() => _frozen ??= _byId.ToFrozenDictionary(StringComparer.Ordinal);
 
-	public static ContentDef? Get(string id)
-		=> _frozen is not null
-			? _frozen.TryGetValue(id, out var def) ? def : null
-			: _byId.TryGetValue(id, out def) ? def : null;
-
-	internal static bool TryRemove(ContentDef def) => _byId.Remove(def.Id);
+	internal static bool TryRemove(ContentDef def)
+	{
+		ThrowIfSealed();
+		return _byId.Remove(def.Id);
+	}
 
 	internal static void Remove(ContentDef def)
 	{
-		if (!_byId.Remove(def.Id)) throw new Exception($"content {def.Id} is not register");
+		ThrowIfSealed();
+
+		if (!_byId.Remove(def.Id)) throw new InvalidOperationException($"Content '{def.Id}' is not registered");
 	}
 
+	public static void Reset()
+	{
+		_byId.Clear();
+		_frozen = null;
+	}
+
+	public static ContentDef? Get(string id)
+	{
+		ArgumentNullException.ThrowIfNull(id);
+
+		if (_frozen is not null)
+			return _frozen.TryGetValue(id, out var frozenDef) ? frozenDef : null;
+
+		return _byId.TryGetValue(id, out var def) ? def : null;
+	}
 
 	public static TDef? Get<TDef>(string id) where TDef : ContentDef => Get(id) as TDef;
 
 	public static IEnumerable<TDef> All<TDef>() where TDef : ContentDef
-		=> (_frozen is not null ? (IEnumerable<ContentDef>)_frozen.Values : _byId.Values).OfType<TDef>();
+		=> (_frozen is not null
+			? (IEnumerable<ContentDef>)_frozen.Values
+			: _byId.Values.ToArray()).OfType<TDef>();
+
+	private static void ThrowIfSealed()
+	{
+		if (_frozen is not null) throw new InvalidOperationException("Content store is already sealed");
+	}
 }

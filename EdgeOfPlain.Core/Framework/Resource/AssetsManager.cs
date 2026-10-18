@@ -101,7 +101,7 @@ public static class AssetsManager
 			return;
 		}
 
-		saver!(stream, resource);
+		saver?.Invoke(stream, resource);
 	}
 
 	private static ResourceOperator<T> Operator<T>()

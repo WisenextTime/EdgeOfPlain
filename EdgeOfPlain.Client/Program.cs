@@ -23,7 +23,7 @@ public class Program : Launcher
 
 	private static void Main()
 	{
-		var launcher = new Program();
+		using var launcher = new Program();
 		launcher.Init();
 
 		using var window = new GameWindow(1280, 720, "Edge of Plain");

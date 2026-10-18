@@ -1,0 +1,5 @@
+type = "tileset"
+id = "probe"
+
+[tileData."0"]
+terrain = "water"

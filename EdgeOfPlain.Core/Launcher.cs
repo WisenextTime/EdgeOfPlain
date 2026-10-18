@@ -11,13 +11,15 @@ using EdgeOfPlain.Core.Framework.Time;
 
 namespace EdgeOfPlain.Core;
 
-public abstract class Launcher
+public abstract class Launcher : IDisposable
 {
 	public const string AssetsHead = "assets";
 	public const string DataHead = "data";
 	public const string ModHead = "mod";
 
 	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
+	private bool _initialized;
+	private bool _disposed;
 
 	protected abstract FileSystem BaseAssetsSystem { get; }
 	protected abstract string DataDirectory { get; }
@@ -26,12 +28,15 @@ public abstract class Launcher
 	protected ModFileSystem AssetFileSystem { get; } = new();
 	protected ModLoader Mods { get; private set; } = null!;
 
-	public SceneManager Scenes { get; } = new();
-	public InputState Input { get; } = new();
-	public GameLoop Loop { get; private set; } = null!;
+	protected SceneManager Scenes { get; } = new();
+	protected InputState Input { get; } = new();
+	protected GameLoop Loop { get; private set; } = null!;
 
 	protected void Init()
 	{
+		if (_initialized) throw new InvalidOperationException("The launcher has already been initialized.");
+		_initialized = true;
+
 		InitFileSystems();
 		InitResourceOperators();
 		LoadModData();
@@ -57,6 +62,17 @@ public abstract class Launcher
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
 	}
 
+	public void Dispose()
+	{
+		if (_disposed) return;
+		_disposed = true;
+
+		Mods?.Dispose();
+		EventBus.Clear();
+		AssetsManager.Clear();
+		FileIO.Clear();
+	}
+
 	protected virtual ColorF ClearColor => ColorF.Black;
 
 	protected virtual bool PumpsEventsInLoop => true;
@@ -78,33 +94,40 @@ public abstract class Launcher
 		var pipeline = CreatePipeline(window);
 		var previousSize = window.Size;
 
-		while (window.IsOpen)
+		try
 		{
-			Input.BeginFrame();
-
-			if (PumpsEventsInLoop)
+			while (window.IsOpen)
 			{
-				window.PollEvents();
-				Input.ApplyPending();
+				Input.BeginFrame();
+
+				if (PumpsEventsInLoop)
+				{
+					window.PollEvents();
+					Input.ApplyPending();
+				}
+
+				var size = window.Size;
+				if (size != previousSize)
+				{
+					EventBus.Publish(new WindowResizedEvent(previousSize, size));
+					previousSize = size;
+				}
+
+				Loop.BeginFrame();
+
+				Scenes.HandleInput(Input);
+				while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
+
+				window.Clear(ClearColor);
+				pipeline.Begin();
+				Scenes.Draw(pipeline, Loop.RenderTime);
+				pipeline.End();
+				window.Present();
 			}
-
-			var size = window.Size;
-			if (size != previousSize)
-			{
-				EventBus.Publish(new WindowResizedEvent(previousSize, size));
-				previousSize = size;
-			}
-
-			Loop.BeginFrame();
-
-			Scenes.HandleInput(Input);
-			while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
-
-			window.Clear(ClearColor);
-			pipeline.Begin();
-			Scenes.Draw(pipeline, Loop.RenderTime);
-			pipeline.End();
-			window.Present();
+		}
+		finally
+		{
+			(pipeline as IDisposable)?.Dispose();
 		}
 	}
 

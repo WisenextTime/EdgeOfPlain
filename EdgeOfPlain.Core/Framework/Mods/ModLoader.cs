@@ -10,17 +10,23 @@ namespace EdgeOfPlain.Core.Framework.Mods;
 public sealed class ModLoader(ModFileSystem assets) : IDisposable
 {
 	private readonly List<ModPackage> _packages = [];
-	private readonly List<(IMod Mod, ModPackage Package)> _mods = [];
+	private readonly List<(Mod Mod, ModPackage Package)> _mods = [];
 	private readonly List<ModLoadContext> _contexts = [];
+	private bool _discovered;
+	private bool _committed;
+	private bool _disposed;
 
-	public string CacheRoot { get; init; } = $"{Launcher.DataHead}://cache";
+	public string CacheRoot { get; init; } = $"{Launcher.DataHead}://Cache";
 
 	public IReadOnlyList<ModPackage> Packages => _packages;
 
-	public IReadOnlyList<IMod> Mods => _mods.Select(entry => entry.Mod).ToArray();
+	public IReadOnlyList<Mod> Mods => [.. _mods.Select(entry => entry.Mod)];
 
 	public void Discover()
 	{
+		if (_discovered) throw new InvalidOperationException("Mod discovery has already run.");
+		_discovered = true;
+
 		if (!FileIO.DirectoryExists($"{Launcher.ModHead}://"))
 		{
 			LogUtils.LogMessage($"Mod directory does not exist, no mod was loaded.", LogUtils.LogType.Warning);
@@ -37,7 +43,7 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 		{
 			try
 			{
-				LoadPackage($"{Launcher.ModHead}://{entry.Path}");
+				LoadPackage(entry.Path);
 			}
 			catch (Exception e)
 			{
@@ -48,7 +54,25 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 
 	public void Commit()
 	{
-		ModAssets.MountAll(assets, _packages);
+		if (_committed) throw new InvalidOperationException("Mods have already been committed.");
+		_committed = true;
+
+		var rejected = ModAssets.MountAll(assets, _packages);
+		if (rejected.Count > 0)
+		{
+			LogUtils.LogMessage(
+				$"These mods will not be loaded because their assets could not be mounted: {string.Join(", ", rejected)}",
+				LogUtils.LogType.Error);
+
+			foreach (var package in _packages.Where(package => rejected.Contains(package.ModId)))
+			{
+				foreach (var entry in _mods.Where(entry => ReferenceEquals(entry.Package, package)).ToArray())
+				{
+					ModManager.UnregisterMod(entry.Mod);
+					_mods.Remove(entry);
+				}
+			}
+		}
 
 		ModManager.LoadAllMods();
 
@@ -68,12 +92,19 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 
 	public void Dispose()
 	{
+		if (_disposed) return;
+		_disposed = true;
+
 		foreach (var context in _contexts) context.Unload();
 		_contexts.Clear();
 
 		foreach (var package in _packages) package.Dispose();
 		_packages.Clear();
 		_mods.Clear();
+
+		ModManager.Reset();
+		ContentStore.Reset();
+		ContentTypeRegistry.Reset();
 	}
 
 	private void LoadPackage(string sourcePath)
@@ -84,25 +115,27 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 				$"'{Launcher.ModHead}://' is not backed by a physical file system, so mod packages cannot be opened from it.");
 
 		var package = ModPackage.Open(zipPath);
+		var contextCount = _contexts.Count;
+
 		try
 		{
 			var info = package.Info
 				?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
 
 			var directory = ModExtractor.Extract(package, CacheRoot);
-			IReadOnlyList<IMod> mods = [];
+			IReadOnlyList<Mod> mods = [];
 
 			if (directory is not null)
 			{
 				mods = ModEntryPoints.Create(package.ModId, directory, _contexts, out var hasManagedAssemblies);
 				if (hasManagedAssemblies && mods.Count == 0)
 					throw new InvalidDataException(
-						$"'{Path.GetFileName(zipPath)}' contains managed assemblies but no {nameof(IMod)} implementation.");
+						$"'{Path.GetFileName(zipPath)}' contains managed assemblies but no {nameof(Mod)} implementation.");
 			}
 
-			if (mods.Count == 0) mods = [new TomlMod(package)];
+			if (mods.Count == 0) mods = [new Mod()];
 
-			var registered = new List<IMod>();
+			var registered = new List<Mod>();
 			try
 			{
 				foreach (var mod in mods)
@@ -122,6 +155,13 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 		}
 		catch
 		{
+			while (_contexts.Count > contextCount)
+			{
+				var extra = _contexts[^1];
+				_contexts.RemoveAt(_contexts.Count - 1);
+				extra.Unload();
+			}
+
 			package.Dispose();
 			throw;
 		}

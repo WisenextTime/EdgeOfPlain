@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using EdgeOfPlain.Core.Content;
+using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Utils;
 
@@ -10,23 +12,26 @@ namespace EdgeOfPlain.Core.Framework.Mods;
 
 public static class ModManager
 {
-	private static readonly List<IMod> _registeredMods = [];
-	private static Dictionary<IMod, ModInfo> _infos = [];
+	public const string TomlContentsDirectory = "Contents";
+	private static readonly List<Mod> _registeredMods = [];
+	private static readonly Dictionary<Mod, ModInfo> _infos = [];
+	private static readonly List<Mod> _loadedMods = [];
+	private static readonly ReadOnlyCollection<Mod> _loadedModsView = _loadedMods.AsReadOnly();
 	public static bool IsLoaded { get; private set; }
 	private static readonly IReadOnlySet<string> _internalRetentionIds = ModFileSystem.ReservedNamespaces;
 
-	public static IReadOnlyList<IMod> LoadedMods => _loadedMods.AsReadOnly();
-	private static readonly List<IMod> _loadedMods = [];
+	public static IReadOnlyList<Mod> LoadedMods => _loadedModsView;
 
-	public static void RegisterMod(IMod mod, ModInfo info)
+	public static void RegisterMod(Mod mod, ModInfo info)
 	{
 		CheckLoaded();
 		ArgumentNullException.ThrowIfNull(mod);
-		if (string.IsNullOrEmpty(info.Id)) throw new Exception("Mod must have a non-empty id.");
+		if (string.IsNullOrEmpty(info.Id)) throw new ArgumentException("Mod must have a non-empty id.", nameof(info));
 		if (_internalRetentionIds.Contains(info.Id))
-			throw new Exception($"Mod {info.Id} uses a internal retention id.");
+			throw new InvalidOperationException($"Mod '{info.Id}' uses an internal reserved id");
 		if (_registeredMods.Exists(registered => string.Equals(registered.ModInfo.Id, info.Id, StringComparison.Ordinal)))
-			throw new Exception($"Mod {info.Id} has already existed.");
+			throw new InvalidOperationException($"Mod '{info.Id}' has already been registered");
+
 		_infos.Add(mod, info);
 		_registeredMods.Add(mod);
 	}
@@ -35,6 +40,23 @@ public static class ModManager
 	{
 		CheckLoaded();
 		IsLoaded = true;
+		LoadAssemblyMods();
+		ContentSerializer.ResetOptions();
+		LoadTomlMods();
+		ContentStore.Seal();
+	}
+
+	public static void Reset()
+	{
+		_registeredMods.Clear();
+		_infos.Clear();
+		_loadedMods.Clear();
+		IsLoaded = false;
+	}
+
+	private static void LoadAssemblyMods()
+	{
+
 		var order = BuildLoadOrder();
 		foreach (var current in order)
 		{
@@ -67,10 +89,36 @@ public static class ModManager
 			context.Dispose();
 			if (!failed) _loadedMods.Add(current);
 		}
-		ContentStore.Seal();
 	}
 
-	private static string? FindUnloadedDependency(IMod mod)
+	private static void LoadTomlMods()
+	{
+		foreach (var mod in _loadedMods)
+		{
+			var directory = $"{Launcher.AssetsHead}://{mod.ModInfo.Id}/{TomlContentsDirectory}/";
+
+			foreach (var toml in FileIO.EnumerateFiles(directory, "*.toml", SearchOption.AllDirectories))
+			{
+				try
+				{
+					var text = FileIO.ReadAllText(toml);
+					var newContent = ContentSerializer.Deserialize<ContentDef>(text)
+						?? throw new InvalidDataException("the file does not describe any content");
+
+					newContent.SourceMod = mod.ModInfo;
+					ContentStore.Add(newContent);
+				}
+				catch (Exception e)
+				{
+					LogUtils.LogMessage(
+						$"Mod '{mod.ModInfo.Id}': failed to load content '{toml}': {e.Message}",
+						LogUtils.LogType.Error);
+				}
+			}
+		}
+	}
+
+	private static string? FindUnloadedDependency(Mod mod)
 	{
 		var dependence = mod.ModInfo.Dependence;
 		return dependence is null
@@ -84,22 +132,22 @@ public static class ModManager
 
 	private static void CheckLoaded()
 	{
-		if (IsLoaded) throw new Exception("Mods are all loaded, could not operate ContentLoader any more.");
+		if (IsLoaded) throw new InvalidOperationException("Mods are already loaded, the mod manager can not be changed any more.");
 	}
 
-	private static ReadOnlyCollection<IMod> BuildLoadOrder()
+	private static ReadOnlyCollection<Mod> BuildLoadOrder()
 	{
 		var coreMod = ResolveCoreMod();
 
-		var byId = new Dictionary<string, IMod>(_registeredMods.Count + 1, StringComparer.Ordinal);
+		var byId = new Dictionary<string, Mod>(_registeredMods.Count + 1, StringComparer.Ordinal);
 		foreach (var mod in _registeredMods) byId[mod.ModInfo.Id] = mod;
 		byId[coreMod.ModInfo.Id] = coreMod;
 
-		var ordered = new List<IMod>(_registeredMods.Count + 1) { coreMod };
+		var ordered = new List<Mod>(_registeredMods.Count + 1) { coreMod };
 		var placed = new HashSet<string>(StringComparer.Ordinal) { coreMod.ModInfo.Id };
 		var skipped = new HashSet<string>(StringComparer.Ordinal);
 
-		var pending = new List<IMod>(_registeredMods.Count);
+		var pending = new List<Mod>(_registeredMods.Count);
 		foreach (var mod in _registeredMods.Where(mod => !ReferenceEquals(mod, coreMod)))
 		{
 			if (string.Equals(mod.ModInfo.Id, coreMod.ModInfo.Id, StringComparison.Ordinal))
@@ -168,10 +216,10 @@ public static class ModManager
 	}
 
 	private static DependencyState GetDependencyState(
-		IMod mod,
+		Mod mod,
 		HashSet<string> placed,
 		HashSet<string> skipped,
-		Dictionary<string, IMod> byId,
+		Dictionary<string, Mod> byId,
 		out string? problem)
 	{
 		problem = null;
@@ -217,18 +265,18 @@ public static class ModManager
 		return waiting ? DependencyState.Waiting : DependencyState.Satisfied;
 	}
 
-	internal static void UnregisterMod(IMod mod)
+	internal static void UnregisterMod(Mod mod)
 	{
 		_infos.Remove(mod);
 		_registeredMods.Remove(mod);
 	}
 
-	public static ModInfo GetModInfo(IMod mod)
+	public static ModInfo GetModInfo(Mod mod)
 		=> _infos.TryGetValue(mod, out var info)
 			? info
 			: throw new InvalidOperationException($"Mod '{mod.GetType().FullName}' has not been registered.");
 
-	private static int CompareModIds(IMod left, IMod right)
+	private static int CompareModIds(Mod left, Mod right)
 		=> string.Compare(left.ModInfo.Id, right.ModInfo.Id, StringComparison.Ordinal);
 
 	private enum DependencyState { Satisfied, Waiting, Broken }

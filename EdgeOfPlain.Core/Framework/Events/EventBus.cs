@@ -31,16 +31,41 @@ public static class EventBus
 
 	public static void Publish<T>(T message) where T : notnull
 	{
-		if (!_handlers.TryGetValue(typeof(T), out var boxed)) return;
-		var actions = ((Handlers<T>)boxed).Actions;
-		foreach (var t in actions) t(message);
-		
+		Action<T>[] actions;
+
+		lock (_gate)
+		{
+			if (!_handlers.TryGetValue(typeof(T), out var boxed)) return;
+			actions = ((Handlers<T>)boxed).Actions;
+		}
+
+		List<Exception>? failures = null;
+
+		foreach (var action in actions)
+		{
+			try
+			{
+				action(message);
+			}
+			catch (Exception exception)
+			{
+				(failures ??= []).Add(exception);
+			}
+		}
+
+		if (failures is not null)
+			throw new AggregateException($"One or more handlers of '{typeof(T).Name}' failed.", failures);
 	}
 
-	public static bool HasSubscribers<T>() => _handlers.ContainsKey(typeof(T));
+	public static bool HasSubscribers<T>() where T : notnull
+	{
+		lock (_gate) return _handlers.ContainsKey(typeof(T));
+	}
 
-	public static int SubscriberCount<T>() where T : notnull => 
-		_handlers.TryGetValue(typeof(T), out var boxed) ? ((Handlers<T>)boxed).Actions.Length : 0;
+	public static int SubscriberCount<T>() where T : notnull
+	{
+		lock (_gate) return _handlers.TryGetValue(typeof(T), out var boxed) ? ((Handlers<T>)boxed).Actions.Length : 0;
+	}
 
 	public static void Clear()
 	{
@@ -75,6 +100,7 @@ public static class EventBus
 		public Action<T>[] Actions = [];
 	}
 }
+
 public readonly struct EventSubscription(Action? unsubscribe) : IDisposable
 {
 	private readonly Action? _unsubscribe = unsubscribe;

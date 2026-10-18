@@ -4,13 +4,16 @@ using EdgeOfPlain.Core.Framework.Mods;
 
 namespace EdgeOfPlain.Core.Content;
 
-public class Base : IMod
+public class Base : Mod
 {
-	public ModInfo ModInfo { get; } = new("base", new Version(1, 0, 0), "WisenextTime", "The base pack of game.");
+	public override ModInfo ModInfo { get; } = new("base", new Version(1, 0, 0), "WisenextTime", "The base pack of game.");
+
+	public override Type[]? RegisterTypes { get; protected set; } = [
+		typeof(TerrainDef),
+		typeof(TilesetDef), 
+		typeof(TileRendererDef)];
 	
-	public Type[]? RegisterTypes { get; } = [typeof(TerrainDef)];
-	
-	public void InitMod(ModContext context)
+	public override void InitMod(ModContext context)
 	{
 		Terrains.RegisterAll(context);
 	}

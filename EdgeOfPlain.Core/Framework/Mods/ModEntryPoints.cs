@@ -9,7 +9,7 @@ namespace EdgeOfPlain.Core.Framework.Mods;
 
 internal static class ModEntryPoints
 {
-	public static IReadOnlyList<IMod> Create(
+	public static IReadOnlyList<Mod> Create(
 		string modId,
 		string directory,
 		List<ModLoadContext> contexts,
@@ -25,7 +25,7 @@ internal static class ModEntryPoints
 		var context = new ModLoadContext(modId, directory, assemblies);
 		contexts.Add(context);
 
-		var mods = new List<IMod>();
+		var mods = new List<Mod>();
 		foreach (var assemblyPath in assemblies)
 		{
 			Assembly assembly;
@@ -44,11 +44,11 @@ internal static class ModEntryPoints
 			foreach (var type in GetTypes(assembly, modId))
 			{
 				if (type is not { IsAbstract: false, IsInterface: false }) continue;
-				if (!typeof(IMod).IsAssignableFrom(type)) continue;
+				if (!typeof(Mod).IsAssignableFrom(type)) continue;
 
 				try
 				{
-					if (Activator.CreateInstance(type) is IMod mod) mods.Add(mod);
+					if (Activator.CreateInstance(type) is Mod mod) mods.Add(mod);
 				}
 				catch (Exception e)
 				{

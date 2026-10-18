@@ -25,6 +25,7 @@ public sealed class InputState : IInputState
 	private Vector2 _position;
 	private Vector2 _delta;
 	private float _scroll;
+	private bool _hasPointer;
 
 	public Vector2 MousePosition => _position;
 
@@ -203,8 +204,11 @@ public sealed class InputState : IInputState
 	private void SetMousePosition(float x, float y)
 	{
 		var next = new Vector2(x, y);
-		_delta += next - _position;
+
+		if (_hasPointer) _delta += next - _position;
+
 		_position = next;
+		_hasPointer = true;
 	}
 
 	private void ClearHeld()
@@ -218,6 +222,7 @@ public sealed class InputState : IInputState
 
 		_delta = Vector2.Zero;
 		_scroll = 0f;
+		_hasPointer = false;
 	}
 
 	private enum InputEventKind

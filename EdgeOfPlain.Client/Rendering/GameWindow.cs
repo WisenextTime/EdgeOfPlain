@@ -14,6 +14,7 @@ public sealed class GameWindow : IGameWindow, IDisposable
 	private readonly RenderWindow _window;
 	private Rectangle _viewport;
 	private bool _viewportDirty;
+	private bool _viewportIsFull = true;
 	private Camera2D? _camera;
 
 	public GameWindow(uint width, uint height, string title)
@@ -22,7 +23,16 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		_window.SetFramerateLimit(60);
 		_window.Closed += (_, _) => _window.Close();
 
-		_window.Resized += (_, _) => _viewportDirty = true;
+		_window.Resized += (_, _) =>
+		{
+			if (_viewportIsFull)
+			{
+				var size = _window.Size;
+				_viewport = new Rectangle(0, 0, (int)size.X, (int)size.Y);
+			}
+
+			_viewportDirty = true;
+		};
 
 		_window.KeyPressed += (_, e) => KeyPressed?.Invoke(e.Code);
 		_window.KeyReleased += (_, e) => KeyReleased?.Invoke(e.Code);
@@ -69,6 +79,8 @@ public sealed class GameWindow : IGameWindow, IDisposable
 		set
 		{
 			_viewport = value;
+			var size = Size;
+			_viewportIsFull = value.X == 0 && value.Y == 0 && value.Width == size.Width && value.Height == size.Height;
 			ApplyView();
 		}
 	}

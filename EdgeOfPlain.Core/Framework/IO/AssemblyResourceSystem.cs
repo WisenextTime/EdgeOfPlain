@@ -78,17 +78,14 @@ public sealed class AssemblyResourceSystem : FileSystem
 	private bool TryMap(string resourceName, out string path)
 	{
 		path = string.Empty;
-
 		var remainder = resourceName;
-		if (Prefix.Length != 0)
-		{
-			if (!resourceName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)) return false;
-			if (resourceName.Length <= Prefix.Length + 1) return false;
-			var separator = resourceName[Prefix.Length];
-			if (separator is not ('.' or '/')) return false;
+		if (Prefix.Length == 0) return TryToPath(remainder, out path);
+		if (!resourceName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)) return false;
+		if (resourceName.Length <= Prefix.Length + 1) return false;
+		var separator = resourceName[Prefix.Length];
+		if (separator is not ('.' or '/')) return false;
 
-			remainder = resourceName[(Prefix.Length + 1)..];
-		}
+		remainder = resourceName[(Prefix.Length + 1)..];
 
 		return TryToPath(remainder, out path);
 	}
@@ -100,7 +97,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 			return TryNormalize(remainder.Replace('\\', '/'), out path);
 
 		var segments = remainder.Split('.', StringSplitOptions.RemoveEmptyEntries);
-		if (segments.Length < 2) return false;
+		if (segments.Length < 2) return TryNormalize(remainder, out path);
 
 		var file = $"{segments[^2]}.{segments[^1]}";
 		var folders = string.Join('/', segments[..^2]);
