@@ -11,12 +11,15 @@ public sealed class AssemblyResourceSystem : FileSystem
 {
 	public const string DefaultAssetFolderName = "Assets";
 
+	private readonly Func<string, bool>? _include;
 	private readonly FrozenDictionary<string, string> _resources;
 	private readonly FrozenSet<string> _directories;
 	private readonly FrozenDictionary<string, FileSystemEntry[]> _children;
-	public AssemblyResourceSystem(Assembly assembly, string? prefix = null)
+	public AssemblyResourceSystem(Assembly assembly, string? prefix = null, Func<string, bool>? include = null)
 	{
 		ArgumentNullException.ThrowIfNull(assembly);
+
+		_include = include;
 
 		Assembly = assembly;
 		Prefix = (prefix ?? $"{assembly.GetName().Name}.{DefaultAssetFolderName}").Trim('.', ' ');
@@ -79,7 +82,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 	{
 		path = string.Empty;
 		var remainder = resourceName;
-		if (Prefix.Length == 0) return TryToPath(remainder, out path);
+		if (Prefix.Length == 0) return TryToPath(remainder, out path) && (_include is null || _include(path));
 		if (!resourceName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)) return false;
 		if (resourceName.Length <= Prefix.Length + 1) return false;
 		var separator = resourceName[Prefix.Length];
@@ -87,7 +90,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 
 		remainder = resourceName[(Prefix.Length + 1)..];
 
-		return TryToPath(remainder, out path);
+		return TryToPath(remainder, out path) && (_include is null || _include(path));
 	}
 	private static bool TryToPath(string remainder, out string path)
 	{

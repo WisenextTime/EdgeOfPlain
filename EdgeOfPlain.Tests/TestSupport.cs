@@ -35,19 +35,12 @@ internal sealed class TempDirectory : IDisposable
 	}
 }
 
-internal sealed class MemoryFileSystem : FileSystem
+internal sealed class MemoryFileSystem(bool caseSensitive = true) : FileSystem
 {
-	private readonly Dictionary<string, byte[]> _files;
+	private readonly Dictionary<string, byte[]> _files = new(caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
 	private readonly HashSet<string> _directories = new(StringComparer.Ordinal) { string.Empty };
-	private readonly bool _caseSensitive;
 
-	public MemoryFileSystem(bool caseSensitive = true)
-	{
-		_caseSensitive = caseSensitive;
-		_files = new Dictionary<string, byte[]>(caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
-	}
-
-	public override bool IsCaseSensitive => _caseSensitive;
+	public override bool IsCaseSensitive { get; } = caseSensitive;
 
 	public override bool IsReadOnly => false;
 

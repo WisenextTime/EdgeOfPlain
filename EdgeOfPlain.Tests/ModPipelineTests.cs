@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,12 +12,12 @@ namespace EdgeOfPlain.Tests;
 
 public sealed class ModPipelineTests
 {
-	private static readonly Lock Gate = new();
+	private static readonly Lock _gate = new();
 	private static Pipeline? _pipeline;
 
 	private static Pipeline Run()
 	{
-		lock (Gate)
+		lock (_gate)
 		{
 			return _pipeline ??= Execute();
 		}

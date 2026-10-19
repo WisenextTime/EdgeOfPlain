@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using Xunit;
@@ -133,8 +131,8 @@ public sealed class ModExtractorTests
 			("mod.toml", ZipFactory.Manifest),
 			("lib/a.dll", "fake"),
 			("Asset/a.txt", "asset"));
-
-		FileIO.RegisterFileSystem(Head, () => new PhysicalFileSystem(Path.Combine(directory.Path, "cache")));
+		var path = directory.Path;
+		FileIO.RegisterFileSystem(Head, () => new PhysicalFileSystem(Path.Combine(path, "cache")));
 		try
 		{
 			using var package = ModPackage.Open(zip);
@@ -159,8 +157,8 @@ public sealed class ModExtractorTests
 		var zip = ZipFactory.Create(directory, "a.zip",
 			("mod.toml", ZipFactory.Manifest),
 			("Asset/a.txt", "asset"));
-
-		FileIO.RegisterFileSystem(Head + "2", () => new PhysicalFileSystem(Path.Combine(directory.Path, "cache")));
+		var path = directory.Path;
+		FileIO.RegisterFileSystem(Head + "2", () => new PhysicalFileSystem(Path.Combine(path, "cache")));
 		try
 		{
 			using var package = ModPackage.Open(zip);

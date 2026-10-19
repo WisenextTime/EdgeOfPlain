@@ -19,6 +19,7 @@ public abstract class Launcher : IDisposable
 
 	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
 	private bool _initialized;
+	private bool _contentLoaded;
 	private bool _disposed;
 
 	protected abstract FileSystem BaseAssetsSystem { get; }
@@ -39,7 +40,19 @@ public abstract class Launcher : IDisposable
 
 		InitFileSystems();
 		InitResourceOperators();
-		LoadModData();
+	}
+
+	protected void LoadContent(Action<string>? progress = null)
+	{
+		if (!_initialized) throw new InvalidOperationException("Init() must run before LoadContent().");
+		if (_contentLoaded) throw new InvalidOperationException("Content has already been loaded.");
+		_contentLoaded = true;
+		Mods = new ModLoader(AssetFileSystem);
+		progress?.Invoke("Loading…");
+		Mods.Discover();
+		progress?.Invoke($"Loading all {Mods.Packages.Count} modpacks…");
+		Mods.Commit();
+		progress?.Invoke($"Already loaded {Mods.Mods.Count} modpacks");
 	}
 
 	protected virtual void InitFileSystems()
@@ -48,13 +61,6 @@ public abstract class Launcher : IDisposable
 		FileIO.RegisterFileSystem(AssetsHead, AssetFileSystem);
 		FileIO.RegisterFileSystem(DataHead, new PhysicalFileSystem(DataDirectory));
 		FileIO.RegisterFileSystem(ModHead, new PhysicalFileSystem(ModDirectory));
-	}
-
-	protected virtual void LoadModData()
-	{
-		Mods = new ModLoader(AssetFileSystem);
-		Mods.Discover();
-		Mods.Commit();
 	}
 
 	protected virtual void InitResourceOperators()
@@ -67,7 +73,7 @@ public abstract class Launcher : IDisposable
 		if (_disposed) return;
 		_disposed = true;
 
-		Mods?.Dispose();
+		Mods.Dispose();
 		EventBus.Clear();
 		AssetsManager.Clear();
 		FileIO.Clear();

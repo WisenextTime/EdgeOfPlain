@@ -12,7 +12,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="Assets\**" />
-	  <EmbeddedResource Include="Assets\**" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
+	  <EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Math\" />

@@ -102,14 +102,14 @@ public sealed class GameLoopTests
 
 public sealed class Camera2DTests
 {
-	private static readonly Vector2 Pixels = new(1280, 720);
+	private static readonly Vector2 _pixels = new(1280, 720);
 
 	[Fact]
 	public void DefaultCameraMapsWorldOriginToTopLeftInPixelSpace()
 	{
 		var camera = Camera2D.Default;
 
-		Assert.Equal(new Vector2(640, 360), camera.WorldToScreen(Vector2.Zero, Pixels));
+		Assert.Equal(new Vector2(640, 360), camera.WorldToScreen(Vector2.Zero, _pixels));
 	}
 
 	[Fact]
@@ -118,8 +118,8 @@ public sealed class Camera2DTests
 		var camera = new Camera2D(new Vector2(120, -40), 2.5f, 0.3f);
 		var world = new Vector2(17, 23);
 
-		var screen = camera.WorldToScreen(world, Pixels);
-		var restored = camera.ScreenToWorld(screen, Pixels);
+		var screen = camera.WorldToScreen(world, _pixels);
+		var restored = camera.ScreenToWorld(screen, _pixels);
 
 		Assert.Equal(world.X, restored.X, 3);
 		Assert.Equal(world.Y, restored.Y, 3);
@@ -130,7 +130,7 @@ public sealed class Camera2DTests
 	{
 		var camera = new Camera2D(Vector2.Zero, 2f);
 
-		Assert.Equal(new Vector2(640, 360), camera.WorldSize(Pixels));
+		Assert.Equal(new Vector2(640, 360), camera.WorldSize(_pixels));
 	}
 
 	[Fact]
@@ -138,7 +138,7 @@ public sealed class Camera2DTests
 	{
 		var camera = new Camera2D(new Vector2(100, 50), 2f);
 
-		var bounds = camera.CullingBounds(Pixels);
+		var bounds = camera.CullingBounds(_pixels);
 
 		Assert.Equal(-220f, bounds.Left, 3);
 		Assert.Equal(-130f, bounds.Top, 3);
@@ -151,7 +151,7 @@ public sealed class Camera2DTests
 	{
 		var camera = new Camera2D(Vector2.Zero, 1f, MathF.PI / 4f);
 
-		var bounds = camera.CullingBounds(Pixels);
+		var bounds = camera.CullingBounds(_pixels);
 
 		Assert.Equal(1414.2136f, bounds.Width, 1);
 		Assert.Equal(1414.2136f, bounds.Height, 1);
@@ -161,11 +161,11 @@ public sealed class Camera2DTests
 	public void CullingBounds_CoversEveryRotatedViewCorner()
 	{
 		var camera = new Camera2D(new Vector2(10, -20), 1.5f, 0.7f);
-		var half = camera.WorldSize(Pixels) / 2f;
+		var half = camera.WorldSize(_pixels) / 2f;
 		var cos = MathF.Cos(camera.Rotation);
 		var sin = MathF.Sin(camera.Rotation);
 
-		var bounds = camera.CullingBounds(Pixels);
+		var bounds = camera.CullingBounds(_pixels);
 
 		foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
 		{
@@ -182,8 +182,8 @@ public sealed class Camera2DTests
 	{
 		var camera = new Camera2D(Vector2.Zero, 0f);
 
-		Assert.Throws<ArgumentOutOfRangeException>(() => camera.WorldSize(Pixels));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new Camera2D(Vector2.Zero, float.NaN).WorldToScreen(default, Pixels));
+		Assert.Throws<ArgumentOutOfRangeException>(() => camera.WorldSize(_pixels));
+		Assert.Throws<ArgumentOutOfRangeException>(() => new Camera2D(Vector2.Zero, float.NaN).WorldToScreen(default, _pixels));
 	}
 
 	[Fact]
@@ -192,7 +192,7 @@ public sealed class Camera2DTests
 		var bounds = new RectangleF(0, 0, 5000, 4000);
 		var camera = new Camera2D(new Vector2(-100, -100));
 
-		var clamped = camera.ClampTo(bounds, Pixels);
+		var clamped = camera.ClampTo(bounds, _pixels);
 
 		Assert.Equal(640, clamped.Position.X);
 		Assert.Equal(360, clamped.Position.Y);
@@ -203,7 +203,7 @@ public sealed class Camera2DTests
 	{
 		var bounds = new RectangleF(0, 0, 100, 100);
 
-		var clamped = Camera2D.Default.ClampTo(bounds, Pixels);
+		var clamped = Camera2D.Default.ClampTo(bounds, _pixels);
 
 		Assert.Equal(50, clamped.Position.X);
 		Assert.Equal(50, clamped.Position.Y);
@@ -237,7 +237,7 @@ public sealed class EventBusTests
 		EventBus.Clear();
 		var calls = new List<int>();
 
-		using var first = EventBus.Subscribe<int>(value => calls.Add(value));
+		using var first = EventBus.Subscribe<int>(calls.Add);
 		using var second = EventBus.Subscribe<int>(value => calls.Add(value * 10));
 
 		EventBus.Publish(1);
@@ -266,13 +266,10 @@ public sealed class EventBusTests
 	{
 		EventBus.Clear();
 		var calls = 0;
-		Action<int> first = _ => calls++;
-		Action<int> second = _ => calls += 10;
-		Action<int> third = _ => calls += 100;
 
-		var a = EventBus.Subscribe(first);
-		using var b = EventBus.Subscribe(second);
-		using var c = EventBus.Subscribe(third);
+		var a = EventBus.Subscribe((Action<int>)First);
+		using var b = EventBus.Subscribe((Action<int>)Second);
+		using var c = EventBus.Subscribe((Action<int>)Third);
 
 		a.Dispose();
 		EventBus.Publish(0);
@@ -280,6 +277,11 @@ public sealed class EventBusTests
 
 		Assert.Equal(110, calls);
 		Assert.Equal(2, EventBus.SubscriberCount<int>());
+		return;
+
+		void First(int _) => calls++;
+		void Second(int _) => calls += 10;
+		void Third(int _) => calls += 100;
 	}
 
 	[Fact]

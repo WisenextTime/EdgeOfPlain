@@ -1,5 +1,4 @@
 using System;
-using EdgeOfPlain.Core.Framework.Events;
 using EdgeOfPlain.Core.Framework.Graphics;
 
 namespace EdgeOfPlain.Core.Framework.Scenes;

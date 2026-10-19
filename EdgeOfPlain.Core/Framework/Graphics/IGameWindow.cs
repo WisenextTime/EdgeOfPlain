@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using EdgeOfPlain.Core.Framework.Graphics;
 
 namespace EdgeOfPlain.Core.Framework.Graphics;
 

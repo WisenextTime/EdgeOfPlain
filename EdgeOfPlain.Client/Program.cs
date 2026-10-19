@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Scenes;
@@ -14,23 +13,28 @@ namespace EdgeOfPlain.Client;
 
 public class Program : Launcher
 {
+	private GameWindow? _window;
+	private UiFonts? _fonts;
+
 	protected override void InitResourceOperators()
 	{
 		base.InitResourceOperators();
 		AssetsManager.RegisterResourceOperator(ImageOperatorBuilder.Build);
 		AssetsManager.RegisterResourceOperator(TextureOperatorBuilder.Build);
 		AssetsManager.RegisterResourceOperator(ShaderOperatorBuilder.Build);
+		AssetsManager.RegisterResourceOperator(FontOperatorBuilder.Build);
 	}
 
 	private static void Main()
 	{
 		using var launcher = new Program();
-		launcher.Init();
-
 		using var window = new GameWindow(1280, 720, "Edge of Plain");
 
 		SfmlInput.Attach(window, launcher.Input);
-
+		launcher.Init();
+		using var fonts = new UiFonts();
+		launcher._window = window;
+		launcher._fonts = fonts;
 		launcher.RunWithEventPump(window);
 	}
 
@@ -39,9 +43,15 @@ public class Program : Launcher
 	protected override IRenderPipeline CreatePipeline(IGameWindow window)
 		=> new SpriteBatch(((GameWindow)window).Target, () => window.Camera);
 
-	protected override IScene CreateInitialScene() => new TestScene();
+	protected override IScene CreateInitialScene()
+		=> new LoadingScene(
+			LoadContent,
+			static () => new TestScene(),
+			_fonts ?? throw new InvalidOperationException("UI fonts were not initialised."),
+			_window?.Target ?? throw new InvalidOperationException("The window was not initialised."),
+			TimeSpan.FromSeconds(1));
 
-	protected override FileSystem BaseAssetsSystem => new AssemblyResourceSystem(Assembly.GetAssembly(typeof(Launcher))!);
+	protected override FileSystem BaseAssetsSystem => CoreAssets.Content;
 	protected override string DataDirectory
 		=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "EdgeOfPlain");
 	protected override string ModDirectory => Path.Combine(AppContext.BaseDirectory, "Mods");
