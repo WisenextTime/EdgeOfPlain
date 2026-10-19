@@ -22,6 +22,28 @@ public readonly record struct Camera2D(Vector2 Position, float Zoom = 1f, float 
 		return new RectangleF(Position.X - size.X / 2f, Position.Y - size.Y / 2f, size.X, size.Y);
 	}
 
+	/// <summary>
+	/// Axis-aligned world-space rectangle that fully contains the visible area.
+	/// Rotated views are conservatively expanded to their bounding box, so a point
+	/// inside the real view is always inside the returned rectangle.
+	/// </summary>
+	public RectangleF CullingBounds(Vector2 targetPixels)
+	{
+		var size = WorldSize(targetPixels);
+		var half = size / 2f;
+
+		if (Rotation == 0f)
+			return new RectangleF(Position.X - half.X, Position.Y - half.Y, size.X, size.Y);
+
+		var cos = MathF.Abs(MathF.Cos(Rotation));
+		var sin = MathF.Abs(MathF.Sin(Rotation));
+
+		var extentX = half.X * cos + half.Y * sin;
+		var extentY = half.X * sin + half.Y * cos;
+
+		return new RectangleF(Position.X - extentX, Position.Y - extentY, extentX * 2f, extentY * 2f);
+	}
+
 	public Vector2 WorldToScreen(Vector2 world, Vector2 targetPixels)
 	{
 		RequireZoom();

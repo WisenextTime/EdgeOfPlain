@@ -19,6 +19,7 @@ public class Program : Launcher
 		base.InitResourceOperators();
 		AssetsManager.RegisterResourceOperator(ImageOperatorBuilder.Build);
 		AssetsManager.RegisterResourceOperator(TextureOperatorBuilder.Build);
+		AssetsManager.RegisterResourceOperator(ShaderOperatorBuilder.Build);
 	}
 
 	private static void Main()
@@ -36,7 +37,7 @@ public class Program : Launcher
 	public void RunWithEventPump(IGameWindow window) => LaunchWithEventPump(window);
 
 	protected override IRenderPipeline CreatePipeline(IGameWindow window)
-		=> new TestRenderPipeline(((GameWindow)window).Target, () => window.Camera);
+		=> new SpriteBatch(((GameWindow)window).Target, () => window.Camera);
 
 	protected override IScene CreateInitialScene() => new TestScene();
 

@@ -14,5 +14,8 @@
 	  <None Remove="Assets\**" />
 	  <EmbeddedResource Include="Assets\**" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Math\" />
+	</ItemGroup>
 
 </Project>

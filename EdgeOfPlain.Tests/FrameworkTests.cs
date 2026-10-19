@@ -134,6 +134,50 @@ public sealed class Camera2DTests
 	}
 
 	[Fact]
+	public void CullingBounds_MatchesViewWhenUnrotated()
+	{
+		var camera = new Camera2D(new Vector2(100, 50), 2f);
+
+		var bounds = camera.CullingBounds(Pixels);
+
+		Assert.Equal(-220f, bounds.Left, 3);
+		Assert.Equal(-130f, bounds.Top, 3);
+		Assert.Equal(640f, bounds.Width, 3);
+		Assert.Equal(360f, bounds.Height, 3);
+	}
+
+	[Fact]
+	public void CullingBounds_ExpandsToContainRotatedView()
+	{
+		var camera = new Camera2D(Vector2.Zero, 1f, MathF.PI / 4f);
+
+		var bounds = camera.CullingBounds(Pixels);
+
+		Assert.Equal(1414.2136f, bounds.Width, 1);
+		Assert.Equal(1414.2136f, bounds.Height, 1);
+	}
+
+	[Fact]
+	public void CullingBounds_CoversEveryRotatedViewCorner()
+	{
+		var camera = new Camera2D(new Vector2(10, -20), 1.5f, 0.7f);
+		var half = camera.WorldSize(Pixels) / 2f;
+		var cos = MathF.Cos(camera.Rotation);
+		var sin = MathF.Sin(camera.Rotation);
+
+		var bounds = camera.CullingBounds(Pixels);
+
+		foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
+		{
+			var local = corner * half;
+			var world = camera.Position + new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos);
+
+			Assert.InRange(world.X, bounds.Left, bounds.Right);
+			Assert.InRange(world.Y, bounds.Top, bounds.Bottom);
+		}
+	}
+
+	[Fact]
 	public void NonPositiveZoomIsRejected()
 	{
 		var camera = new Camera2D(Vector2.Zero, 0f);
