@@ -36,6 +36,7 @@ internal static class ModInitializer
 		try
 		{
 			foreach (var registerType in registerTypes) ContentTypeRegistry.RegisterType(registerType);
+			mod.Preload();
 			mod.InitMod(context);
 			return true;
 		}
