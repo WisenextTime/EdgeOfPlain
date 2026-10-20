@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
+using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Resource;
 using SFML.Graphics;
@@ -9,13 +10,14 @@ using SFML.System;
 using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
-public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = null, Func<string, Shader>? shaderLoader = null)
+public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera2D>? camera = null)
 	: ISpriteBatch, IDisposable
 {
 	private const float DefaultQuadSize = 16f;
 
 	private readonly IRenderTarget _target = target ?? throw new ArgumentNullException(nameof(target));
-	private readonly Func<string, Shader> _shaderLoader = shaderLoader ?? (static path => AssetsManager.LoadResource<Shader>(path));
+	private readonly UiFonts _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
+	private readonly Func<string, Shader> _shaderLoader = static path => AssetsManager.LoadResource<Shader>(path);
 
 	private readonly Dictionary<string, Texture> _textures = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, Shader> _shaders = new(StringComparer.Ordinal);
@@ -25,6 +27,8 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 
 	private readonly Dictionary<GroupKey, Bucket> _buckets = [];
 	private readonly List<GroupKey> _activeKeys = [];
+	private readonly List<TextEntry> _texts = [];
+	private readonly Dictionary<uint, Text> _textCache = [];
 
 	private Vector2 _pixels;
 	private Camera2D? _appliedCamera;
@@ -61,6 +65,8 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		_lastTexturePath = null;
 		_lastTexture = null;
 		_lastBucket = null;
+
+		_texts.Clear();
 
 		var size = _target.Size;
 		_pixels = new Vector2(size.X, size.Y);
@@ -131,35 +137,55 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		bucket.Append(quad, metadata.Color);
 	}
 
+	public void DrawText(string text, int size, float x, float y, uint layer)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+
+		if (string.IsNullOrEmpty(text)) return;
+
+		var cameraSlot = camera is null ? -1 : SlotFor(camera());
+		_texts.Add(new TextEntry(text, (uint)size, x, y, layer, cameraSlot, _texts.Count));
+	}
+
 	public void End()
 	{
-		if (_activeKeys.Count == 0) return;
+		if (_activeKeys.Count == 0 && _texts.Count == 0) return;
 
-		_activeKeys.Sort(static (left, right) => Compare(left, right));
+		if (_activeKeys.Count > 1) _activeKeys.Sort(static (left, right) => Compare(left, right));
+		if (_texts.Count > 1) _texts.Sort(static (left, right) => CompareText(left, right));
 
-		foreach (var key in _activeKeys)
+		var textIndex = 0;
+
+		for (var index = 0; index < _activeKeys.Count; index++)
 		{
-			var bucket = _buckets[key];
-			if (bucket.Count == 0) continue;
+			var key = _activeKeys[index];
 
-			ApplyCamera(key.CameraSlot);
+			while (textIndex < _texts.Count && _texts[textIndex].Layer < key.Layer)
+				DrawTextItem(_texts[textIndex++]);
 
-			var states = RenderStates.Default;
-			states.Texture = key.Texture is null ? null : ResolveTexture(key.Texture);
-			states.Shader = key.Shader is null ? null : ResolveShader(key.Shader);
+			DrawGroup(key);
 
-			_target.Draw(bucket.Vertices, 0, (uint)bucket.Count, PrimitiveType.Triangles, states);
+			var lastOfLayer = index == _activeKeys.Count - 1 || _activeKeys[index + 1].Layer != key.Layer;
 
-			DrawCalls++;
-			DrawnSprites += bucket.Count / 6;
+			if (!lastOfLayer) continue;
+
+			while (textIndex < _texts.Count && _texts[textIndex].Layer == key.Layer)
+				DrawTextItem(_texts[textIndex++]);
 		}
+
+		while (textIndex < _texts.Count) DrawTextItem(_texts[textIndex++]);
+
+		_texts.Clear();
 	}
 
 	public void Dispose()
 	{
+		foreach (var text in _textCache.Values) text.Dispose();
 		foreach (var shader in _shaders.Values) shader.Dispose();
 		foreach (var texture in _textures.Values) texture.Dispose();
 
+		_textCache.Clear();
+		_texts.Clear();
 		_shaders.Clear();
 		_textures.Clear();
 		_buckets.Clear();
@@ -253,6 +279,56 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		});
 	}
 
+	private void DrawGroup(in GroupKey key)
+	{
+		var bucket = _buckets[key];
+		if (bucket.Count == 0) return;
+
+		ApplyCamera(key.CameraSlot);
+
+		var states = RenderStates.Default;
+		states.Texture = key.Texture is null ? null : ResolveTexture(key.Texture);
+		states.Shader = key.Shader is null ? null : ResolveShader(key.Shader);
+
+		_target.Draw(bucket.Vertices, 0, (uint)bucket.Count, PrimitiveType.Triangles, states);
+
+		DrawCalls++;
+		DrawnSprites += bucket.Count / 6;
+	}
+
+	private void DrawTextItem(in TextEntry entry)
+	{
+		var text = ResolveText(entry.Size);
+
+		text.DisplayedString = entry.Content;
+		text.Position = new Vector2f(entry.X, entry.Y);
+
+		if (entry.CameraSlot >= 0)
+		{
+			var bounds = text.GetGlobalBounds();
+			var view = _cameraBounds[entry.CameraSlot];
+
+			if (bounds.Left > view.Right || bounds.Left + bounds.Width < view.Left ||
+				bounds.Top > view.Bottom || bounds.Top + bounds.Height < view.Top)
+				return;
+
+			ApplyCamera(entry.CameraSlot);
+		}
+
+		_target.Draw(text, RenderStates.Default);
+		DrawCalls++;
+	}
+
+	private Text ResolveText(uint size)
+	{
+		if (_textCache.TryGetValue(size, out var cached)) return cached;
+
+		var text = new Text(_fonts.Light, string.Empty, size);
+		_textCache[size] = text;
+
+		return text;
+	}
+
 	private Texture ResolveTexture(string path)
 	{
 		if (_lastTexture is not null && string.Equals(_lastTexturePath, path, StringComparison.Ordinal)) return _lastTexture;
@@ -309,6 +385,13 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		return left.CameraSlot.CompareTo(right.CameraSlot);
 	}
 
+	private static int CompareText(in TextEntry left, in TextEntry right)
+	{
+		var result = left.Layer.CompareTo(right.Layer);
+
+		return result != 0 ? result : left.Sequence.CompareTo(right.Sequence);
+	}
+
 	private sealed class Bucket
 	{
 		public Vertex[] Vertices = new Vertex[96];
@@ -346,6 +429,8 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		float X3, float Y3,
 		float TexLeft, float TexTop,
 		float TexRight, float TexBottom);
+
+	private readonly record struct TextEntry(string Content, uint Size, float X, float Y, uint Layer, int CameraSlot, int Sequence);
 
 	private readonly record struct GroupKey(uint Layer, string? Texture, string? Shader, int CameraSlot);
 }

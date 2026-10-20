@@ -8,6 +8,7 @@ using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
+using EdgeOfPlain.Core.Utils;
 
 namespace EdgeOfPlain.Core;
 
@@ -83,8 +84,6 @@ public abstract class Launcher : IDisposable
 
 	protected virtual bool PumpsEventsInLoop => true;
 
-	protected abstract IRenderPipeline CreatePipeline(IGameWindow window);
-
 	protected abstract IScene CreateInitialScene();
 
 	protected virtual ITimeSource CreateTimeSource() => new StopwatchTimeSource();
@@ -96,8 +95,6 @@ public abstract class Launcher : IDisposable
 		Loop = new GameLoop(CreateTimeSource());
 		Scenes.Attach(window);
 		Scenes.Push(CreateInitialScene());
-
-		var pipeline = CreatePipeline(window);
 		var previousSize = window.Size;
 
 		try
@@ -125,15 +122,14 @@ public abstract class Launcher : IDisposable
 				while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
 
 				window.Clear(ClearColor);
-				pipeline.Begin();
-				Scenes.Draw(pipeline, Loop.RenderTime);
-				pipeline.End();
+				Scenes.Draw(Loop.RenderTime);
 				window.Present();
 			}
 		}
-		finally
+		catch (Exception e)
 		{
-			(pipeline as IDisposable)?.Dispose();
+			LogUtils.LogMessage(e.ToString(), LogUtils.LogType.Error);
+			throw;
 		}
 	}
 

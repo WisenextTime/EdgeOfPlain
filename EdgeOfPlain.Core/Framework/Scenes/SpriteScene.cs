@@ -5,9 +5,14 @@ namespace EdgeOfPlain.Core.Framework.Scenes;
 
 public abstract class SpriteScene : Scene
 {
-	public override sealed void Draw(IRenderPipeline pipeline, RenderTime time)
+	public abstract ISpriteBatch SpriteBatch { get; }
+	public override sealed void Draw(RenderTime time)
 	{
-		if (pipeline is ISpriteBatch sprites) Draw(sprites, time);
+		var sprites = SpriteBatch;
+
+		sprites.Begin();
+		Draw(sprites, time);
+		sprites.End();
 	}
 
 	protected abstract void Draw(ISpriteBatch sprites, RenderTime time);

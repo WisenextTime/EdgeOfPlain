@@ -20,5 +20,5 @@ public abstract class Scene : IScene
 
 	public virtual bool HandleInput(IInputState input) => false;
 
-	public virtual void Draw(IRenderPipeline pipeline, RenderTime time) { }
+	public virtual void Draw(RenderTime time) { }
 }

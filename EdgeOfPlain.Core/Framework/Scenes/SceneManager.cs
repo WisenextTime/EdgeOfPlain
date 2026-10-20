@@ -86,11 +86,9 @@ public sealed class SceneManager
 		Flush();
 	}
 
-	public void Draw(IRenderPipeline pipeline, RenderTime time)
+	public void Draw(RenderTime time)
 	{
-		ArgumentNullException.ThrowIfNull(pipeline);
-
-		foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(pipeline, time);
+		foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(time);
 		Flush();
 	}
 
@@ -114,12 +112,12 @@ public sealed class SceneManager
 
 			case SceneChangeKind.Pop:
 				if (previous is null) return;
-				Exit(previous);
+				Exit();
 				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Pop, previous, Active));
 				break;
 
 			case SceneChangeKind.Replace:
-				if (previous is not null) Exit(previous);
+				if (previous is not null) Exit();
 				Enter(command.Scene!, previous, SceneChangeKind.Replace);
 				break;
 
@@ -128,12 +126,12 @@ public sealed class SceneManager
 				var found = _scenes.IndexOf(target);
 				if (found < 0) return;
 
-				for (var index = _scenes.Count - 1; index > found; index--) Exit(_scenes[index]);
+				for (var index = _scenes.Count - 1; index > found; index--) Exit();
 				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
 				break;
 
 			case SceneChangeKind.Clear:
-				while (_scenes.Count > 0) Exit(_scenes[^1]);
+				while (_scenes.Count > 0) Exit();
 				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Clear, previous, null));
 				break;
 		}
@@ -156,9 +154,10 @@ public sealed class SceneManager
 		EventBus.Publish(new SceneChangedEvent(kind, previous, scene));
 	}
 
-	private void Exit(IScene scene)
+	private void Exit()
 	{
-		_scenes.RemoveAt(_scenes.Count - 1);
+		var scene = _scenes[^1];
+		_scenes.Remove(scene);
 		scene.Exit();
 	}
 
