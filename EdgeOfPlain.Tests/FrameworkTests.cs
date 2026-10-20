@@ -392,7 +392,7 @@ internal sealed class RecordingScene(string name) : Scene
 		return HandleAll;
 	}
 
-	public override void Draw(IRenderPipeline pipeline, RenderTime time) => Log.Add($"draw:{name}");
+	public override void Draw(RenderTime time) => Log.Add($"draw:{name}");
 }
 
 public sealed class SceneManagerTests
@@ -540,7 +540,7 @@ public sealed class SceneManagerTests
 		scenes.Update(default, new InputState());
 
 		scenes.Update(default, new InputState());
-		scenes.Draw(new NullPipeline(), default);
+		scenes.Draw(default);
 
 		Assert.DoesNotContain("update:a", scene.Log);
 		Assert.DoesNotContain("draw:a", scene.Log);

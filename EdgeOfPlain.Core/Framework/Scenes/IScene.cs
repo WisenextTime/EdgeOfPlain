@@ -20,5 +20,5 @@ public interface IScene
 
 	bool HandleInput(IInputState input);
 
-	void Draw(IRenderPipeline pipeline, RenderTime time);
+	void Draw(RenderTime time);
 }

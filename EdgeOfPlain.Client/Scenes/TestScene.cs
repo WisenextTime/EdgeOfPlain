@@ -61,6 +61,8 @@ public sealed class TestScene : SpriteScene
 			MathF.Sin(seconds * 0.2f) * 0.15f);
 	}
 
+	public override ISpriteBatch SpriteBatch => GameContext.Sprites;
+
 	protected override void Draw(ISpriteBatch sprites, RenderTime time)
 	{
 		var camera = Camera2D.Interpolate(_previousCamera, _currentCamera, time.Alpha);

@@ -86,11 +86,9 @@ public sealed class SceneManager
 		Flush();
 	}
 
-	public void Draw(IRenderPipeline pipeline, RenderTime time)
+	public void Draw(RenderTime time)
 	{
-		ArgumentNullException.ThrowIfNull(pipeline);
-
-		foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(pipeline, time);
+		foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(time);
 		Flush();
 	}
 

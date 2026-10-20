@@ -71,7 +71,7 @@ public sealed class LoadingScene(
 		_context!.Scenes.Replace(_next());
 	}
 
-	public override void Draw(IRenderPipeline pipeline, RenderTime time)
+	public override void Draw(RenderTime time)
 	{
 		if (_context is null || _text is null) return;
 

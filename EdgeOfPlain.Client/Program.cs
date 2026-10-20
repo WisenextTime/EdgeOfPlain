@@ -13,9 +13,6 @@ namespace EdgeOfPlain.Client;
 
 public class Program : Launcher
 {
-	private GameWindow? _window;
-	private UiFonts? _fonts;
-
 	protected override void InitResourceOperators()
 	{
 		base.InitResourceOperators();
@@ -31,24 +28,30 @@ public class Program : Launcher
 		using var window = new GameWindow(1280, 720, "Edge of Plain");
 
 		SfmlInput.Attach(window, launcher.Input);
+
 		launcher.Init();
+
 		using var fonts = new UiFonts();
-		launcher._window = window;
-		launcher._fonts = fonts;
-		launcher.RunWithEventPump(window);
+		GameContext.Initialize(window, fonts, window.Target);
+
+		try
+		{
+			launcher.RunWithEventPump(window);
+		}
+		finally
+		{
+			GameContext.Sprites.Dispose();
+		}
 	}
 
 	public void RunWithEventPump(IGameWindow window) => LaunchWithEventPump(window);
-
-	protected override IRenderPipeline CreatePipeline(IGameWindow window)
-		=> new SpriteBatch(((GameWindow)window).Target, () => window.Camera);
 
 	protected override IScene CreateInitialScene()
 		=> new LoadingScene(
 			LoadContent,
 			static () => new TestScene(),
-			_fonts ?? throw new InvalidOperationException("UI fonts were not initialised."),
-			_window?.Target ?? throw new InvalidOperationException("The window was not initialised."),
+			GameContext.Fonts,
+			GameContext.Target,
 			TimeSpan.FromSeconds(1));
 
 	protected override FileSystem BaseAssetsSystem => CoreAssets.Content;
