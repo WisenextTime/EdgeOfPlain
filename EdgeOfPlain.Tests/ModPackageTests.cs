@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using EdgeOfPlain.Core.Framework.IO;
-using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Framework.Mods.Loading;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;

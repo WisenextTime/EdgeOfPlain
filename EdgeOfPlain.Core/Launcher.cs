@@ -4,7 +4,7 @@ using EdgeOfPlain.Core.Framework.Events;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.IO;
-using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Framework.Mods.Loading;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
@@ -50,7 +50,7 @@ public abstract class Launcher
 		ModLoader.Discover();
 		progress?.Invoke($"Loading all {ModLoader.Packages.Count} modpacks…");
 		ModLoader.Commit(AssetFileSystem);
-		progress?.Invoke($"Already loaded {ModLoader.Mods.Count} modpacks");
+		progress?.Invoke($"Already loaded {ModLoader.LoadedMods.Count} modpacks");
 	}
 
 	protected virtual void InitFileSystems()

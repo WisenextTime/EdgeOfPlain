@@ -6,6 +6,8 @@ using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Framework.Mods.Loading;
+using EdgeOfPlain.Core.Framework.Resource;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -119,6 +121,12 @@ public sealed class ModPipelineTests
 		                                                                        """);
 
 		FileIO.Clear();
+		ContentStore.Reset();
+		ContentTypeRegistry.Reset();
+		ContentSerializer.ResetOptions();
+		AssetsManager.Clear();
+		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
+
 		var assets = new ModFileSystem();
 		assets.RegisterNamespace("base", new PhysicalFileSystem(baseDirectory));
 		assets.RegisterNamespace("lib", new PhysicalFileSystem(libDirectory));
@@ -142,7 +150,7 @@ public sealed class ModPipelineTests
 		Exception? error = null;
 		try
 		{
-			ModManager.LoadAllMods();
+			ModLoader.LoadRegistered();
 		}
 		catch(Exception exception)
 		{
@@ -160,8 +168,8 @@ public sealed class ModPipelineTests
 		}
 
 		return new Pipeline(
-			ModManager.LoadedMods.Select(mod => mod.ModInfo.Id).ToArray(),
-			ModManager.IsLoaded,
+			ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id).ToArray(),
+			ModLoader.IsLoaded,
 			error,
 			ContentStore.Get("ground") is not null,
 			ContentStore.Get("libsand") is not null,
@@ -173,7 +181,7 @@ public sealed class ModPipelineTests
 			&& ContentTypeRegistry.ByType.ContainsKey(typeof(TileRendererDef)));
 	}
 
-	private static void Register(Mod mod) => ModManager.RegisterMod(mod, mod.ModInfo);
+	private static void Register(Mod mod) => ModRegistry.Register(mod, mod.ModInfo);
 
 	private static ModInfo Info(string id, params (string Id, string MinVersion)[] dependencies)
 		=> new(

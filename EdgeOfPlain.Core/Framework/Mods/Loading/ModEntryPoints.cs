@@ -5,14 +5,14 @@ using System.Linq;
 using System.Reflection;
 using EdgeOfPlain.Core.Utils;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
+namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
 internal static class ModEntryPoints
 {
 	public static IReadOnlyList<Mod> Create(
 		string modId,
 		string directory,
-		List<ModLoadContext> contexts,
+		List<ModAssemblyLoadContext> contexts,
 		out bool hasManagedAssemblies)
 	{
 		hasManagedAssemblies = false;
@@ -22,7 +22,7 @@ internal static class ModEntryPoints
 
 		hasManagedAssemblies = true;
 
-		var context = new ModLoadContext(modId, directory, assemblies);
+		var context = new ModAssemblyLoadContext(modId, directory, assemblies);
 		contexts.Add(context);
 
 		var mods = new List<Mod>();
