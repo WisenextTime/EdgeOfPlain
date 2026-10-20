@@ -7,7 +7,7 @@ using EdgeOfPlain.Core.Framework.Time;
 
 namespace EdgeOfPlain.Client.Scenes;
 
-public sealed class TestScene : SpriteScene
+public sealed class TestScene : Scene
 {
 	private readonly RenderMetadata _ground = new()
 	{
@@ -18,14 +18,14 @@ public sealed class TestScene : SpriteScene
 
 	private readonly RenderMetadata _block = new()
 	{
-		Layer = 2,
+		Layer = 3,
 		Color = new ColorF(120, 70, 40, 255),
 		Size = new Vector2(48, 48),
 	};
 
 	private readonly RenderMetadata _unit = new()
 	{
-		Layer = 3,
+		Layer = 2,
 		Size = new Vector2(96, 96),
 		Origin = new Vector2(8, 8),
 	};
@@ -61,20 +61,20 @@ public sealed class TestScene : SpriteScene
 			MathF.Sin(seconds * 0.2f) * 0.15f);
 	}
 
-	public override ISpriteBatch SpriteBatch => GameContext.Sprites;
+	public ISpriteBatch SpriteBatch => GameContext.Sprites;
 
-	protected override void Draw(ISpriteBatch sprites, RenderTime time)
+	public override void Draw(RenderTime time)
 	{
 		var camera = Camera2D.Interpolate(_previousCamera, _currentCamera, time.Alpha);
 		var position = Vector2.Lerp(_previous, _current, time.Alpha);
 
 		if (_context is { } context) context.Window.Camera = camera;
-
-		sprites.Draw(_ground, 0, 0);
-		sprites.Draw(_block, 200, 200);
-		sprites.Draw(_unit, position.X, position.Y);
-
+		SpriteBatch.Begin();
+		SpriteBatch.Draw(_ground, 0, 0);
+		SpriteBatch.Draw(_block, 200, 200);
+		SpriteBatch.Draw(_unit, position.X, position.Y);
 		_context?.Window.ResetCamera();
-		sprites.Draw(_hud, 24, 24);
+		SpriteBatch.Draw(_hud, 24, 24);
+		SpriteBatch.End();
 	}
 }

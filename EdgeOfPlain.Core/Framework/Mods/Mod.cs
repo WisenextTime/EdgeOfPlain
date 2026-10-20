@@ -8,4 +8,5 @@ public class Mod
 	public virtual Type[]? RegisterTypes { get; protected set; } = null;
 
 	public virtual void InitMod(ModContext context) { }
+	public virtual void Preload() { }
 }

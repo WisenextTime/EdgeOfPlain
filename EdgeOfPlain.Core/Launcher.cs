@@ -12,7 +12,7 @@ using EdgeOfPlain.Core.Utils;
 
 namespace EdgeOfPlain.Core;
 
-public abstract class Launcher : IDisposable
+public abstract class Launcher
 {
 	public const string AssetsHead = "assets";
 	public const string DataHead = "data";
@@ -21,14 +21,12 @@ public abstract class Launcher : IDisposable
 	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
 	private bool _initialized;
 	private bool _contentLoaded;
-	private bool _disposed;
 
 	protected abstract FileSystem BaseAssetsSystem { get; }
 	protected abstract string DataDirectory { get; }
 	protected abstract string ModDirectory { get; }
 
 	protected ModFileSystem AssetFileSystem { get; } = new();
-	protected ModLoader Mods { get; private set; } = null!;
 
 	protected SceneManager Scenes { get; } = new();
 	protected InputState Input { get; } = new();
@@ -48,12 +46,11 @@ public abstract class Launcher : IDisposable
 		if (!_initialized) throw new InvalidOperationException("Init() must run before LoadContent().");
 		if (_contentLoaded) throw new InvalidOperationException("Content has already been loaded.");
 		_contentLoaded = true;
-		Mods = new ModLoader(AssetFileSystem);
 		progress?.Invoke("Loading…");
-		Mods.Discover();
-		progress?.Invoke($"Loading all {Mods.Packages.Count} modpacks…");
-		Mods.Commit();
-		progress?.Invoke($"Already loaded {Mods.Mods.Count} modpacks");
+		ModLoader.Discover();
+		progress?.Invoke($"Loading all {ModLoader.Packages.Count} modpacks…");
+		ModLoader.Commit(AssetFileSystem);
+		progress?.Invoke($"Already loaded {ModLoader.Mods.Count} modpacks");
 	}
 
 	protected virtual void InitFileSystems()
@@ -67,17 +64,6 @@ public abstract class Launcher : IDisposable
 	protected virtual void InitResourceOperators()
 	{
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
-	}
-
-	public void Dispose()
-	{
-		if (_disposed) return;
-		_disposed = true;
-
-		Mods.Dispose();
-		EventBus.Clear();
-		AssetsManager.Clear();
-		FileIO.Clear();
 	}
 
 	protected virtual ColorF ClearColor => ColorF.Black;

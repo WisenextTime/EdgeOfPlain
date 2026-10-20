@@ -24,7 +24,7 @@ public class Program : Launcher
 
 	private static void Main()
 	{
-		using var launcher = new Program();
+		var launcher = new Program();
 		using var window = new GameWindow(1280, 720, "Edge of Plain");
 
 		SfmlInput.Attach(window, launcher.Input);

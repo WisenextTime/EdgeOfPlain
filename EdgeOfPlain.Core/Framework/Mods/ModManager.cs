@@ -6,12 +6,14 @@ using System.Linq;
 using EdgeOfPlain.Core.Content;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.IO;
+using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Utils;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
 public static class ModManager
 {
+	public record struct LoadingAssetsData(string Path, ModInfo SourceMod);
 	public const string TomlContentsDirectory = "Contents";
 	private static readonly List<Mod> _registeredMods = [];
 	private static readonly Dictionary<Mod, ModInfo> _infos = [];
@@ -19,8 +21,23 @@ public static class ModManager
 	private static readonly ReadOnlyCollection<Mod> _loadedModsView = _loadedMods.AsReadOnly();
 	public static bool IsLoaded { get; private set; }
 	private static readonly IReadOnlySet<string> _internalRetentionIds = ModFileSystem.ReservedNamespaces;
+	private static readonly Dictionary<string, Action<LoadingAssetsData>> _resourceLoaders =
+	new()
+	 {
+		{ TomlContentsDirectory, LoadTomlContentData},
+	};
+
+	private static void LoadTomlContentData(LoadingAssetsData data)
+	{
+		var content = ContentSerializer.Deserialize<ContentDef>(AssetsManager.LoadResource<string>(data.Path)) ?? throw new InvalidDataException("the file does not describe any content");
+		content.SourceMod = data.SourceMod;
+		ContentStore.Add(content);
+	}
 
 	public static IReadOnlyList<Mod> LoadedMods => _loadedModsView;
+
+	public static bool TryRegisterLoaders(string directory, Action<LoadingAssetsData> action)
+		=> _resourceLoaders.TryAdd(directory, action);
 
 	public static void RegisterMod(Mod mod, ModInfo info)
 	{
@@ -42,11 +59,30 @@ public static class ModManager
 		IsLoaded = true;
 		LoadAssemblyMods();
 		ContentSerializer.ResetOptions();
-		LoadTomlMods();
+		LoadOtherResource();
 		ContentStore.Seal();
 	}
 
-	public static void Reset()
+	private static void LoadOtherResource()
+	{
+		foreach (var (mod, path, action) in from mod in _loadedMods from kvp in _resourceLoaders select (mod, kvp.Key, kvp.Value))
+		{
+			var directory = $"{Launcher.AssetsHead}://{mod.ModInfo.Id}/{path}/";
+			foreach (var file in FileIO.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+			{
+				try
+				{
+					action(new LoadingAssetsData(file, mod.ModInfo));
+				}
+				catch (Exception e)
+				{
+					LogUtils.LogMessage(e.Message, LogUtils.LogType.Error);
+				}
+			}
+		}
+	}
+
+	internal static void Reset()
 	{
 		_registeredMods.Clear();
 		_infos.Clear();
@@ -88,33 +124,6 @@ public static class ModManager
 			}
 			context.Dispose();
 			if (!failed) _loadedMods.Add(current);
-		}
-	}
-
-	private static void LoadTomlMods()
-	{
-		foreach (var mod in _loadedMods)
-		{
-			var directory = $"{Launcher.AssetsHead}://{mod.ModInfo.Id}/{TomlContentsDirectory}/";
-
-			foreach (var toml in FileIO.EnumerateFiles(directory, "*.toml", SearchOption.AllDirectories))
-			{
-				try
-				{
-					var text = FileIO.ReadAllText(toml);
-					var newContent = ContentSerializer.Deserialize<ContentDef>(text)
-						?? throw new InvalidDataException("the file does not describe any content");
-
-					newContent.SourceMod = mod.ModInfo;
-					ContentStore.Add(newContent);
-				}
-				catch (Exception e)
-				{
-					LogUtils.LogMessage(
-						$"Mod '{mod.ModInfo.Id}': failed to load content '{toml}': {e.Message}",
-						LogUtils.LogType.Error);
-				}
-			}
 		}
 	}
 

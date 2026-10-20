@@ -39,7 +39,7 @@ public static class ContentStore
 		if (!_byId.Remove(def.Id)) throw new InvalidOperationException($"Content '{def.Id}' is not registered");
 	}
 
-	public static void Reset()
+	internal static void Reset()
 	{
 		_byId.Clear();
 		_frozen = null;
@@ -48,11 +48,7 @@ public static class ContentStore
 	public static ContentDef? Get(string id)
 	{
 		ArgumentNullException.ThrowIfNull(id);
-
-		if (_frozen is not null)
-			return _frozen.TryGetValue(id, out var frozenDef) ? frozenDef : null;
-
-		return _byId.TryGetValue(id, out var def) ? def : null;
+		return _frozen is not null ? _frozen.GetValueOrDefault(id) : _byId.GetValueOrDefault(id);
 	}
 
 	public static TDef? Get<TDef>(string id) where TDef : ContentDef => Get(id) as TDef;
