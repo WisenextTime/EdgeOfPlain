@@ -7,22 +7,22 @@ using EdgeOfPlain.Core.Utils;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
-public sealed class ModLoader(ModFileSystem assets) : IDisposable
+public static class ModLoader
 {
-	private readonly List<ModPackage> _packages = [];
-	private readonly List<(Mod Mod, ModPackage Package)> _mods = [];
-	private readonly List<ModLoadContext> _contexts = [];
-	private bool _discovered;
-	private bool _committed;
-	private bool _disposed;
+	private static readonly List<ModPackage> _packages = [];
+	private static readonly List<(Mod Mod, ModPackage Package)> _mods = [];
+	private static readonly List<ModLoadContext> _contexts = [];
+	private static bool _discovered;
+	private static bool _committed;
+	private static bool _disposed;
 
-	public string CacheRoot { get; init; } = $"{Launcher.DataHead}://Cache";
+	public static string CacheRoot => $"{Launcher.DataHead}://Cache";
 
-	public IReadOnlyList<ModPackage> Packages => _packages;
+	public static IReadOnlyList<ModPackage> Packages => _packages;
 
-	public IReadOnlyList<Mod> Mods => [.. _mods.Select(entry => entry.Mod)];
+	public static IReadOnlyList<Mod> Mods => [.. _mods.Select(entry => entry.Mod)];
 
-	public void Discover()
+	public static void Discover()
 	{
 		if (_discovered) throw new InvalidOperationException("Mod discovery has already run.");
 		_discovered = true;
@@ -52,7 +52,7 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 		}
 	}
 
-	public void Commit()
+	public static void Commit(ModFileSystem assets)
 	{
 		if (_committed) throw new InvalidOperationException("Mods have already been committed.");
 		_committed = true;
@@ -90,24 +90,7 @@ public sealed class ModLoader(ModFileSystem assets) : IDisposable
 		ModAssets.Seal(assets);
 	}
 
-	public void Dispose()
-	{
-		if (_disposed) return;
-		_disposed = true;
-
-		foreach (var context in _contexts) context.Unload();
-		_contexts.Clear();
-
-		foreach (var package in _packages) package.Dispose();
-		_packages.Clear();
-		_mods.Clear();
-
-		ModManager.Reset();
-		ContentStore.Reset();
-		ContentTypeRegistry.Reset();
-	}
-
-	private void LoadPackage(string sourcePath)
+	private static void LoadPackage(string sourcePath)
 	{
 		var location = FileIO.Resolve(sourcePath);
 		if (!location.FileSystem.TryGetPhysicalPath(location.Path, out var zipPath))

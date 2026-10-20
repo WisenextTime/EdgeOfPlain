@@ -173,17 +173,6 @@ public sealed class ContentSerializerTests
 	}
 
 	[Fact]
-	public void ResetClearsRegisteredTypes()
-	{
-		RegistryProbes.Ensure(typeof(SnapshotProbeDef));
-		ContentTypeRegistry.Reset();
-
-		Assert.Empty(ContentTypeRegistry.Types);
-		Assert.Empty(ContentTypeRegistry.ByName);
-		Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(ContentDef)));
-	}
-
-	[Fact]
 	public void ContentDefToStringContainsTypeAndId()
 	{
 		RegistryProbes.Ensure(typeof(DuplicateProbeDef));

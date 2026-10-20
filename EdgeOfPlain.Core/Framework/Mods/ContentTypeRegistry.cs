@@ -64,7 +64,7 @@ public static class ContentTypeRegistry
 		if (!TryUnRegisterType(t)) throw new InvalidOperationException($"Type '{t.Name}' is not registered");
 	}
 
-	public static void Reset()
+	internal static void Reset()
 	{
 		_types.Clear();
 		_byName.Clear();
