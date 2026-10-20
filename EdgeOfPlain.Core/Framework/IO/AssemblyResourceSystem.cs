@@ -15,6 +15,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 	private readonly FrozenDictionary<string, string> _resources;
 	private readonly FrozenSet<string> _directories;
 	private readonly FrozenDictionary<string, FileSystemEntry[]> _children;
+
 	public AssemblyResourceSystem(Assembly assembly, string? prefix = null, Func<string, bool>? include = null)
 	{
 		ArgumentNullException.ThrowIfNull(assembly);
@@ -42,9 +43,9 @@ public sealed class AssemblyResourceSystem : FileSystem
 		var children = new Dictionary<string, List<FileSystemEntry>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var path in directories)
 			if (path.Length != 0)
-				ResourcePathTree.AddChild(children, path, isDirectory: true);
+				ResourcePathTree.AddChild(children, path, true);
 
-		foreach (var path in resources.Keys) ResourcePathTree.AddChild(children, path, isDirectory: false);
+		foreach (var path in resources.Keys) ResourcePathTree.AddChild(children, path, false);
 
 		_resources = resources.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 		_directories = directories.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
@@ -72,7 +73,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 			throw new FileNotFoundException($"Assembly '{Assembly.GetName().Name}' has no embedded resource '{path}'", path);
 
 		return Assembly.GetManifestResourceStream(name)
-			?? throw new FileNotFoundException($"Embedded resource '{name}' could not be opened", path);
+		       ?? throw new FileNotFoundException($"Embedded resource '{name}' could not be opened", path);
 	}
 
 	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
@@ -92,6 +93,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 
 		return TryToPath(remainder, out path) && (_include is null || _include(path));
 	}
+
 	private static bool TryToPath(string remainder, out string path)
 	{
 		path = string.Empty;
@@ -116,7 +118,7 @@ public sealed class AssemblyResourceSystem : FileSystem
 			path = NormalizePath(candidate);
 			return path.Length != 0;
 		}
-		catch (ArgumentException)
+		catch(ArgumentException)
 		{
 			return false;
 		}

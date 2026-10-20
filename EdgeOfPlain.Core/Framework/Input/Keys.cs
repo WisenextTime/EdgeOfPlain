@@ -18,6 +18,7 @@ public enum Key
 	Pause,
 	Unknown,
 }
+
 public enum MouseButton
 {
 	Left,

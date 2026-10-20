@@ -106,7 +106,7 @@ public sealed class FileSystemTests
 		var fileSystem = new MemoryFileSystem().Add("a.txt", "a").Add("b.txt", "b");
 
 		Assert.Throws<IOException>(() => fileSystem.CopyFile("a.txt", "b.txt"));
-		fileSystem.CopyFile("a.txt", "b.txt", overwrite: true);
+		fileSystem.CopyFile("a.txt", "b.txt", true);
 
 		Assert.Equal("a", fileSystem.ReadAllText("b.txt"));
 	}
@@ -254,8 +254,8 @@ public sealed class OverlayFileSystemTests
 		var overlay = new OverlayFileSystem(new MemoryFileSystem());
 		overlay.Seal();
 
-		Assert.Throws<InvalidOperationException>(
-			() => overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem(), "late")));
+		Assert.Throws<InvalidOperationException>(()
+			=> overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem(), "late")));
 	}
 
 	[Fact]

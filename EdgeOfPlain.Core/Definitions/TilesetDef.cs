@@ -6,8 +6,10 @@ namespace EdgeOfPlain.Core.Definitions;
 [ContentTypeName("tileset")]
 public class TilesetDef(string id) : ContentDef(id)
 {
-	[TomlRequired]public int Width { get; set; }
-	[TomlRequired]public int Height { get; set; }
+	[TomlRequired]
+	public int Width { get; set; }
+	[TomlRequired]
+	public int Height { get; set; }
 	public int TileWidth { get; set; } = 32;
 	public int TileHeight { get; set; } = 32;
 
@@ -32,7 +34,7 @@ public struct TileData
 
 	public string Renderer
 	{
-		get => field?? "default";
+		get => field ?? "default";
 		set;
 	}
 

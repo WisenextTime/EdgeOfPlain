@@ -19,10 +19,14 @@ public sealed class ZipFileSystem : FileSystem
 	private readonly Lock _gate = new();
 
 	public ZipFileSystem(string zipPath)
-		: this(new ZipArchive(File.OpenRead(zipPath), ZipArchiveMode.Read, leaveOpen: false)) { }
+		: this(new ZipArchive(File.OpenRead(zipPath), ZipArchiveMode.Read, false))
+	{
+	}
 
 	public ZipFileSystem(Stream source, bool leaveOpen = false)
-		: this(new ZipArchive(source, ZipArchiveMode.Read, leaveOpen)) { }
+		: this(new ZipArchive(source, ZipArchiveMode.Read, leaveOpen))
+	{
+	}
 
 	private ZipFileSystem(ZipArchive archive)
 	{
@@ -45,9 +49,9 @@ public sealed class ZipFileSystem : FileSystem
 		var children = new Dictionary<string, List<FileSystemEntry>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var path in directories)
 			if (path.Length != 0)
-				ResourcePathTree.AddChild(children, path, isDirectory: true);
+				ResourcePathTree.AddChild(children, path, true);
 
-		foreach (var path in files.Keys) ResourcePathTree.AddChild(children, path, isDirectory: false);
+		foreach (var path in files.Keys) ResourcePathTree.AddChild(children, path, false);
 
 		_files = files.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 		_directories = directories.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
@@ -108,7 +112,7 @@ public sealed class ZipFileSystem : FileSystem
 			path = NormalizePath(entryName.Replace('\\', '/'));
 			return true;
 		}
-		catch (ArgumentException)
+		catch(ArgumentException)
 		{
 			return false;
 		}

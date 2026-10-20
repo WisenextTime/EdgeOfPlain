@@ -14,6 +14,7 @@ namespace EdgeOfPlain.Core.Framework.Mods;
 public static class ModManager
 {
 	public record struct LoadingAssetsData(string Path, ModInfo SourceMod);
+
 	public const string TomlContentsDirectory = "Contents";
 	private static readonly List<Mod> _registeredMods = [];
 	private static readonly Dictionary<Mod, ModInfo> _infos = [];
@@ -22,14 +23,15 @@ public static class ModManager
 	public static bool IsLoaded { get; private set; }
 	private static readonly IReadOnlySet<string> _internalRetentionIds = ModFileSystem.ReservedNamespaces;
 	private static readonly Dictionary<string, Action<LoadingAssetsData>> _resourceLoaders =
-	new()
-	 {
-		{ TomlContentsDirectory, LoadTomlContentData},
-	};
+		new()
+		{
+			{ TomlContentsDirectory, LoadTomlContentData },
+		};
 
 	private static void LoadTomlContentData(LoadingAssetsData data)
 	{
-		var content = ContentSerializer.Deserialize<ContentDef>(AssetsManager.LoadResource<string>(data.Path)) ?? throw new InvalidDataException("the file does not describe any content");
+		var content = ContentSerializer.Deserialize<ContentDef>(AssetsManager.LoadResource<string>(data.Path)) ??
+		              throw new InvalidDataException("the file does not describe any content");
 		content.SourceMod = data.SourceMod;
 		ContentStore.Add(content);
 	}
@@ -74,7 +76,7 @@ public static class ModManager
 				{
 					action(new LoadingAssetsData(file, mod.ModInfo));
 				}
-				catch (Exception e)
+				catch(Exception e)
 				{
 					LogUtils.LogMessage(e.Message, LogUtils.LogType.Error);
 				}
@@ -141,7 +143,8 @@ public static class ModManager
 
 	private static void CheckLoaded()
 	{
-		if (IsLoaded) throw new InvalidOperationException("Mods are already loaded, the mod manager can not be changed any more.");
+		if (IsLoaded)
+			throw new InvalidOperationException("Mods are already loaded, the mod manager can not be changed any more.");
 	}
 
 	private static ReadOnlyCollection<Mod> BuildLoadOrder()

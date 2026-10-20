@@ -5,6 +5,7 @@ using EdgeOfPlain.Core.Framework.Resource;
 using SFML.Graphics;
 
 namespace EdgeOfPlain.Client.Resource;
+
 public sealed class UiFonts : IDisposable
 {
 	private readonly Dictionary<string, Font> _fonts = new(StringComparer.OrdinalIgnoreCase);

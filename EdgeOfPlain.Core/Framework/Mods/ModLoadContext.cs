@@ -20,7 +20,7 @@ internal sealed class ModLoadContext : AssemblyLoadContext
 	private readonly string _directory;
 
 	public ModLoadContext(string modId, string directory, IEnumerable<string> mainAssemblies)
-		: base(modId, isCollectible: true)
+		: base(modId, true)
 	{
 		_directory = directory;
 

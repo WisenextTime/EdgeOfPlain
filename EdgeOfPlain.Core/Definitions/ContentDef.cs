@@ -21,7 +21,7 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 	public ModInfo SourceMod { get; internal set; }
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
-	
+
 	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.Discriminator(GetType())}({Id})";
 }
 

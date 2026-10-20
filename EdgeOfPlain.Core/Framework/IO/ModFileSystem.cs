@@ -72,6 +72,7 @@ public sealed class ModFileSystem : FileSystem
 	}
 
 	public OverlayFileSystem? GetNamespace(string name) => _namespaces.GetValueOrDefault(NormalizeNamespace(name));
+
 	public int RemoveOverrideLayers(string layerName)
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -79,7 +80,8 @@ public sealed class ModFileSystem : FileSystem
 
 		var changed = 0;
 		foreach (var overlay in _namespaces.Values)
-			if (overlay.RemoveOverrideLayers(layerName)) changed++;
+			if (overlay.RemoveOverrideLayers(layerName))
+				changed++;
 
 		return changed;
 	}

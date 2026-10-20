@@ -7,7 +7,7 @@ using Tomlyn.Serialization;
 
 namespace EdgeOfPlain.Core.World;
 
-[method:TomlConstructor]
+[method: TomlConstructor]
 public class Map(int width, int height)
 {
 	public static Version DefaultMapVersion => new(1, 0, 0);

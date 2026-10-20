@@ -84,6 +84,7 @@ public sealed class GameWindow : IGameWindow, IDisposable
 			ApplyView();
 		}
 	}
+
 	public Camera2D Camera
 	{
 		get => _camera ?? PixelSpaceCamera();

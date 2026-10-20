@@ -88,7 +88,10 @@ public sealed class OverlayFileSystem : FileSystem
 		_shadows.Clear();
 		_diagnostics.Clear();
 
-		for (var index = 1; index < _layers.Count; index++) IndexLayer(index);
+		for (var index = 1; index < _layers.Count; index++)
+		{
+			IndexLayer(index);
+		}
 	}
 
 	public void Seal() => IsSealed = true;

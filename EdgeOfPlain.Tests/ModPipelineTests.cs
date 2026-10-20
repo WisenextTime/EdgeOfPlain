@@ -113,10 +113,10 @@ public sealed class ModPipelineTests
 		Directory.CreateDirectory(Path.Combine(libDirectory, "Contents"));
 		Directory.CreateDirectory(Path.Combine(appDirectory, "Contents"));
 		File.WriteAllText(Path.Combine(baseDirectory, "Contents", "base.toml"), """
-			type = "terrain"
-			id = "basedirt"
-			moveCost = 2
-			""");
+		                                                                        type = "terrain"
+		                                                                        id = "basedirt"
+		                                                                        moveCost = 2
+		                                                                        """);
 
 		FileIO.Clear();
 		var assets = new ModFileSystem();
@@ -144,7 +144,7 @@ public sealed class ModPipelineTests
 		{
 			ModManager.LoadAllMods();
 		}
-		catch (Exception exception)
+		catch(Exception exception)
 		{
 			error = exception;
 		}
@@ -154,7 +154,7 @@ public sealed class ModPipelineTests
 		{
 			Register(new TestMod(Info("late")));
 		}
-		catch (Exception)
+		catch(Exception)
 		{
 			lateRejected = true;
 		}
@@ -181,7 +181,8 @@ public sealed class ModPipelineTests
 			new Version(1, 0, 0),
 			"tests",
 			"",
-			dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion))).ToArray());
+			dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion)))
+				.ToArray());
 
 	private sealed record Pipeline(
 		string[] LoadedIds,

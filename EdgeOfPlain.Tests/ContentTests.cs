@@ -146,12 +146,12 @@ public sealed class ContentSerializerTests
 		ContentSerializer.ResetOptions();
 
 		var toml = """
-			type = "tileset"
-			id = "tiles"
-			width = 8
-			height = 4
-			tileWidth = 16
-			""";
+		           type = "tileset"
+		           id = "tiles"
+		           width = 8
+		           height = 4
+		           tileWidth = 16
+		           """;
 
 		var restored = ContentSerializer.Deserialize<ContentDef>(toml);
 

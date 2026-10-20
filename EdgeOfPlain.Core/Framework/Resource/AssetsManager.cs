@@ -85,7 +85,8 @@ public static class AssetsManager
 		saver(stream, resource);
 	}
 
-	public static async ValueTask SaveResourceAsync<T>(T resource, string sourcePath, CancellationToken cancellationToken = default)
+	public static async ValueTask SaveResourceAsync<T>(T resource, string sourcePath,
+		CancellationToken cancellationToken = default)
 	{
 		var resourceOperator = Operator<T>();
 		var asyncSaver = resourceOperator.AsyncSaver;

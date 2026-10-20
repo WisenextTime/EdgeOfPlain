@@ -10,19 +10,19 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="xunit.v3" Version="4.0.2" />
+		<PackageReference Include="xunit.v3" Version="4.0.2"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\EdgeOfPlain.Core\EdgeOfPlain.Core.csproj" />
+		<ProjectReference Include="..\EdgeOfPlain.Core\EdgeOfPlain.Core.csproj"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Assets\**" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
+		<EmbeddedResource Include="Assets\**" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))"/>
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest"/>
 	</ItemGroup>
 
 </Project>

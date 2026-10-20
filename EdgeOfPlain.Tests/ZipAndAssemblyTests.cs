@@ -13,7 +13,7 @@ public sealed class ZipFileSystemTests
 	private static ZipFileSystem Open(params (string Name, string Content)[] entries)
 	{
 		var buffer = new MemoryStream();
-		using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+		using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
 		{
 			foreach (var (name, content) in entries)
 			{
@@ -24,7 +24,7 @@ public sealed class ZipFileSystemTests
 		}
 
 		buffer.Position = 0;
-		return new ZipFileSystem(buffer, leaveOpen: false);
+		return new ZipFileSystem(buffer, false);
 	}
 
 	[Fact]
@@ -128,7 +128,7 @@ public sealed class AssemblyResourceSystemTests
 	[Fact]
 	public void CoreAssemblyAssetsKeepDefaultPrefix()
 	{
-		using var resourceSystem = new AssemblyResourceSystem(typeof(EdgeOfPlain.Core.Launcher).Assembly);
+		using var resourceSystem = new AssemblyResourceSystem(typeof(Core.Launcher).Assembly);
 
 		Assert.True(resourceSystem.FileExists("Contents/Tilesets/TestTile.toml"));
 		Assert.True(resourceSystem.FileExists("Textures/Tiles/TestTile.png"));
@@ -137,7 +137,6 @@ public sealed class AssemblyResourceSystemTests
 	[Fact]
 	public void RejectsAssemblyWithoutResourcesUnderPrefix()
 	{
-		Assert.Throws<InvalidOperationException>(
-			() => new AssemblyResourceSystem(TestAssembly, "Nothing.Here"));
+		Assert.Throws<InvalidOperationException>(() => new AssemblyResourceSystem(TestAssembly, "Nothing.Here"));
 	}
 }

@@ -44,7 +44,7 @@ public static class ModLoader
 			{
 				LoadPackage(entry.Path);
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				LogUtils.LogMessage($"Failed to load mod package '{entry.Path}': {e.Message}", LogUtils.LogType.Error);
 			}
@@ -102,7 +102,7 @@ public static class ModLoader
 		try
 		{
 			var info = package.Info
-				?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
+			           ?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
 
 			var directory = ModExtractor.Extract(package, CacheRoot);
 			IReadOnlyList<Mod> mods = [];

@@ -33,7 +33,7 @@ internal static class ModEntryPoints
 			{
 				assembly = context.LoadFromAssemblyPath(assemblyPath);
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				LogUtils.LogMessage(
 					$"Mod '{modId}': failed to load assembly '{Path.GetFileName(assemblyPath)}': {e.Message}",
@@ -50,7 +50,7 @@ internal static class ModEntryPoints
 				{
 					if (Activator.CreateInstance(type) is Mod mod) mods.Add(mod);
 				}
-				catch (Exception e)
+				catch(Exception e)
 				{
 					LogUtils.LogMessage(
 						$"Mod '{modId}': failed to create entry point '{type.FullName}': {e.Message}",
@@ -85,11 +85,11 @@ internal static class ModEntryPoints
 			_ = AssemblyName.GetAssemblyName(path);
 			return true;
 		}
-		catch (BadImageFormatException)
+		catch(BadImageFormatException)
 		{
 			return false;
 		}
-		catch (FileLoadException)
+		catch(FileLoadException)
 		{
 			return false;
 		}
@@ -101,7 +101,7 @@ internal static class ModEntryPoints
 		{
 			return assembly.GetTypes();
 		}
-		catch (ReflectionTypeLoadException e)
+		catch(ReflectionTypeLoadException e)
 		{
 			foreach (var loaderException in e.LoaderExceptions)
 				if (loaderException is not null)

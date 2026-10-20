@@ -112,7 +112,7 @@ public abstract class Launcher
 				window.Present();
 			}
 		}
-		catch (Exception e)
+		catch(Exception e)
 		{
 			LogUtils.LogMessage(e.ToString(), LogUtils.LogType.Error);
 			throw;
@@ -135,7 +135,7 @@ public abstract class Launcher
 				window.ActivateContext();
 				Launch(window);
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				failure = e;
 			}

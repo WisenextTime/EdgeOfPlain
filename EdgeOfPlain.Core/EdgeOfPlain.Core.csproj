@@ -11,11 +11,11 @@
 		<PackageReference Include="Tomlyn" Version="2.10.1"/>
 	</ItemGroup>
 	<ItemGroup>
-	  <None Remove="Assets\**" />
-	  <EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
+		<None Remove="Assets\**"/>
+		<EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))"/>
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="Math\" />
+		<Folder Include="Math\"/>
 	</ItemGroup>
 
 </Project>

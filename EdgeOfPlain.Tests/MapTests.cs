@@ -29,7 +29,9 @@ public sealed class MapTests
 		var map = new Map(4, 3);
 		for (var x = 0; x < map.Width; x++)
 		for (var y = 0; y < map.Height; y++)
+		{
 			map.Tiles[x, y] = (ushort)(x * 10 + y + 1);
+		}
 
 		var toml = TomlSerializer.Serialize(map, Options);
 		var restored = TomlSerializer.Deserialize<Map>(toml, Options);
@@ -40,7 +42,9 @@ public sealed class MapTests
 
 		for (var x = 0; x < map.Width; x++)
 		for (var y = 0; y < map.Height; y++)
+		{
 			Assert.Equal(map.Tiles[x, y], restored.Tiles[x, y]);
+		}
 	}
 
 	[Fact]

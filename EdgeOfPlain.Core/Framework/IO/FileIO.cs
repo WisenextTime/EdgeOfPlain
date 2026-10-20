@@ -228,7 +228,8 @@ public static class FileIO
 		fileSystem.DeleteDirectory(path, recursive);
 	}
 
-	public static ValueTask DeleteDirectoryAsync(string sourcePath, bool recursive = false, CancellationToken cancellationToken = default)
+	public static ValueTask DeleteDirectoryAsync(string sourcePath, bool recursive = false,
+		CancellationToken cancellationToken = default)
 	{
 		var (fileSystem, path) = Resolve(sourcePath);
 		return fileSystem.DeleteDirectoryAsync(path, recursive, cancellationToken);
@@ -240,7 +241,8 @@ public static class FileIO
 		fileSystem.CopyFile(source, destination, overwrite);
 	}
 
-	public static ValueTask CopyFileAsync(string sourcePath, string destinationPath, bool overwrite = false, CancellationToken cancellationToken = default)
+	public static ValueTask CopyFileAsync(string sourcePath, string destinationPath, bool overwrite = false,
+		CancellationToken cancellationToken = default)
 	{
 		var (fileSystem, source, destination) = ResolvePair(sourcePath, destinationPath);
 		return fileSystem.CopyFileAsync(source, destination, overwrite, cancellationToken);
@@ -252,7 +254,8 @@ public static class FileIO
 		fileSystem.MoveFile(source, destination, overwrite);
 	}
 
-	public static ValueTask MoveFileAsync(string sourcePath, string destinationPath, bool overwrite = false, CancellationToken cancellationToken = default)
+	public static ValueTask MoveFileAsync(string sourcePath, string destinationPath, bool overwrite = false,
+		CancellationToken cancellationToken = default)
 	{
 		var (fileSystem, source, destination) = ResolvePair(sourcePath, destinationPath);
 		return fileSystem.MoveFileAsync(source, destination, overwrite, cancellationToken);
@@ -284,13 +287,15 @@ public static class FileIO
 			.Select(directory => $"{head}{SchemeSeparator}{directory}");
 	}
 
-	private static (FileSystem FileSystem, string Source, string Destination) ResolvePair(string sourcePath, string destinationPath)
+	private static (FileSystem FileSystem, string Source, string Destination) ResolvePair(string sourcePath,
+		string destinationPath)
 	{
 		var source = Resolve(sourcePath);
 		var destination = Resolve(destinationPath);
 
 		if (!ReferenceEquals(source.FileSystem, destination.FileSystem))
-			throw new ArgumentException($"'{sourcePath}' and '{destinationPath}' are not mounted on the same file system", nameof(destinationPath));
+			throw new ArgumentException($"'{sourcePath}' and '{destinationPath}' are not mounted on the same file system",
+				nameof(destinationPath));
 
 		return (source.FileSystem, source.Path, destination.Path);
 	}

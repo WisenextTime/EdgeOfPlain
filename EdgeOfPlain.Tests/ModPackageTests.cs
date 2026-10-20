@@ -26,11 +26,11 @@ internal static class ZipFactory
 	}
 
 	public const string Manifest = """
-		id = "CoolMod"
-		version = "1.2.3"
-		author = "tester"
-		description = "test mod"
-		""";
+	                               id = "CoolMod"
+	                               version = "1.2.3"
+	                               author = "tester"
+	                               description = "test mod"
+	                               """;
 }
 
 public sealed class ModPackageTests

@@ -1,1 +1,4 @@
-﻿{ "parallelizeTestCollections": false, "diagnosticMessages": false }
+﻿{
+  "parallelizeTestCollections": false,
+  "diagnosticMessages": false
+}

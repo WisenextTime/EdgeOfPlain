@@ -73,5 +73,5 @@ public static class SfmlInput
 	}
 
 	private static int TableSize(IEnumerable<int> values) => values.Select(value => value + 1).Prepend(0).Max();
-	
+
 }

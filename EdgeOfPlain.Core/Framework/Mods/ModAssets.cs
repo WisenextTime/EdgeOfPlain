@@ -9,6 +9,7 @@ namespace EdgeOfPlain.Core.Framework.Mods;
 public static class ModAssets
 {
 	private const int MaxListedShadows = 20;
+
 	public static IReadOnlyList<string> MountAll(ModFileSystem assets, IReadOnlyList<ModPackage> inLoadOrder)
 	{
 		ArgumentNullException.ThrowIfNull(assets);
@@ -27,7 +28,7 @@ public static class ModAssets
 			{
 				assets.RegisterNamespace(package.ModId, package.Assets);
 			}
-			catch (Exception e)
+			catch(Exception e)
 			{
 				LogUtils.LogMessage($"Namespace of mod '{package.ModId}' mount failed.", LogUtils.LogType.Error);
 				LogUtils.LogMessage(e.Message, LogUtils.LogType.Error);
@@ -48,6 +49,7 @@ public static class ModAssets
 
 		return rejected;
 	}
+
 	public static void Seal(ModFileSystem assets)
 	{
 		ArgumentNullException.ThrowIfNull(assets);

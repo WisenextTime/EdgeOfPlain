@@ -8,6 +8,6 @@ public static class LogUtils
 
 	public static void LogMessage(string message, LogType type = LogType.Info)
 	{
-		Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [{type.ToString()}] {message}"); 
+		Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [{type.ToString()}] {message}");
 	}
 }

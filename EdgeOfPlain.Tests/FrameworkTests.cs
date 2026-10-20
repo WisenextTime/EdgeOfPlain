@@ -279,9 +279,20 @@ public sealed class EventBusTests
 		Assert.Equal(2, EventBus.SubscriberCount<int>());
 		return;
 
-		void First(int _) => calls++;
-		void Second(int _) => calls += 10;
-		void Third(int _) => calls += 100;
+		void First(int _)
+		{
+			calls++;
+		}
+
+		void Second(int _)
+		{
+			calls += 10;
+		}
+
+		void Third(int _)
+		{
+			calls += 100;
+		}
 	}
 
 	[Fact]

@@ -4,6 +4,7 @@ using System.Text;
 using SFML.Graphics;
 
 namespace EdgeOfPlain.Client.Utils;
+
 public static class ShaderParser
 {
 	private enum Stage
@@ -25,7 +26,7 @@ public static class ShaderParser
 
 		var stage = Stage.Prelude;
 
-		using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+		using var reader = new StreamReader(stream, Encoding.UTF8, true);
 
 		while (reader.ReadLine() is { } line)
 		{
@@ -56,7 +57,8 @@ public static class ShaderParser
 		return Shader.FromString(vertexSource, geometrySource, fragmentSource);
 	}
 
-	private static StringBuilder BufferFor(Stage stage, StringBuilder prelude, StringBuilder vertex, StringBuilder geometry, StringBuilder fragment)
+	private static StringBuilder BufferFor(Stage stage, StringBuilder prelude, StringBuilder vertex, StringBuilder geometry,
+		StringBuilder fragment)
 		=> stage switch
 		{
 			Stage.Vertex => vertex,

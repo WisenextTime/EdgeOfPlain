@@ -12,6 +12,9 @@ public enum SceneChangeKind
 	PopTo,
 	Clear,
 }
+
 public readonly record struct SceneChangedEvent(SceneChangeKind Kind, IScene? Previous, IScene? Current);
+
 public readonly record struct WindowResizedEvent(Size Previous, Size Current);
+
 public readonly record struct MapLoadedEvent(Map Source);

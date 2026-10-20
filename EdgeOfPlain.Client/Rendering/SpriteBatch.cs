@@ -10,6 +10,7 @@ using SFML.System;
 using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
+
 public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera2D>? camera = null)
 	: ISpriteBatch, IDisposable
 {
@@ -309,7 +310,7 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 			var view = _cameraBounds[entry.CameraSlot];
 
 			if (bounds.Left > view.Right || bounds.Left + bounds.Width < view.Left ||
-				bounds.Top > view.Bottom || bounds.Top + bounds.Height < view.Top)
+			    bounds.Top > view.Bottom || bounds.Top + bounds.Height < view.Top)
 				return;
 
 			ApplyCamera(entry.CameraSlot);
@@ -423,14 +424,27 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 	}
 
 	private readonly record struct Quad(
-		float X0, float Y0,
-		float X1, float Y1,
-		float X2, float Y2,
-		float X3, float Y3,
-		float TexLeft, float TexTop,
-		float TexRight, float TexBottom);
+		float X0,
+		float Y0,
+		float X1,
+		float Y1,
+		float X2,
+		float Y2,
+		float X3,
+		float Y3,
+		float TexLeft,
+		float TexTop,
+		float TexRight,
+		float TexBottom);
 
-	private readonly record struct TextEntry(string Content, uint Size, float X, float Y, uint Layer, int CameraSlot, int Sequence);
+	private readonly record struct TextEntry(
+		string Content,
+		uint Size,
+		float X,
+		float Y,
+		uint Layer,
+		int CameraSlot,
+		int Sequence);
 
 	private readonly record struct GroupKey(uint Layer, string? Texture, string? Shader, int CameraSlot);
 }

@@ -53,13 +53,16 @@ public sealed class InputState : IInputState
 			while (_pending.Count > 0) Apply(_pending.Dequeue());
 		}
 	}
+
 	public void OnKeyDown(Key key) => Apply(new InputEvent(InputEventKind.KeyDown, key, default, 0f, 0f));
 
 	public void OnKeyUp(Key key) => Apply(new InputEvent(InputEventKind.KeyUp, key, default, 0f, 0f));
 
-	public void OnMouseButtonDown(MouseButton button) => Apply(new InputEvent(InputEventKind.MouseButtonDown, default, button, 0f, 0f));
+	public void OnMouseButtonDown(MouseButton button)
+		=> Apply(new InputEvent(InputEventKind.MouseButtonDown, default, button, 0f, 0f));
 
-	public void OnMouseButtonUp(MouseButton button) => Apply(new InputEvent(InputEventKind.MouseButtonUp, default, button, 0f, 0f));
+	public void OnMouseButtonUp(MouseButton button)
+		=> Apply(new InputEvent(InputEventKind.MouseButtonUp, default, button, 0f, 0f));
 
 	public void OnMouseMoved(float x, float y) => Apply(new InputEvent(InputEventKind.MouseMove, default, default, x, y));
 
@@ -72,9 +75,11 @@ public sealed class InputState : IInputState
 
 	public void PostKeyUp(Key key) => Post(new InputEvent(InputEventKind.KeyUp, key, default, 0f, 0f));
 
-	public void PostMouseButtonDown(MouseButton button) => Post(new InputEvent(InputEventKind.MouseButtonDown, default, button, 0f, 0f));
+	public void PostMouseButtonDown(MouseButton button)
+		=> Post(new InputEvent(InputEventKind.MouseButtonDown, default, button, 0f, 0f));
 
-	public void PostMouseButtonUp(MouseButton button) => Post(new InputEvent(InputEventKind.MouseButtonUp, default, button, 0f, 0f));
+	public void PostMouseButtonUp(MouseButton button)
+		=> Post(new InputEvent(InputEventKind.MouseButtonUp, default, button, 0f, 0f));
 
 	public void PostMouseMoved(float x, float y) => Post(new InputEvent(InputEventKind.MouseMove, default, default, x, y));
 
@@ -120,7 +125,10 @@ public sealed class InputState : IInputState
 
 	private void Post(in InputEvent inputEvent)
 	{
-		lock (_gate) _pending.Enqueue(inputEvent);
+		lock (_gate)
+		{
+			_pending.Enqueue(inputEvent);
+		}
 	}
 
 	private void Apply(in InputEvent inputEvent)

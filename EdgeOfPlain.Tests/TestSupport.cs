@@ -26,10 +26,10 @@ internal sealed class TempDirectory : IDisposable
 		{
 			Directory.Delete(Path, true);
 		}
-		catch (IOException)
+		catch(IOException)
 		{
 		}
-		catch (UnauthorizedAccessException)
+		catch(UnauthorizedAccessException)
 		{
 		}
 	}
@@ -37,7 +37,8 @@ internal sealed class TempDirectory : IDisposable
 
 internal sealed class MemoryFileSystem(bool caseSensitive = true) : FileSystem
 {
-	private readonly Dictionary<string, byte[]> _files = new(caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, byte[]> _files =
+		new(caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
 	private readonly HashSet<string> _directories = new(StringComparer.Ordinal) { string.Empty };
 
 	public override bool IsCaseSensitive { get; } = caseSensitive;
@@ -62,7 +63,7 @@ internal sealed class MemoryFileSystem(bool caseSensitive = true) : FileSystem
 
 	protected override Stream OpenReadCore(string path)
 		=> _files.TryGetValue(path, out var content)
-			? new MemoryStream(content, writable: false)
+			? new MemoryStream(content, false)
 			: throw new FileNotFoundException($"'{path}' does not exist", path);
 
 	protected override Stream OpenWriteCore(string path)

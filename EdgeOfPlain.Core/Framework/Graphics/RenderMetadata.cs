@@ -4,7 +4,7 @@ using System.Numerics;
 namespace EdgeOfPlain.Core.Framework.Graphics;
 
 public sealed record RenderMetadata
-{ 
+{
 	public string? Texture { get; set; }
 	public string? Shader { get; set; }
 	public uint Layer { get; set; }

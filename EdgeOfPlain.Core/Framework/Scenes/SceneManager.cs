@@ -53,6 +53,7 @@ public sealed class SceneManager
 		ArgumentNullException.ThrowIfNull(scene);
 		_pending.Add(new SceneCommand(SceneChangeKind.PopTo, scene));
 	}
+
 	public bool HandleInput(IInputState input)
 	{
 		ArgumentNullException.ThrowIfNull(input);
@@ -126,7 +127,10 @@ public sealed class SceneManager
 				var found = _scenes.IndexOf(target);
 				if (found < 0) return;
 
-				for (var index = _scenes.Count - 1; index > found; index--) Exit();
+				for (var index = _scenes.Count - 1; index > found; index--)
+				{
+					Exit();
+				}
 				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
 				break;
 

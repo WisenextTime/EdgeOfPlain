@@ -47,7 +47,7 @@ public static class EventBus
 			{
 				action(message);
 			}
-			catch (Exception exception)
+			catch(Exception exception)
 			{
 				(failures ??= []).Add(exception);
 			}
@@ -59,17 +59,26 @@ public static class EventBus
 
 	public static bool HasSubscribers<T>() where T : notnull
 	{
-		lock (_gate) return _handlers.ContainsKey(typeof(T));
+		lock (_gate)
+		{
+			return _handlers.ContainsKey(typeof(T));
+		}
 	}
 
 	public static int SubscriberCount<T>() where T : notnull
 	{
-		lock (_gate) return _handlers.TryGetValue(typeof(T), out var boxed) ? ((Handlers<T>)boxed).Actions.Length : 0;
+		lock (_gate)
+		{
+			return _handlers.TryGetValue(typeof(T), out var boxed) ? ((Handlers<T>)boxed).Actions.Length : 0;
+		}
 	}
 
 	public static void Clear()
 	{
-		lock (_gate) _handlers.Clear();
+		lock (_gate)
+		{
+			_handlers.Clear();
+		}
 	}
 
 	private static void Remove<T>(Action<T> handler) where T : notnull

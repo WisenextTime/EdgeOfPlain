@@ -43,6 +43,7 @@ public sealed class ModPackage : IDisposable
 
 	public bool HasAssets => Assets.DirectoryExists(string.Empty);
 	public static ModPackage Open(string zipPath) => Open(zipPath, null);
+
 	public static ModPackage Open(string zipPath, string? modId)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
@@ -73,7 +74,8 @@ public sealed class ModPackage : IDisposable
 				overriders[ModFileSystem.NormalizeNamespace(target)] = new SubFileSystem(zip, directory);
 			}
 
-			return new ModPackage(id, Path.GetFullPath(zipPath), zip, new SubFileSystem(zip, AssetDirectoryName), overriders, info);
+			return new ModPackage(id, Path.GetFullPath(zipPath), zip, new SubFileSystem(zip, AssetDirectoryName), overriders,
+				info);
 		}
 		catch
 		{
