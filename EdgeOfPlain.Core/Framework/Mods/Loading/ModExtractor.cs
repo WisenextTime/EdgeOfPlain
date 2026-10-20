@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using EdgeOfPlain.Core.Framework.IO;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
+namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
 public static class ModExtractor
 {
@@ -45,14 +45,13 @@ public static class ModExtractor
 		return directory;
 	}
 
-	private static bool ShouldExtract(string path)
-	{
-		if (path.StartsWith("runtimes/", StringComparison.OrdinalIgnoreCase)) return true;
-		if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) return true;
-		if (path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase)) return true;
-		if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return true;
-		if (path.EndsWith(".so", StringComparison.OrdinalIgnoreCase)) return true;
+	private static bool ShouldExtract(string path) 
+		=> path.StartsWith("runtimes/", StringComparison.OrdinalIgnoreCase) ||
+		   path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
+		   path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase) ||
+		   path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+		   path.EndsWith(".so", StringComparison.OrdinalIgnoreCase) ||
+		   path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase);
 
-		return path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase);
-	}
+	
 }

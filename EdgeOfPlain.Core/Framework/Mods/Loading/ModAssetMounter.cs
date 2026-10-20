@@ -4,9 +4,9 @@ using System.Linq;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Utils;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
+namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
-public static class ModAssets
+public static class ModAssetMounter
 {
 	private const int MaxListedShadows = 20;
 
@@ -37,14 +37,18 @@ public static class ModAssets
 		}
 
 		foreach (var package in inLoadOrder)
-		foreach (var (target, layer) in package.Overriders)
 		{
-			if (assets.AddOverrideLayer(target, layer, package.ModId)) continue;
+			if (rejected.Contains(package.ModId)) continue;
 
-			LogUtils.LogMessage(
-				$"{ModPackage.OverriderDirectoryName}/{target}/ in mod '{package.ModId}' will be ignore, " +
-				$"because of nonexistent target namespace",
-				LogUtils.LogType.Error);
+			foreach (var (target, layer) in package.Overriders)
+			{
+				if (assets.AddOverrideLayer(target, layer, package.ModId)) continue;
+
+				LogUtils.LogMessage(
+					$"{ModPackage.OverriderDirectoryName}/{target}/ in mod '{package.ModId}' will be ignore, " +
+					$"because of nonexistent target namespace",
+					LogUtils.LogType.Error);
+			}
 		}
 
 		return rejected;
@@ -71,7 +75,7 @@ public static class ModAssets
 			{
 				if (listed++ >= MaxListedShadows)
 				{
-					LogUtils.LogMessage($"  … remaining {overlay.Shadows.Count - MaxListedShadows} omitted");
+					LogUtils.LogMessage($"  ...remaining {overlay.Shadows.Count - MaxListedShadows} omitted");
 					break;
 				}
 				LogUtils.LogMessage($"  {path} ← {overlay.Layers[index].Name}");

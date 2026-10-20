@@ -6,11 +6,11 @@ using System.Reflection;
 using System.Runtime.Loader;
 using EdgeOfPlain.Core.Utils;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
+namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
-internal sealed class ModLoadContext : AssemblyLoadContext
+internal sealed class ModAssemblyLoadContext : AssemblyLoadContext
 {
-	internal static readonly IReadOnlySet<string> SharedAssemblies =
+	private static readonly IReadOnlySet<string> _sharedAssemblies =
 		new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			"EdgeOfPlain.Core", "Tomlyn", "Arch", "Arch.LowLevel", "Collections.Pooled",
@@ -19,7 +19,7 @@ internal sealed class ModLoadContext : AssemblyLoadContext
 	private readonly List<AssemblyDependencyResolver> _resolvers = [];
 	private readonly string _directory;
 
-	public ModLoadContext(string modId, string directory, IEnumerable<string> mainAssemblies)
+	public ModAssemblyLoadContext(string modId, string directory, IEnumerable<string> mainAssemblies)
 		: base(modId, true)
 	{
 		_directory = directory;
@@ -36,7 +36,7 @@ internal sealed class ModLoadContext : AssemblyLoadContext
 		var name = assemblyName.Name;
 		if (name is null) return null;
 
-		if (SharedAssemblies.Contains(name)) return null;
+		if (_sharedAssemblies.Contains(name)) return null;
 
 		foreach (var path in _resolvers.Select(resolver => resolver.ResolveAssemblyToPath(assemblyName)).OfType<string>())
 		{

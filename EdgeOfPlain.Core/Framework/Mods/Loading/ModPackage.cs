@@ -6,7 +6,7 @@ using System.Text.Json;
 using EdgeOfPlain.Core.Framework.IO;
 using Tomlyn;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
+namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
 public sealed class ModPackage : IDisposable
 {
