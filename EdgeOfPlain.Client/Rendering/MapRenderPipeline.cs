@@ -1,10 +1,11 @@
+using System;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.World;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public class MapRenderPipeline : IRenderPipeline
+public class MapRenderPipeline(Func<Camera2D>? camera) : IRenderPipeline
 {
 	public void Begin()
 	{

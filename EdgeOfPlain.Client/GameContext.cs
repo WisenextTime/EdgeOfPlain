@@ -22,6 +22,6 @@ public static class GameContext
 		Fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
 		Target = target ?? throw new ArgumentNullException(nameof(target));
 
-		Sprites = new SpriteBatch(target, fonts, () => window.Camera);
+		Sprites = new SpriteBatch(target, () => window.Camera);
 	}
 }

@@ -2,6 +2,7 @@ using System.Numerics;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Core.Framework.Graphics;
+using SFML.System;
 using Xunit;
 
 namespace EdgeOfPlain.Client.Tests;
@@ -13,7 +14,7 @@ public sealed class SpriteBatchTests
 	{
 		var target = new FakeRenderTarget();
 		using var fonts = new UiFonts();
-		using var batch = new SpriteBatch(target, fonts);
+		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata
 		{
 			Layer = 1,
@@ -38,7 +39,7 @@ public sealed class SpriteBatchTests
 	{
 		var target = new FakeRenderTarget();
 		using var fonts = new UiFonts();
-		using var batch = new SpriteBatch(target, fonts);
+		using var batch = new SpriteBatch(target);
 		var lower = new RenderMetadata { Layer = 1, Size = new Vector2(8, 8) };
 		var upper = new RenderMetadata { Layer = 2, Size = new Vector2(8, 8) };
 
@@ -56,7 +57,7 @@ public sealed class SpriteBatchTests
 	{
 		var target = new FakeRenderTarget();
 		using var fonts = new UiFonts();
-		using var batch = new SpriteBatch(target, fonts);
+		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata
 		{
 			Layer = 1,
@@ -82,10 +83,10 @@ public sealed class SpriteBatchTests
 	[Fact]
 	public void CameraCullsSpritesOutsideTheView()
 	{
-		var target = new FakeRenderTarget { Size = new(100, 100) };
+		var target = new FakeRenderTarget { Size = new Vector2u(100, 100) };
 		using var fonts = new UiFonts();
-		var camera = new Camera2D(new Vector2(0, 0), 1f);
-		using var batch = new SpriteBatch(target, fonts, () => camera);
+		var camera = new Camera2D(new Vector2(0, 0));
+		using var batch = new SpriteBatch(target, () => camera);
 		var metadata = new RenderMetadata { Layer = 1, Size = new Vector2(10, 10) };
 
 		batch.Begin();
@@ -101,7 +102,7 @@ public sealed class SpriteBatchTests
 	{
 		var target = new FakeRenderTarget();
 		using var fonts = new UiFonts();
-		using var batch = new SpriteBatch(target, fonts);
+		using var batch = new SpriteBatch(target);
 
 		batch.Begin();
 		batch.DrawText("hello", 16, 10, 20, 1);
@@ -116,7 +117,7 @@ public sealed class SpriteBatchTests
 	{
 		var target = new FakeRenderTarget();
 		using var fonts = new UiFonts();
-		using var batch = new SpriteBatch(target, fonts);
+		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata { Layer = 1, Size = new Vector2(10, 10) };
 
 		batch.Begin();
