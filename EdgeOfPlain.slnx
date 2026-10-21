@@ -2,4 +2,5 @@
 	<Project Path="EdgeOfPlain.Core/EdgeOfPlain.Core.csproj"/>
 	<Project Path="EdgeOfPlain.Client/EdgeOfPlain.Client.csproj"/>
 	<Project Path="EdgeOfPlain.Tests/EdgeOfPlain.Tests.csproj"/>
+	<Project Path="EdgeOfPlain.Client.Tests/EdgeOfPlain.Client.Tests.csproj"/>
 </Solution>

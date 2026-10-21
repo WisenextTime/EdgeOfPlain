@@ -8,17 +8,17 @@ public class MapRenderPipeline : IRenderPipeline
 {
 	public void Begin()
 	{
-
+		
 	}
 
 	public void End()
 	{
-
+		
 	}
 
 	public void ChangeMap(Map map)
 	{
-
+		
 	}
 }
 

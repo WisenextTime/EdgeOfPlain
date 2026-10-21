@@ -5,6 +5,8 @@ using SFML.Graphics;
 
 namespace EdgeOfPlain.Client.Utils;
 
+public readonly record struct ShaderSources(string? Vertex, string? Geometry, string? Fragment);
+
 public static class ShaderParser
 {
 	private enum Stage
@@ -15,7 +17,9 @@ public static class ShaderParser
 		Fragment,
 	}
 
-	public static Shader ParseShader(Stream stream)
+	public static Shader ParseShader(Stream stream) => Compile(ParseSources(stream));
+
+	public static ShaderSources ParseSources(Stream stream)
 	{
 		ArgumentNullException.ThrowIfNull(stream);
 
@@ -54,8 +58,11 @@ public static class ShaderParser
 		if (vertexSource is null && geometrySource is null && fragmentSource is null)
 			throw new InvalidDataException("shader source has no #VERT, #GEOM or #FRAG section");
 
-		return Shader.FromString(vertexSource, geometrySource, fragmentSource);
+		return new ShaderSources(vertexSource, geometrySource, fragmentSource);
 	}
+
+	public static Shader Compile(ShaderSources sources)
+		=> Shader.FromString(sources.Vertex, sources.Geometry, sources.Fragment);
 
 	private static StringBuilder BufferFor(Stage stage, StringBuilder prelude, StringBuilder vertex, StringBuilder geometry,
 		StringBuilder fragment)

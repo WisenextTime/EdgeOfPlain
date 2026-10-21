@@ -11,13 +11,12 @@ using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera2D>? camera = null)
+public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = null)
 	: ISpriteBatch, IDisposable
 {
 	private const float DefaultQuadSize = 16f;
 
 	private readonly IRenderTarget _target = target ?? throw new ArgumentNullException(nameof(target));
-	private readonly UiFonts _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
 
 	private readonly Dictionary<Camera2D, int> _cameraSlots = [];
 	private readonly List<Camera2D> _cameras = [];
@@ -144,9 +143,15 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 
 	public void End()
 	{
-		if (_activeKeys.Count == 0 && _texts.Count == 0) return;
+		switch (_activeKeys.Count)
+		{
+			case 0 when _texts.Count == 0:
+				return;
+			case > 1:
+				_activeKeys.Sort(static (left, right) => Compare(left, right));
+				break;
+		}
 
-		if (_activeKeys.Count > 1) _activeKeys.Sort(static (left, right) => Compare(left, right));
 		if (_texts.Count > 1) _texts.Sort(static (left, right) => CompareText(left, right));
 
 		var textIndex = 0;
@@ -317,7 +322,7 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 	{
 		if (_textCache.TryGetValue(size, out var cached)) return cached;
 
-		var text = new Text(_fonts.Light, string.Empty, size);
+		var text = new Text(GameContext.Fonts.Light, string.Empty, size);
 		_textCache[size] = text;
 
 		return text;

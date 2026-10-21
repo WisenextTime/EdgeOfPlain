@@ -102,10 +102,9 @@ public sealed class OverlayFileSystem : FileSystem
 	protected override Stream OpenReadCore(string path)
 	{
 		var target = Target(path);
-		if (!target.FileExists(path))
-			throw new FileNotFoundException($"Namespace '{BaseLayer.Name}' do not contain '{path}'", path);
-
-		return target.OpenRead(path);
+		return !target.FileExists(path)
+			? throw new FileNotFoundException($"Namespace '{BaseLayer.Name}' do not contain '{path}'", path)
+			: target.OpenRead(path);
 	}
 
 	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)

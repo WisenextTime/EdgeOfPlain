@@ -23,10 +23,27 @@ public static class FileIO
 	public static void RegisterFileSystem(string head, FileSystem fileSystem)
 	{
 		ArgumentNullException.ThrowIfNull(fileSystem);
-		RegisterFileSystem(head, () => fileSystem);
+
+		if (TryRegisterFileSystem(head, fileSystem)) return;
+
+		throw new ArgumentException($"head '{head}' is already registered", nameof(head));
 	}
 
 	public static void RegisterFileSystem(string head, Func<FileSystem> factory)
+	{
+		if (TryRegisterFileSystem(head, factory)) return;
+
+		throw new ArgumentException($"head '{head}' is already registered", nameof(head));
+	}
+
+	public static bool TryRegisterFileSystem(string head, FileSystem fileSystem)
+	{
+		ArgumentNullException.ThrowIfNull(fileSystem);
+
+		return TryRegisterFileSystem(head, () => fileSystem);
+	}
+
+	public static bool TryRegisterFileSystem(string head, Func<FileSystem> factory)
 	{
 		ValidateHead(head);
 		ArgumentNullException.ThrowIfNull(factory);
@@ -34,8 +51,10 @@ public static class FileIO
 		lock (_gate)
 		{
 			if (!_registry.TryAdd(head, new Lazy<FileSystem>(factory, LazyThreadSafetyMode.ExecutionAndPublication)))
-				throw new ArgumentException($"head '{head}' is already registered", nameof(head));
+				return false;
+
 			_mounts = _registry.ToFrozenDictionary(StringComparer.Ordinal);
+			return true;
 		}
 	}
 
