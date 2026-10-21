@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
 using EdgeOfPlain.Client.Resource;
+using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.Graphics;
-using EdgeOfPlain.Core.Framework.Resource;
 using SFML.Graphics;
 using SFML.System;
 using SfColor = SFML.Graphics.Color;
@@ -18,10 +18,7 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 
 	private readonly IRenderTarget _target = target ?? throw new ArgumentNullException(nameof(target));
 	private readonly UiFonts _fonts = fonts ?? throw new ArgumentNullException(nameof(fonts));
-	private readonly Func<string, Shader> _shaderLoader = static path => AssetsManager.LoadResource<Shader>(path);
 
-	private readonly Dictionary<string, Texture> _textures = new(StringComparer.Ordinal);
-	private readonly Dictionary<string, Shader> _shaders = new(StringComparer.Ordinal);
 	private readonly Dictionary<Camera2D, int> _cameraSlots = [];
 	private readonly List<Camera2D> _cameras = [];
 	private readonly List<RectangleF> _cameraBounds = [];
@@ -36,8 +33,6 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 
 	private Camera2D? _lastCamera;
 	private int _lastCameraSlot = -1;
-	private string? _lastTexturePath;
-	private Texture? _lastTexture;
 	private GroupKey _lastKey;
 	private Bucket? _lastBucket;
 
@@ -63,8 +58,6 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 
 		_lastCamera = null;
 		_lastCameraSlot = -1;
-		_lastTexturePath = null;
-		_lastTexture = null;
 		_lastBucket = null;
 
 		_texts.Clear();
@@ -105,7 +98,7 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 			viewBounds = _cameraBounds[cameraSlot];
 		}
 
-		var texture = metadata.Texture is null ? null : ResolveTexture(metadata.Texture);
+		var texture = string.IsNullOrEmpty(metadata.Texture) ? null : ResolveTexture(metadata.Texture);
 
 		if (!TryBuildQuad(metadata, texture, x, y, viewBounds, out var quad))
 		{
@@ -113,7 +106,8 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 			return;
 		}
 
-		var key = new GroupKey(metadata.Layer, metadata.Texture, metadata.Shader, cameraSlot);
+		var shader = string.IsNullOrEmpty(metadata.Shader) ? null : metadata.Shader;
+		var key = new GroupKey(metadata.Layer, texture?.TexturePath, shader, cameraSlot);
 
 		Bucket bucket;
 		if (_lastBucket is not null && key.Equals(_lastKey))
@@ -182,13 +176,9 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 	public void Dispose()
 	{
 		foreach (var text in _textCache.Values) text.Dispose();
-		foreach (var shader in _shaders.Values) shader.Dispose();
-		foreach (var texture in _textures.Values) texture.Dispose();
 
 		_textCache.Clear();
 		_texts.Clear();
-		_shaders.Clear();
-		_textures.Clear();
 		_buckets.Clear();
 		_activeKeys.Clear();
 	}
@@ -205,9 +195,12 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 		return slot;
 	}
 
-	private bool TryBuildQuad(RenderMetadata metadata, Texture? texture, float x, float y, RectangleF? view, out Quad quad)
+	private static bool TryBuildQuad(RenderMetadata metadata, TextureData? texture, float x, float y, RectangleF? view, out Quad quad)
 	{
-		var natural = NaturalSize(metadata, texture);
+		var source = metadata.Source ?? texture?.Source;
+		var natural = source is { } region
+			? new Vector2(region.Width, region.Height)
+			: metadata.Size ?? new Vector2(DefaultQuadSize);
 		var scale = ResolveScale(metadata, natural);
 
 		var width = natural.X;
@@ -248,12 +241,12 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 			}
 		}
 
-		var texLeft = metadata.Source?.Left ?? 0;
-		var texTop = metadata.Source?.Top ?? 0;
+		var texLeft = source?.Left ?? 0;
+		var texTop = source?.Top ?? 0;
 
 		quad = new Quad(
 			x0, y0, x1, y1, x2, y2, x3, y3,
-			texLeft, texTop, texLeft + width, texTop + height);
+			texLeft, texTop, texLeft + natural.X, texTop + natural.Y);
 
 		return true;
 	}
@@ -288,7 +281,7 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 		ApplyCamera(key.CameraSlot);
 
 		var states = RenderStates.Default;
-		states.Texture = key.Texture is null ? null : ResolveTexture(key.Texture);
+		states.Texture = key.Texture is null ? null : ClientAssetsManager.Get<Texture>(key.Texture);
 		states.Shader = key.Shader is null ? null : ResolveShader(key.Shader);
 
 		_target.Draw(bucket.Vertices, 0, (uint)bucket.Count, PrimitiveType.Triangles, states);
@@ -330,38 +323,9 @@ public sealed class SpriteBatch(IRenderTarget target, UiFonts fonts, Func<Camera
 		return text;
 	}
 
-	private Texture ResolveTexture(string path)
-	{
-		if (_lastTexture is not null && string.Equals(_lastTexturePath, path, StringComparison.Ordinal)) return _lastTexture;
+	private static TextureData ResolveTexture(string key) => ClientAssetsManager.Get<TextureData>(key);
 
-		if (!_textures.TryGetValue(path, out var texture))
-		{
-			texture = AssetsManager.LoadResource<Texture>(path);
-			_textures[path] = texture;
-		}
-
-		_lastTexturePath = path;
-		_lastTexture = texture;
-
-		return texture;
-	}
-
-	private Shader ResolveShader(string path)
-	{
-		if (_shaders.TryGetValue(path, out var cached)) return cached;
-
-		var shader = _shaderLoader(path);
-		_shaders[path] = shader;
-		return shader;
-	}
-
-	private static Vector2 NaturalSize(RenderMetadata metadata, Texture? texture)
-	{
-		if (metadata.Source is { } source) return new Vector2(source.Width, source.Height);
-		if (texture is not null) return new Vector2(texture.Size.X, texture.Size.Y);
-
-		return metadata.Size ?? new Vector2(DefaultQuadSize);
-	}
+	private static Shader ResolveShader(string path) => ClientAssetsManager.Get<Shader>(path);
 
 	private static Vector2 ResolveScale(RenderMetadata metadata, Vector2 natural)
 	{

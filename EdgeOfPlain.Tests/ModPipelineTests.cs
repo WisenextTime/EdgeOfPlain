@@ -104,6 +104,17 @@ public sealed class ModPipelineTests
 		Assert.DoesNotContain("oldapp", pipeline.LoadedIds);
 	}
 
+	[Fact]
+	public void ResourceLoaderReceivesOneDirectoryAtATime()
+	{
+		var pipeline = Run();
+
+		Assert.Equal(1, pipeline.ProbeCalls);
+		Assert.EndsWith("base/Probe/Tiles/", pipeline.ProbePath);
+		Assert.Equal(2, pipeline.ProbeFiles.Length);
+		Assert.All(pipeline.ProbeFiles, file => Assert.Contains("base/Probe/Tiles/", file));
+	}
+
 	private static Pipeline Execute()
 	{
 		var root = new TempDirectory();
@@ -119,6 +130,9 @@ public sealed class ModPipelineTests
 		                                                                        id = "basedirt"
 		                                                                        moveCost = 2
 		                                                                        """);
+		Directory.CreateDirectory(Path.Combine(baseDirectory, "Probe", "Tiles"));
+		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "a.txt"), "a");
+		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "b.txt"), "b");
 
 		FileIO.Clear();
 		ContentStore.Reset();
@@ -146,6 +160,16 @@ public sealed class ModPipelineTests
 		Register(new TestMod(Info("ghost", ("missing", "1.0.0"))));
 		Register(new TestMod(Info("cyc1", ("cyc2", "1.0.0"))));
 		Register(new TestMod(Info("cyc2", ("cyc1", "1.0.0"))));
+
+		var probeCalls = 0;
+		string? probePath = null;
+		string[] probeFiles = [];
+		ModResourceLoader.TryRegister("Probe", directory =>
+		{
+			probeCalls++;
+			probePath = directory.Path;
+			probeFiles = [.. directory.Files];
+		});
 
 		Exception? error = null;
 		try
@@ -178,7 +202,10 @@ public sealed class ModPipelineTests
 			ContentStore.Get("basedirt") is not null,
 			lateRejected,
 			ContentTypeRegistry.ByType.ContainsKey(typeof(TilesetDef))
-			&& ContentTypeRegistry.ByType.ContainsKey(typeof(TileRendererDef)));
+			&& ContentTypeRegistry.ByType.ContainsKey(typeof(TileRendererDef)),
+			probeCalls,
+			probePath,
+			probeFiles);
 	}
 
 	private static void Register(Mod mod) => ModRegistry.Register(mod, mod.ModInfo);
@@ -202,7 +229,10 @@ public sealed class ModPipelineTests
 		bool HasBadOre,
 		bool HasBaseTomlContent,
 		bool RejectsLateRegistration,
-		bool HasBuiltInContentTypes);
+		bool HasBuiltInContentTypes,
+		int ProbeCalls,
+		string? ProbePath,
+		string[] ProbeFiles);
 
 	private sealed class TestMod(ModInfo info, Type[]? types = null, Action<ModContext>? init = null) : Mod
 	{

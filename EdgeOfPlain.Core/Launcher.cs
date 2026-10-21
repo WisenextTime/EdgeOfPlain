@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using EdgeOfPlain.Core.Framework.Events;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
@@ -64,6 +65,7 @@ public abstract class Launcher
 	protected virtual void InitResourceOperators()
 	{
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
+		AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
 	}
 
 	protected virtual ColorF ClearColor => ColorF.Black;

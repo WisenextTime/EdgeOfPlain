@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using EdgeOfPlain.Client.Resource;
+using EdgeOfPlain.Client.Resource.Shaders;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Scenes;
@@ -56,6 +57,12 @@ public sealed class LoadingScene(
 
 		if (_loading.IsFaulted)
 			throw new InvalidOperationException("Loading the game content failed.", _loading.Exception);
+
+		if (ShaderLoader.WarmupNext(out var compiled, out var total))
+		{
+			_message = $"Compiling shaders {compiled}/{total}…";
+			return;
+		}
 
 		if (!_completed)
 		{

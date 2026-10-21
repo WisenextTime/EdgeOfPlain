@@ -17,3 +17,14 @@ public static class TextOperatorBuilder
 	};
 	public static ResourceOperator<string> Build => field ??= new ResourceOperator<string>(_loader, _saver);
 }
+
+public static class TextureAtlasOperatorBuilder
+{
+	private static readonly Func<Stream, TextureAtlas> _loader = stream =>
+	{
+		using var reader = new StreamReader(stream);
+		return TextureAtlas.Parse(reader.ReadToEnd());
+	};
+
+	public static ResourceOperator<TextureAtlas> Build => field ??= new ResourceOperator<TextureAtlas>(_loader);
+}

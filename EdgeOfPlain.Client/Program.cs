@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.Resource;
+using EdgeOfPlain.Client.Resource.Shaders;
+using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Client.Scenes;
 using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Framework.Graphics;
@@ -20,6 +22,9 @@ public class Program : Launcher
 		AssetsManager.RegisterResourceOperator(TextureOperatorBuilder.Build);
 		AssetsManager.RegisterResourceOperator(ShaderOperatorBuilder.Build);
 		AssetsManager.RegisterResourceOperator(FontOperatorBuilder.Build);
+
+		TextureLoader.Register();
+		ShaderLoader.Register();
 	}
 
 	private static void Main()
@@ -41,6 +46,7 @@ public class Program : Launcher
 		finally
 		{
 			GameContext.Sprites.Dispose();
+			ClientAssetsManager.Dispose();
 		}
 	}
 
