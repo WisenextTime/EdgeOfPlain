@@ -11,16 +11,12 @@ using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
 
-public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = null)
+public sealed class SpriteBatch(IRenderTarget target)
 	: ISpriteBatch, IDisposable
 {
 	private const float DefaultQuadSize = 16f;
 
 	private readonly IRenderTarget _target = target ?? throw new ArgumentNullException(nameof(target));
-
-	private readonly Dictionary<Camera2D, int> _cameraSlots = [];
-	private readonly List<Camera2D> _cameras = [];
-	private readonly List<RectangleF> _cameraBounds = [];
 
 	private readonly Dictionary<GroupKey, Bucket> _buckets = [];
 	private readonly List<GroupKey> _activeKeys = [];
@@ -28,10 +24,8 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 	private readonly Dictionary<uint, Text> _textCache = [];
 
 	private Vector2 _pixels;
-	private Camera2D? _appliedCamera;
+	private RectangleF? _cameraBounds;
 
-	private Camera2D? _lastCamera;
-	private int _lastCameraSlot = -1;
 	private GroupKey _lastKey;
 	private Bucket? _lastBucket;
 
@@ -45,24 +39,23 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 
 	public int BatchCount => _activeKeys.Count;
 
-	public void Begin()
+	public void Begin() => StartFrame(null);
+
+	public void Begin(Camera2D camera) => StartFrame(camera);
+
+	private void StartFrame(Camera2D? camera)
 	{
 		foreach (var key in _activeKeys) _buckets[key].Reset();
 
 		_activeKeys.Clear();
-		_cameraSlots.Clear();
-		_cameras.Clear();
-		_cameraBounds.Clear();
-		_appliedCamera = null;
-
-		_lastCamera = null;
-		_lastCameraSlot = -1;
 		_lastBucket = null;
-
 		_texts.Clear();
 
 		var size = _target.Size;
 		_pixels = new Vector2(size.X, size.Y);
+
+		_cameraBounds = camera?.CullingBounds(_pixels);
+		ApplyCamera(camera);
 
 		SubmittedSprites = 0;
 		CulledSprites = 0;
@@ -76,28 +69,8 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 
 		SubmittedSprites++;
 
-		var cameraSlot = -1;
-		RectangleF? viewBounds = null;
-
-		if (camera is not null)
-		{
-			var activeCamera = camera();
-
-			if (_lastCamera is { } cached && cached.Equals(activeCamera))
-			{
-				cameraSlot = _lastCameraSlot;
-			}
-			else
-			{
-				cameraSlot = SlotFor(activeCamera);
-				_lastCamera = activeCamera;
-				_lastCameraSlot = cameraSlot;
-			}
-
-			viewBounds = _cameraBounds[cameraSlot];
-		}
-
 		var texture = string.IsNullOrEmpty(metadata.Texture) ? null : ResolveTexture(metadata.Texture);
+		var viewBounds = _cameraBounds;
 
 		if (!TryBuildQuad(metadata, texture, x, y, viewBounds, out var quad))
 		{
@@ -106,7 +79,7 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		}
 
 		var shader = string.IsNullOrEmpty(metadata.Shader) ? null : metadata.Shader;
-		var key = new GroupKey(metadata.Layer, texture?.TexturePath, shader, cameraSlot);
+		var key = new GroupKey(metadata.Layer, texture?.TexturePath, shader);
 
 		Bucket bucket;
 		if (_lastBucket is not null && key.Equals(_lastKey))
@@ -137,8 +110,7 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 
 		if (string.IsNullOrEmpty(text)) return;
 
-		var cameraSlot = camera is null ? -1 : SlotFor(camera());
-		_texts.Add(new TextEntry(text, (uint)size, x, y, layer, cameraSlot, _texts.Count));
+		_texts.Add(new TextEntry(text, (uint)size, x, y, layer, _texts.Count));
 	}
 
 	public void End()
@@ -186,18 +158,6 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		_texts.Clear();
 		_buckets.Clear();
 		_activeKeys.Clear();
-	}
-
-	private int SlotFor(Camera2D camera2D)
-	{
-		if (_cameraSlots.TryGetValue(camera2D, out var slot)) return slot;
-
-		slot = _cameras.Count;
-		_cameraSlots[camera2D] = slot;
-		_cameras.Add(camera2D);
-		_cameraBounds.Add(camera2D.CullingBounds(_pixels));
-
-		return slot;
 	}
 
 	private static bool TryBuildQuad(RenderMetadata metadata, TextureData? texture, float x, float y, RectangleF? view, out Quad quad)
@@ -256,23 +216,17 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		return true;
 	}
 
-	private void ApplyCamera(int slot)
+	private void ApplyCamera(Camera2D? source)
 	{
-		if (slot < 0 || slot >= _cameras.Count) return;
-
-		var camera2D = _cameras[slot];
-		if (_appliedCamera is { } applied && applied.Equals(camera2D)) return;
-
-		_appliedCamera = camera2D;
-
-		var world = camera2D.WorldSize(_pixels);
+		var camera = source ?? new Camera2D(new Vector2(_target.Size.X, _target.Size.Y) / 2);
+		var world = camera.WorldSize(_pixels);
 		var current = _target.GetView();
 
 		_target.SetView(new View(
-			new Vector2f(camera2D.Position.X, camera2D.Position.Y),
+			new Vector2f(camera.Position.X, camera.Position.Y),
 			new Vector2f(world.X, world.Y))
 		{
-			Rotation = Angle.FromRadians(camera2D.Rotation),
+			Rotation = Angle.FromRadians(camera.Rotation),
 			Viewport = current.Viewport,
 			Scissor = current.Scissor,
 		});
@@ -282,8 +236,6 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 	{
 		var bucket = _buckets[key];
 		if (bucket.Count == 0) return;
-
-		ApplyCamera(key.CameraSlot);
 
 		var states = RenderStates.Default;
 		states.Texture = key.Texture is null ? null : ClientAssetsManager.Get<Texture>(key.Texture);
@@ -302,16 +254,13 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		text.DisplayedString = entry.Content;
 		text.Position = new Vector2f(entry.X, entry.Y);
 
-		if (entry.CameraSlot >= 0)
+		if (_cameraBounds is { } view)
 		{
 			var bounds = text.GetGlobalBounds();
-			var view = _cameraBounds[entry.CameraSlot];
 
 			if (bounds.Left > view.Right || bounds.Left + bounds.Width < view.Left ||
 			    bounds.Top > view.Bottom || bounds.Top + bounds.Height < view.Top)
 				return;
-
-			ApplyCamera(entry.CameraSlot);
 		}
 
 		_target.Draw(text, RenderStates.Default);
@@ -349,10 +298,7 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		result = string.CompareOrdinal(left.Texture, right.Texture);
 		if (result != 0) return result;
 
-		result = string.CompareOrdinal(left.Shader, right.Shader);
-		if (result != 0) return result;
-
-		return left.CameraSlot.CompareTo(right.CameraSlot);
+		return string.CompareOrdinal(left.Shader, right.Shader);
 	}
 
 	private static int CompareText(in TextEntry left, in TextEntry right)
@@ -412,8 +358,7 @@ public sealed class SpriteBatch(IRenderTarget target, Func<Camera2D>? camera = n
 		float X,
 		float Y,
 		uint Layer,
-		int CameraSlot,
 		int Sequence);
 
-	private readonly record struct GroupKey(uint Layer, string? Texture, string? Shader, int CameraSlot);
+	private readonly record struct GroupKey(uint Layer, string? Texture, string? Shader);
 }

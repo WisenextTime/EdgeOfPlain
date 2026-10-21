@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Scenes;
@@ -37,44 +38,58 @@ public sealed class TestScene : Scene
 		Size = new Vector2(32, 32),
 	};
 
-	private SceneContext? _context;
+	private SpriteBatch? _worldSprites;
+	private SpriteBatch? _hudSprites;
 
 	private Vector2 _previous = new(300, 150);
 	private Vector2 _current = new(300, 150);
 
-	private Camera2D _previousCamera = new(new Vector2(300, 150));
-	private Camera2D _currentCamera = new(new Vector2(300, 150));
+	public override void Enter(SceneContext context)
+	{
+		GameContext.WorldCamera.Reset(new Camera2D(new Vector2(300, 150)));
 
-	public override void Enter(SceneContext context) => _context = context;
+		var target = GameContext.RenderTarget;
+		_worldSprites = new SpriteBatch(target);
+		_hudSprites = new SpriteBatch(target);
+	}
+
+	public override void Exit()
+	{
+		_hudSprites?.Dispose();
+		_worldSprites?.Dispose();
+		_hudSprites = null;
+		_worldSprites = null;
+	}
 
 	public override void Update(LogicTime time, IInputState input)
 	{
 		_previous = _current;
 		_current = new Vector2(300f + MathF.Sin((float)time.TotalSeconds * 1.5f) * 120f, 150f);
 
-		_previousCamera = _currentCamera;
-
 		var seconds = (float)time.TotalSeconds;
-		_currentCamera = new Camera2D(
+		GameContext.WorldCamera.Push(new Camera2D(
 			_current,
 			1.5f + MathF.Sin(seconds * 0.4f) * 0.3f,
-			MathF.Sin(seconds * 0.2f) * 0.15f);
+			MathF.Sin(seconds * 0.2f) * 0.15f));
 	}
-
-	public ISpriteBatch SpriteBatch => GameContext.Sprites;
 
 	public override void Draw(RenderTime time)
 	{
-		var camera = Camera2D.Interpolate(_previousCamera, _currentCamera, time.Alpha);
+		var camera = GameContext.WorldCamera.Evaluate(time.Alpha);
 		var position = Vector2.Lerp(_previous, _current, time.Alpha);
 
-		if (_context is { } context) context.Window.Camera = camera;
-		SpriteBatch.Begin();
-		SpriteBatch.Draw(_ground, 0, 0);
-		SpriteBatch.Draw(_block, 200, 200);
-		SpriteBatch.Draw(_unit, position.X, position.Y);
-		_context?.Window.ResetCamera();
-		SpriteBatch.Draw(_hud, 24, 24);
-		SpriteBatch.End();
+		GameContext.Window.Camera = camera;
+
+		if (_worldSprites is null || _hudSprites is null) return;
+
+		_worldSprites.Begin(camera);
+		_worldSprites.Draw(_ground, 0, 0);
+		_worldSprites.Draw(_block, 200, 200);
+		_worldSprites.Draw(_unit, position.X, position.Y);
+		_worldSprites.End();
+
+		_hudSprites.Begin();
+		_hudSprites.Draw(_hud, 24, 24);
+		_hudSprites.End();
 	}
 }

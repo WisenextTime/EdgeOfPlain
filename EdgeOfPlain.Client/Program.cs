@@ -45,7 +45,6 @@ public class Program : Launcher
 		}
 		finally
 		{
-			GameContext.Sprites.Dispose();
 			ClientAssetsManager.Dispose();
 		}
 	}
@@ -57,7 +56,7 @@ public class Program : Launcher
 			LoadContent,
 			static () => new TestScene(),
 			GameContext.Fonts,
-			GameContext.Target,
+			GameContext.RenderTarget,
 			TimeSpan.FromSeconds(1));
 
 	protected override FileSystem BaseAssetsSystem => CoreAssets.Content;

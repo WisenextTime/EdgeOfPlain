@@ -1,6 +1,8 @@
 <Solution>
-	<Project Path="EdgeOfPlain.Core/EdgeOfPlain.Core.csproj"/>
-	<Project Path="EdgeOfPlain.Client/EdgeOfPlain.Client.csproj"/>
-	<Project Path="EdgeOfPlain.Tests/EdgeOfPlain.Tests.csproj"/>
-	<Project Path="EdgeOfPlain.Client.Tests/EdgeOfPlain.Client.Tests.csproj"/>
+	<Project Path="EdgeOfPlain.Core/EdgeOfPlain.Core.csproj" />
+	<Project Path="EdgeOfPlain.Client/EdgeOfPlain.Client.csproj" />
+	<Folder Name="/Tests/">
+		<Project Path="EdgeOfPlain.Client.Tests/EdgeOfPlain.Client.Tests.csproj" />
+		<Project Path="EdgeOfPlain.Tests/EdgeOfPlain.Tests.csproj" />
+	</Folder>
 </Solution>

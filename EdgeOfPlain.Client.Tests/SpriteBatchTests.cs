@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.Resource;
@@ -7,13 +8,24 @@ using Xunit;
 
 namespace EdgeOfPlain.Client.Tests;
 
-public sealed class SpriteBatchTests
+public sealed class SpriteBatchTests : IDisposable
 {
+	private readonly UiFonts _fonts = new();
+	private readonly FakeRenderTarget _contextTarget = new();
+	private readonly FakeGameWindow _window = new();
+
+	public SpriteBatchTests() => GameContext.Initialize(_window, _fonts, _contextTarget);
+
+	public void Dispose()
+	{
+		ClientAssetsManager.Dispose();
+		_fonts.Dispose();
+	}
+
 	[Fact]
 	public void DrawBatchesQuadsWithSameLayer()
 	{
 		var target = new FakeRenderTarget();
-		using var fonts = new UiFonts();
 		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata
 		{
@@ -38,7 +50,6 @@ public sealed class SpriteBatchTests
 	public void DifferentLayersProduceSeparateDrawCalls()
 	{
 		var target = new FakeRenderTarget();
-		using var fonts = new UiFonts();
 		using var batch = new SpriteBatch(target);
 		var lower = new RenderMetadata { Layer = 1, Size = new Vector2(8, 8) };
 		var upper = new RenderMetadata { Layer = 2, Size = new Vector2(8, 8) };
@@ -56,7 +67,6 @@ public sealed class SpriteBatchTests
 	public void OriginAndScaleAreAppliedToQuadVertices()
 	{
 		var target = new FakeRenderTarget();
-		using var fonts = new UiFonts();
 		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata
 		{
@@ -84,12 +94,11 @@ public sealed class SpriteBatchTests
 	public void CameraCullsSpritesOutsideTheView()
 	{
 		var target = new FakeRenderTarget { Size = new Vector2u(100, 100) };
-		using var fonts = new UiFonts();
 		var camera = new Camera2D(new Vector2(0, 0));
-		using var batch = new SpriteBatch(target, () => camera);
+		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata { Layer = 1, Size = new Vector2(10, 10) };
 
-		batch.Begin();
+		batch.Begin(camera);
 		batch.Draw(metadata, 1000, 1000);
 		batch.End();
 
@@ -101,7 +110,6 @@ public sealed class SpriteBatchTests
 	public void DrawTextIsQueuedAndDrawn()
 	{
 		var target = new FakeRenderTarget();
-		using var fonts = new UiFonts();
 		using var batch = new SpriteBatch(target);
 
 		batch.Begin();
@@ -116,7 +124,6 @@ public sealed class SpriteBatchTests
 	public void BeginResetsCounters()
 	{
 		var target = new FakeRenderTarget();
-		using var fonts = new UiFonts();
 		using var batch = new SpriteBatch(target);
 		var metadata = new RenderMetadata { Layer = 1, Size = new Vector2(10, 10) };
 
@@ -131,5 +138,28 @@ public sealed class SpriteBatchTests
 		Assert.Equal(0, batch.CulledSprites);
 		Assert.Equal(0, batch.DrawnSprites);
 		Assert.Equal(0, batch.DrawCalls);
+	}
+
+	[Fact]
+	public void SeparateBatchesCanUseDifferentCameras()
+	{
+		var target = new FakeRenderTarget { Size = new Vector2u(100, 100) };
+		using var world = new SpriteBatch(target);
+		using var hud = new SpriteBatch(target);
+		var metadata = new RenderMetadata { Layer = 1, Size = new Vector2(10, 10) };
+
+		world.Begin(new Camera2D(Vector2.Zero, 2f));
+		world.Draw(metadata, 0, 0);
+		world.End();
+
+		Assert.Equal(50f, target.GetView().Size.X, 3);
+		Assert.Equal(50f, target.GetView().Size.Y, 3);
+
+		hud.Begin(new Camera2D(Vector2.Zero));
+		hud.Draw(metadata, 0, 0);
+		hud.End();
+
+		Assert.Equal(100f, target.GetView().Size.X, 3);
+		Assert.Equal(100f, target.GetView().Size.Y, 3);
 	}
 }
