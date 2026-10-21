@@ -177,7 +177,7 @@ public sealed class ContentSerializerTests
 	{
 		RegistryProbes.Ensure(typeof(DuplicateProbeDef));
 
-		var text = new DuplicateProbeDef("mud").ToString();
+		var text = new DuplicateProbeDef("mud") { SourceMod = new ModInfo("test", new Version(1, 0, 0)) }.ToString();
 
 		Assert.Contains("dup", text);
 		Assert.Contains("mud", text);

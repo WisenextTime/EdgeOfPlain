@@ -12,6 +12,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="EdgeOfPlain.Tests"/>
+		<InternalsVisibleTo Include="EdgeOfPlain.Client.Tests"/>
 	</ItemGroup>
 	<ItemGroup>
 		<None Remove="Assets\**"/>
