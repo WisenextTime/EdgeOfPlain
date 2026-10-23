@@ -73,7 +73,7 @@ public static class ContentTypeRegistry
 	}
 
 	public static IReadOnlyList<TomlDerivedType> BuildDerivedTypes()
-		=> ByType.Select(pair => new TomlDerivedType(pair.Key, pair.Value)).ToArray();
+		=> [.. ByType.Select(pair => new TomlDerivedType(pair.Key, pair.Value))];
 
 	internal static string Discriminator(Type t)
 		=> ByType.TryGetValue(t, out var name) ? name : ContentTypeName(t);

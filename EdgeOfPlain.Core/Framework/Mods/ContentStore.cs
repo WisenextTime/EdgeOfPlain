@@ -56,7 +56,7 @@ public static class ContentStore
 	public static IEnumerable<TDef> All<TDef>() where TDef : ContentDef
 		=> (_frozen is not null
 			? (IEnumerable<ContentDef>)_frozen.Values
-			: _byId.Values.ToArray()).OfType<TDef>();
+			: [.. _byId.Values]).OfType<TDef>();
 
 	private static void ThrowIfSealed()
 	{

@@ -19,7 +19,21 @@ public sealed class GameWindow : IGameWindow, IDisposable
 
 	public GameWindow(uint width, uint height, string title)
 	{
-		_window = new RenderWindow(new VideoMode(new Vector2u(width, height)), title, Styles.Default, State.Windowed);
+		var contextSettings = new ContextSettings(
+			depthBits: 24,
+			stencilBits: 8,
+			antialiasingLevel: 0,
+			majorVersion: 3,
+			minorVersion: 3,
+			attributes: ContextSettings.Attribute.Default,
+			sRgbCapable: false);
+
+		_window = new RenderWindow(
+			new VideoMode(new Vector2u(width, height)),
+			title,
+			Styles.Default,
+			State.Windowed,
+			contextSettings);
 		_window.SetFramerateLimit(60);
 		_window.Closed += (_, _) => _window.Close();
 

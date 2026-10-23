@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EdgeOfPlain.Client.Resource;
 
@@ -32,10 +33,7 @@ internal sealed class ClientAssetStore
 
 	public IEnumerable<object> Values()
 	{
-		foreach (var map in _resources.Values)
-		foreach (var value in map.Values)
-			if (value is not null)
-				yield return value;
+		return _resources.Values.SelectMany(map => map.Values.OfType<object>());
 	}
 
 	public void Clear() => _resources.Clear();

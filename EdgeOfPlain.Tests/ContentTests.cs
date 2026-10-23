@@ -116,6 +116,36 @@ public sealed class ContentTypeRegistryTests
 
 public sealed class NoAttributeProbeDef(string id) : ContentDef(id);
 
+public sealed class ContentDefPathTests
+{
+	[Fact]
+	public void ResolveResourcePathPrefixesPathsWithTheSourceMod()
+	{
+		var def = new ProbeDef("probe") { SourceMod = new ModInfo("test", new Version(1, 0, 0)) };
+
+		Assert.Equal("assets://test/path/to/resource.res", def.ResolveResourcePath("path/to/resource.res"));
+		Assert.Equal("assets://test/path/to/resource.res", def.ResolveResourcePath("/path/to/resource.res"));
+		Assert.Equal("assets://test/path/to/resource.res", def.ResolveResourcePath(@"path\to\resource.res"));
+	}
+
+	[Fact]
+	public void ResolveResourcePathKeepsAbsoluteAssetPaths()
+	{
+		var def = new ProbeDef("probe") { SourceMod = new ModInfo("test", new Version(1, 0, 0)) };
+
+		Assert.Equal("assets://other/path.res", def.ResolveResourcePath("assets://other/path.res"));
+	}
+
+	[Fact]
+	public void ResolveResourcePathRejectsEmptyPaths()
+	{
+		var def = new ProbeDef("probe") { SourceMod = new ModInfo("test", new Version(1, 0, 0)) };
+
+		Assert.Throws<ArgumentException>(() => def.ResolveResourcePath(""));
+		Assert.Throws<ArgumentException>(() => def.ResolveResourcePath("   "));
+	}
+}
+
 public sealed class ContentSerializerTests
 {
 	[Fact]
@@ -148,6 +178,7 @@ public sealed class ContentSerializerTests
 		var toml = """
 		           type = "tileset"
 		           id = "tiles"
+		           texture = "assets://test/Tiles#main"
 		           width = 8
 		           height = 4
 		           tileWidth = 16

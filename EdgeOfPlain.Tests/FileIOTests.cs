@@ -238,7 +238,7 @@ public sealed class FileIOTests
 		await FileIO.WriteAllTextAsync(scope["a.txt"], "async", cancellationToken);
 		Assert.Equal("async", await FileIO.ReadAllTextAsync(scope["a.txt"], cancellationToken));
 
-		await FileIO.WriteAllBytesAsync(scope["b.bin"], new byte[] { 1, 2, 3 }, cancellationToken);
+		await FileIO.WriteAllBytesAsync(scope["b.bin"], [1, 2, 3], cancellationToken);
 		Assert.Equal(new byte[] { 1, 2, 3 }, await FileIO.ReadAllBytesAsync(scope["b.bin"], cancellationToken));
 		Assert.Equal(3L, await FileIO.GetFileLengthAsync(scope["b.bin"], cancellationToken));
 

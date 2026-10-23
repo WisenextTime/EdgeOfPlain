@@ -1,5 +1,8 @@
 using System;
 using System.IO;
+using System.Text.Json;
+using EdgeOfPlain.Core.World;
+using Tomlyn;
 
 namespace EdgeOfPlain.Core.Framework.Resource;
 
@@ -27,4 +30,20 @@ public static class TextureAtlasOperatorBuilder
 	};
 
 	public static ResourceOperator<TextureAtlas> Build => field ??= new ResourceOperator<TextureAtlas>(_loader);
+}
+
+public static class MapOperatorBuilder
+{
+	private static readonly TomlSerializerOptions _options = new()
+	{
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+	};
+
+	private static readonly Func<Stream, Map> _loader = stream =>
+	{
+		using var reader = new StreamReader(stream);
+		return TomlSerializer.Deserialize<Map>(reader.ReadToEnd(), _options);
+	};
+
+	public static ResourceOperator<Map> Build => field ??= new ResourceOperator<Map>(_loader);
 }

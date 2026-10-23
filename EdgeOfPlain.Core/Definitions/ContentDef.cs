@@ -12,7 +12,6 @@ namespace EdgeOfPlain.Core.Definitions;
 [method: TomlConstructor]
 public abstract class ContentDef(string id) : IComparable<ContentDef>
 {
-	private ModInfo _sourceMod;
 	private bool _hasSourceMod;
 
 	public string Id { get; } = id;
@@ -24,17 +23,29 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 	public ModInfo SourceMod
 	{
 		get => _hasSourceMod
-			? _sourceMod
+			? field
 			: throw new InvalidOperationException(
-				$"Content '{GetType().Name}({Id})' has no source mod assigned. It must be registered through the mod loading pipeline.");
+				$"Content '{GetType().Name}({Id})' has no source mod assigned. " +
+				$"It must be registered through the mod loading pipeline.");
 		internal set
 		{
-			_sourceMod = value;
+			field = value;
 			_hasSourceMod = true;
 		}
 	}
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
+
+	public string ResolveResourcePath(string path)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+		var normalized = path.Replace('\\', '/');
+		var prefix = $"{Launcher.AssetsHead}://";
+		return normalized.StartsWith(prefix, StringComparison.Ordinal)
+			? normalized
+			: $"{prefix}{SourceMod.Id}/{normalized.TrimStart('/')}";
+	}
 
 	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.Discriminator(GetType())}({Id})";
 }

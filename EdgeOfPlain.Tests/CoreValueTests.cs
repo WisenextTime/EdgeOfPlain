@@ -117,9 +117,9 @@ public sealed class DefinitionDefaultTests
 		var blank = new TileData();
 
 		Assert.Equal("ground", unset.Terrain);
-		Assert.Equal("default", unset.Renderer);
+		Assert.Equal("", unset.Renderer);
 		Assert.Equal("ground", blank.Terrain);
-		Assert.Equal("default", blank.Renderer);
+		Assert.Equal("", blank.Renderer);
 		Assert.Null(unset.Animation);
 		Assert.Null(unset.Random);
 

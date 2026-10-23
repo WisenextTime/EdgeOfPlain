@@ -1,0 +1,7 @@
+mapVersion = "1.0.0"
+tiles = "7c1BDQAwDAOxPDZe5Y9qIKJJffgOgCfJpO+U8/l8Pp/P5/P5fD6fz9/v33I+n8/n8/l8Pp/P5/P5//0H"
+width = 64
+height = 64
+[[tilesets]]
+tileSet = "TestTile"
+firstGid = 0

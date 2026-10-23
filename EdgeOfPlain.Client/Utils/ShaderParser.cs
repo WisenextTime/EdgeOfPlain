@@ -36,13 +36,13 @@ public static class ShaderParser
 		{
 			switch (line.Trim())
 			{
-				case "#VERT":
+				case "//VERT":
 					stage = Stage.Vertex;
 					continue;
-				case "#GEOM":
+				case "//GEOM":
 					stage = Stage.Geometry;
 					continue;
-				case "#FRAG":
+				case "//FRAG":
 					stage = Stage.Fragment;
 					continue;
 			}
@@ -56,7 +56,7 @@ public static class ShaderParser
 		var fragmentSource = Compose(shared, fragment);
 
 		if (vertexSource is null && geometrySource is null && fragmentSource is null)
-			throw new InvalidDataException("shader source has no #VERT, #GEOM or #FRAG section");
+			throw new InvalidDataException("shader source has no //VERT, //GEOM or //FRAG section");
 
 		return new ShaderSources(vertexSource, geometrySource, fragmentSource);
 	}

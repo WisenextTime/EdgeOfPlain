@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.IO;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core;
@@ -48,7 +47,7 @@ public sealed class TextureLoaderTests : IDisposable
 	{
 		TextureLoader.Load(CreateDirectory());
 
-		var key = TextureData.MakeKey($"assets://{Namespace}/Textures/Tiles/Test.png", "main");
+		var key = TextureData.MakeKey($"assets://{Namespace}/Textures/Tiles/Test", "main");
 
 		Assert.True(ClientAssetsManager.TryGet<TextureData>(key, out var data));
 		Assert.Equal("main", data.SpriteId);

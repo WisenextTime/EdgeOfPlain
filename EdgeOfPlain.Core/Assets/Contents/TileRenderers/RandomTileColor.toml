@@ -1,0 +1,4 @@
+type = "tileRenderer"
+
+id = "RandomTileColor"
+shaderPath = "Shaders/RandomTileColor.glsl"

@@ -14,10 +14,10 @@ public sealed class ShaderParserTests
 		const string text = """
 		                    const vec4 Tint = vec4(1.0);
 
-		                    #VERT
+		                    //VERT
 		                    void main() { gl_Position = vec4(0.0); }
 
-		                    #FRAG
+		                    //FRAG
 		                    void main() { gl_FragColor = Tint; }
 		                    """;
 
@@ -34,13 +34,13 @@ public sealed class ShaderParserTests
 	public void ParseSourcesHandlesGeometrySection()
 	{
 		const string text = """
-		                    #VERT
+		                    //VERT
 		                    void main() { }
 
-		                    #GEOM
+		                    //GEOM
 		                    void main() { }
 
-		                    #FRAG
+		                    //FRAG
 		                    void main() { }
 		                    """;
 
@@ -55,9 +55,9 @@ public sealed class ShaderParserTests
 	public void ParseSourcesSkipsEmptyStages()
 	{
 		const string text = """
-		                    #VERT
+		                    //VERT
 		                    void main() { }
-		                    #FRAG
+		                    //FRAG
 		                    """;
 
 		var sources = ShaderParser.ParseSources(Stream(text));

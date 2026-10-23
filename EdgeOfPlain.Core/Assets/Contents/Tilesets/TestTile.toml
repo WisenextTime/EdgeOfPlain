@@ -1,14 +1,15 @@
 type = "tileset"
 
 id = "TestTile"
-width = 256
-height = 128
+width = 128
+height = 64
+texture = "Textures/Tiles/TestTile#main"
 
 [tileData."0"]
 random = [0, 1, 2, 3]
 
 [tileData."4"]
-renderer = "grass"
+renderer = "RandomTileColor"
 
 [tileData."5"]
 terrain = "water"
