@@ -589,12 +589,6 @@ public sealed class SceneManagerTests
 		return result;
 	}
 
-	private sealed class NullPipeline : IRenderPipeline
-	{
-		public void Begin() { }
-
-		public void End() { }
-	}
 }
 
 public sealed class InputStateTests

@@ -39,9 +39,7 @@ public sealed class SpriteBatch(IRenderTarget target)
 
 	public int BatchCount => _activeKeys.Count;
 
-	public void Begin() => StartFrame(null);
-
-	public void Begin(Camera2D camera) => StartFrame(camera);
+	public void Begin(Camera2D? camera = null) => StartFrame(camera);
 
 	private void StartFrame(Camera2D? camera)
 	{
