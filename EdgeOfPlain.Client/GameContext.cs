@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Core.Framework.Graphics;
 using SFML.Graphics;

@@ -31,7 +31,7 @@ public sealed class GameContextTests : IDisposable
 	[Fact]
 	public void WorldCameraInterpolatesBetweenPushes()
 	{
-		var from = new Camera2D(new Vector2(0, 0), 1f);
+		var from = new Camera2D(new Vector2(0, 0));
 		var to = new Camera2D(new Vector2(100, 0), 2f);
 
 		GameContext.WorldCamera.Reset(from);
