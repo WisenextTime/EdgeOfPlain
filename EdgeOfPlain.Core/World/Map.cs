@@ -8,8 +8,9 @@ using Tomlyn.Serialization;
 namespace EdgeOfPlain.Core.World;
 
 [method: TomlConstructor]
-public class Map(int width, int height)
+public struct Map(int width, int height)
 {
+	[TomlIgnore]
 	public static Version DefaultMapVersion => new(1, 0, 0);
 	public Version MapVersion { get; set; } = DefaultMapVersion;
 	[TomlConverter(typeof(TileGridConverter))]
@@ -19,10 +20,8 @@ public class Map(int width, int height)
 	public int Height => Tiles.GetLength(1);
 }
 
-public struct TileSetData
+public struct TileSetData()
 {
-	public TileSetData() { }
-
 	public string TileSet { get; set; } = string.Empty;
 	public ushort FirstGid { get; set; }
 }

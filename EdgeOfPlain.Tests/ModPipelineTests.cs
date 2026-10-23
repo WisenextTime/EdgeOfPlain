@@ -192,7 +192,7 @@ public sealed class ModPipelineTests
 		}
 
 		return new Pipeline(
-			ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id).ToArray(),
+			[.. ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id)],
 			ModLoader.IsLoaded,
 			error,
 			ContentStore.Get("ground") is not null,
@@ -216,8 +216,7 @@ public sealed class ModPipelineTests
 			new Version(1, 0, 0),
 			"tests",
 			"",
-			dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion)))
-				.ToArray());
+			[.. dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion)))]);
 
 	private sealed record Pipeline(
 		string[] LoadedIds,

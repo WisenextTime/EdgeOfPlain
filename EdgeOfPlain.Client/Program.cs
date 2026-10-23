@@ -54,7 +54,7 @@ public class Program : Launcher
 	protected override IScene CreateInitialScene()
 		=> new LoadingScene(
 			LoadContent,
-			static () => new TestScene(),
+			static () => new TestMapScene(),
 			GameContext.Fonts,
 			GameContext.RenderTarget,
 			TimeSpan.FromSeconds(1));

@@ -36,7 +36,13 @@ public static class ShaderOperatorBuilder
 
 public static class TextureOperatorBuilder
 {
-	private static readonly Func<Stream, Texture> _loader = stream => new Texture(stream);
+	private static readonly Func<Stream, Texture> _loader = stream =>
+	{
+		var texture = new Texture(stream);
+		texture.Smooth = false;
+		texture.Repeated = false;
+		return texture;
+	};
 	private static readonly Action<Stream, Texture> _saver = (stream, texture) =>
 	{
 		if (!texture.CopyToImage().SaveToMemory(out var buffer, "png")) throw new Exception("Save failed");

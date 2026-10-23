@@ -1,5 +1,3 @@
-using System;
-
 namespace EdgeOfPlain.Core.MathLib;
 
 public static class Easing

@@ -29,7 +29,7 @@ public static class ShaderLoader
 
 		try
 		{
-			ClientAssetsManager.Get<Shader>(path);
+			_ = ClientAssetsManager.Get<Shader>(path);
 		}
 		catch(Exception e)
 		{
@@ -44,7 +44,10 @@ public static class ShaderLoader
 	private static void Collect(ModResourceDirectory directory)
 	{
 		foreach (var file in directory.Files)
-			if (_seen.Add(file))
-				_pending.Add(file);
+		{
+			if (!_seen.Add(file)) continue;
+
+			_pending.Add(file);
+		}
 	}
 }

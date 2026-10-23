@@ -1,4 +1,3 @@
-using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Time;
 

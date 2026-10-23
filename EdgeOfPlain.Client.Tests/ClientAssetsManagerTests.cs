@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.IO;

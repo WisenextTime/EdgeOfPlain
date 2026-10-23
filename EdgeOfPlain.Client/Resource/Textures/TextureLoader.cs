@@ -72,7 +72,7 @@ public static class TextureLoader
 				sprite.Height / (float)height);
 
 			ClientAssetsManager.Add(
-				TextureData.MakeKey(texturePath, sprite.Id),
+				TextureData.MakeKey(WithoutExtension(texturePath), sprite.Id),
 				new TextureData(sprite.Id, texturePath, source, uv));
 		}
 	}
