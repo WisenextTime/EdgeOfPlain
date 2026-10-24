@@ -1,6 +1,6 @@
 using System.Drawing;
+using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Scenes;
-using EdgeOfPlain.Core.World;
 
 namespace EdgeOfPlain.Core.Framework.Events;
 

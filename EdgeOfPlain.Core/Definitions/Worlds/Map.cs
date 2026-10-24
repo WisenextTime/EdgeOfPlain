@@ -5,7 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using Tomlyn.Serialization;
 
-namespace EdgeOfPlain.Core.World;
+namespace EdgeOfPlain.Core.Definitions.Worlds;
 
 [method: TomlConstructor]
 public struct Map(int width, int height)

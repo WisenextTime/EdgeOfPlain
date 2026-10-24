@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using EdgeOfPlain.Core.World;
+using EdgeOfPlain.Core.Definitions.Worlds;
 using Tomlyn;
 
 namespace EdgeOfPlain.Core.Framework.Resource;

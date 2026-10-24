@@ -1,5 +1,6 @@
 using System.Numerics;
 using EdgeOfPlain.Client.Rendering;
+using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
