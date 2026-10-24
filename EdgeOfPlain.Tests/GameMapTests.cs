@@ -170,6 +170,18 @@ public sealed class GameMapTests : IDisposable
 	}
 
 	[Fact]
+	public void TilesetStartingAtGidZeroIsRejected()
+	{
+		RegisterTileset("zero-gid", 16, 16, 16, 16);
+
+		var map = new Map(1, 1);
+		map.Tilesets.Add(new TileSetData { TileSet = "zero-gid", FirstGid = Map.EmptyGid });
+
+		var exception = Assert.Throws<InvalidOperationException>(() => GameMap.Build(map));
+		Assert.Contains("reserved for empty tiles", exception.Message);
+	}
+
+	[Fact]
 	public void MissingTilesetDefinitionThrows()
 	{
 		var map = new Map(1, 1);
@@ -220,7 +232,11 @@ public sealed class GameMapTests : IDisposable
 		};
 
 		var map = new Map(8, 8);
-		map.Tilesets.Add(new TileSetData { TileSet = "random-variants", FirstGid = 0 });
+		map.Tilesets.Add(new TileSetData { TileSet = "random-variants", FirstGid = 1 });
+
+		for (var y = 0; y < map.Height; y++)
+		for (var x = 0; x < map.Width; x++)
+			map.Tiles[x, y] = 1;
 
 		var gameMap = GameMap.Build(map);
 		var localIds = new HashSet<int>();

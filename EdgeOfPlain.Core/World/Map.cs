@@ -10,6 +10,7 @@ namespace EdgeOfPlain.Core.World;
 [method: TomlConstructor]
 public struct Map(int width, int height)
 {
+	public const ushort EmptyGid = 0;
 	[TomlIgnore]
 	public static Version DefaultMapVersion => new(1, 0, 0);
 	public Version MapVersion { get; set; } = DefaultMapVersion;
@@ -45,7 +46,8 @@ public sealed class TileGridConverter : TomlConverter<ushort[,]>
 		var length = (long)rows * cols * sizeof(ushort);
 		if (length + 2 * sizeof(int) > decompressed.Length)
 			throw new InvalidDataException(
-				$"Tile grid payload is truncated: {rows}x{cols} needs {length} byte but only {decompressed.Length - 2 * sizeof(int)} byte remained");
+				$"Tile grid payload is truncated: {rows}x{cols} needs {length} byte" +
+				$" but only {decompressed.Length - 2 * sizeof(int)} byte remained");
 
 		var value = new ushort[rows, cols];
 		Buffer.BlockCopy(decompressed, 8, value, 0, (int)length);

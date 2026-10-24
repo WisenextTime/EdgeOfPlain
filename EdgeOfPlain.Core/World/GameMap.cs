@@ -13,6 +13,7 @@ public sealed class GameMap
 {
 	public const int DefaultChunkSize = 32;
 	public const int TileSize = 32;
+	public const ushort EmptyTileId = Map.EmptyGid;
 
 	private readonly ushort[,] _tiles;
 	private readonly MapTileset[] _tilesets;
@@ -114,14 +115,13 @@ public sealed class GameMap
 
 	private MapTile ResolveTile(int tileX, int tileY, ushort id)
 	{
+		// Gid 0 is reserved for empty tiles, even if a tileset claims that range.
+		if (id == Map.EmptyGid)
+			return new MapTile(0, null, -1, -1, -1, RectangleF.Empty, null, null);
+
 		var index = FindTilesetIndex(_tilesets, id);
 		if (index < 0)
-		{
-			if (id == 0)
-				return new MapTile(0, null, -1, -1, -1, RectangleF.Empty, null, null);
-
 			throw new InvalidOperationException($"Tile id {id} has no matching tileset.");
-		}
 
 		var tileset = _tilesets[index];
 		var baseLocalId = tileset.LocalId(id);
@@ -185,6 +185,10 @@ public sealed class GameMap
 			if (string.IsNullOrWhiteSpace(source.TileSet))
 				throw new InvalidOperationException("Map contains a tileset with an empty id.");
 
+			if (source.FirstGid == Map.EmptyGid)
+				throw new InvalidOperationException(
+					$"Tileset '{source.TileSet}' starts at gid {Map.EmptyGid}, which is reserved for empty tiles; use 1 or later.");
+
 			var definition = ContentStore.Get<TilesetDef>(source.TileSet)
 			                 ?? throw new InvalidOperationException($"Tileset '{source.TileSet}' is not registered.");
 			result.Add(new MapTileset(source.FirstGid, definition));
@@ -236,7 +240,7 @@ public sealed class GameMap
 		for (var x = 0; x < tiles.GetLength(0); x++)
 		{
 			var id = tiles[x, y];
-			if (FindTilesetIndex(tilesets, id) >= 0 || id == 0) continue;
+			if (id == Map.EmptyGid || FindTilesetIndex(tilesets, id) >= 0) continue;
 
 			throw new InvalidOperationException($"Tile ({x},{y}) has id {id}, but no matching tileset is registered.");
 		}
@@ -353,13 +357,13 @@ public sealed class MapTileset
 				continue;
 
 			if (pair.Value.Random is { } variants)
-			foreach (var variant in variants)
-			{
-				if ((uint)variant >= (uint)TileCount)
-					throw new InvalidOperationException(
-						$"Tileset '{definition.Id}' tile {localId} has random variant {variant}, " +
-						$"but the tileset only contains {TileCount} tile(s).");
-			}
+				foreach (var variant in variants)
+				{
+					if ((uint)variant >= (uint)TileCount)
+						throw new InvalidOperationException(
+							$"Tileset '{definition.Id}' tile {localId} has random variant {variant}, " +
+							$"but the tileset only contains {TileCount} tile(s).");
+				}
 
 			_tileData[localId] = pair.Value;
 		}
@@ -377,7 +381,7 @@ public sealed class MapTileset
 	public string TextureKey => Definition.ResolveResourcePath(Definition.Texture);
 
 	public bool Contains(ushort id)
-		=> id >= FirstGid && id - FirstGid < TileCount;
+		=> id != Map.EmptyGid && id >= FirstGid && id - FirstGid < TileCount;
 
 	public int LocalId(ushort id) => id - FirstGid;
 

@@ -1,7 +1,7 @@
 mapVersion = "1.0.0"
-tiles = "7c1BDQAwDAOxPDZe5Y9qIKJJffgOgCfJpO+U8/l8Pp/P5/P5fD6fz9/v33I+n8/n8/l8Pp/P5/P5//0H"
+tiles = "7c2xEQAgDAOxUJC5sv9UsIMvnfznWlNV83/Cbhifz+fz+Xw+n8/n8/n8fT9dh/H5fD6fz+fz+Xw+n8/f9x8="
 width = 64
 height = 64
 [[tilesets]]
 tileSet = "TestTile"
-firstGid = 0
+firstGid = 1
