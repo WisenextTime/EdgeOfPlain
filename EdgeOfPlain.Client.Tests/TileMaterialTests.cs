@@ -12,7 +12,7 @@ public sealed class TileMaterialTests
 	{
 		var texture = new TextureData(
 			"main",
-			"assets://base/Textures/Tiles/TestTile",
+			"assets://base/Textures/Tiles/testTile",
 			new Rectangle(32, 16, 64, 32),
 			new RectangleF(0.125f, 0.125f, 0.25f, 0.25f));
 		var material = new TileMaterial(texture, new FakeRenderTarget());

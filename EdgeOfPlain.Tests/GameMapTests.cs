@@ -5,7 +5,7 @@ using System.Numerics;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
-using EdgeOfPlain.Core.World;
+using EdgeOfPlain.Core.Game;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -15,7 +15,7 @@ public sealed class GameMapTests : IDisposable
 	public GameMapTests()
 	{
 		ContentStore.Reset();
-		ContentStore.Add(new TerrainDef("ground") { Passage = TerrainDef.PassageMask.Ground, MoveCost = 1 });
+		ContentStore.Add(new TerrainDef("ground") { SourceMod = TestMods.Base, Passage = PassageMask.Ground, MoveCost = 1 });
 	}
 
 	public void Dispose() => ContentStore.Reset();
@@ -25,8 +25,8 @@ public sealed class GameMapTests : IDisposable
 	{
 		var tileset = RegisterTileset("terrain", 64, 32);
 		tileset.TileData["1"] = new TileData { Terrain = "water" };
-		RegisterTerrain("ground", TerrainDef.PassageMask.Ground);
-		RegisterTerrain("water", TerrainDef.PassageMask.Water, 3);
+		RegisterTerrain("ground", PassageMask.Ground);
+		RegisterTerrain("water", PassageMask.Water, 3);
 
 		var map = new Map(3, 2);
 		map.Tilesets.Add(new TileSetData { TileSet = "terrain", FirstGid = 7 });
@@ -59,7 +59,7 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void BuildSplitsChunksAtMapEdges()
 	{
-		RegisterTileset("chunk", 16, 16, 16, 16);
+		RegisterTileset("chunk", 16, 16);
 
 		var map = new Map(65, 33);
 		map.Tilesets.Add(new TileSetData { TileSet = "chunk", FirstGid = 1 });
@@ -86,7 +86,7 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void TileAndWorldCoordinatesRoundTrip()
 	{
-		RegisterTileset("coords", 16, 16, 16, 16);
+		RegisterTileset("coords", 16, 16);
 
 		var map = new Map(4, 4);
 		map.Tilesets.Add(new TileSetData { TileSet = "coords", FirstGid = 1 });
@@ -102,9 +102,9 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void PassabilityAndMoveCostUseResolvedTerrain()
 	{
-		var tileset = RegisterTileset("passability", 16, 16, 16, 16);
+		var tileset = RegisterTileset("passability", 16, 16);
 		tileset.TileData["0"] = new TileData { Terrain = "water" };
-		RegisterTerrain("water", TerrainDef.PassageMask.Water, 4);
+		RegisterTerrain("water", PassageMask.Water, 4);
 
 		var map = new Map(2, 1);
 		map.Tilesets.Add(new TileSetData { TileSet = "passability", FirstGid = 1 });
@@ -112,11 +112,11 @@ public sealed class GameMapTests : IDisposable
 
 		var gameMap = GameMap.Build(map);
 
-		Assert.True(gameMap.IsPassable(0, 0, TerrainDef.PassageMask.Water));
-		Assert.False(gameMap.IsPassable(0, 0, TerrainDef.PassageMask.Ground));
+		Assert.True(gameMap.IsPassable(0, 0, PassageMask.Water));
+		Assert.False(gameMap.IsPassable(0, 0, PassageMask.Ground));
 		Assert.Equal(4, gameMap.GetMoveCost(0, 0));
 
-		Assert.False(gameMap.IsPassable(1, 0, TerrainDef.PassageMask.Water));
+		Assert.False(gameMap.IsPassable(1, 0, PassageMask.Water));
 		Assert.Equal(0, gameMap.GetMoveCost(1, 0));
 	}
 
@@ -126,8 +126,8 @@ public sealed class GameMapTests : IDisposable
 		var tileset = RegisterTileset("renderers", 64, 64);
 		tileset.TileData["0"] = new TileData { Renderer = "grass" };
 		tileset.TileData["1"] = new TileData { Renderer = "water" };
-		ContentStore.Add(new TileRendererDef("grass") { ShaderPath = "shaders/grass" });
-		ContentStore.Add(new TileRendererDef("water") { ShaderPath = "shaders/water" });
+		ContentStore.Add(new TileRendererDef("grass") { SourceMod = TestMods.Base, ShaderPath = "shaders/grass" });
+		ContentStore.Add(new TileRendererDef("water") { SourceMod = TestMods.Base, ShaderPath = "shaders/water" });
 
 		var map = new Map(1, 1);
 		map.Tilesets.Add(new TileSetData { TileSet = "renderers", FirstGid = 1 });
@@ -156,7 +156,7 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void EmptyTileHasNoTileset()
 	{
-		RegisterTileset("empty", 16, 16, 16, 16);
+		RegisterTileset("empty", 16, 16);
 
 		var map = new Map(1, 1);
 		map.Tilesets.Add(new TileSetData { TileSet = "empty", FirstGid = 1 });
@@ -173,7 +173,7 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void TilesetStartingAtGidZeroIsRejected()
 	{
-		RegisterTileset("zero-gid", 16, 16, 16, 16);
+		RegisterTileset("zero-gid", 16, 16);
 
 		var map = new Map(1, 1);
 		map.Tilesets.Add(new TileSetData { TileSet = "zero-gid", FirstGid = Map.EmptyGid });
@@ -194,16 +194,14 @@ public sealed class GameMapTests : IDisposable
 	[Fact]
 	public void NonEmptyTileWithoutTilesetThrows()
 	{
-		var map = new Map(1, 1);
-		map.Tiles[0, 0] = 1;
-
+		var map = new Map(1, 1) { Tiles = { [0, 0] = 1 } };
 		Assert.Throws<InvalidOperationException>(() => GameMap.Build(map));
 	}
 
 	[Fact]
 	public void TilesetSourceTileSizeDoesNotChangeMapGrid()
 	{
-		RegisterTileset("small", 16, 16, 16, 16);
+		RegisterTileset("small", 16, 16);
 		var large = RegisterTileset("large", 64, 64, 32, 32);
 
 		var map = new Map(2, 2);
@@ -260,6 +258,7 @@ public sealed class GameMapTests : IDisposable
 	{
 		var definition = new TilesetDef(id)
 		{
+			SourceMod = TestMods.Base,
 			Width = width,
 			Height = height,
 			TileWidth = tileWidth,
@@ -269,21 +268,21 @@ public sealed class GameMapTests : IDisposable
 		return definition;
 	}
 
-	private static TerrainDef RegisterTerrain(string id, TerrainDef.PassageMask passage, int moveCost = 1)
+	private static void RegisterTerrain(string id, PassageMask passage, int moveCost = 1)
 	{
 		if (ContentStore.Get<TerrainDef>(id) is { } existing)
 		{
 			existing.Passage = passage;
 			existing.MoveCost = moveCost;
-			return existing;
+			return;
 		}
 
 		var definition = new TerrainDef(id)
 		{
+			SourceMod = TestMods.Base,
 			Passage = passage,
 			MoveCost = moveCost,
 		};
 		ContentStore.Add(definition);
-		return definition;
 	}
 }

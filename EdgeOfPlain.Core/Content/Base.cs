@@ -17,6 +17,6 @@ public class Base : Mod
 
 	public override void InitMod(ModContext context)
 	{
-		Terrains.RegisterAll(context);
+		
 	}
 }

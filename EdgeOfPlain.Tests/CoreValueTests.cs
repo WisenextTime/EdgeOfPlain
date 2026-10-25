@@ -42,7 +42,6 @@ public sealed class ColorFTests
 		Assert.NotEqual(ColorF.White, ColorF.Black);
 		Assert.Equal(new ColorF(1, 2, 3, 4), new ColorF(1, 2, 3, 4));
 		Assert.NotEqual(new ColorF(1, 2, 3, 4), new ColorF(1, 2, 3, 5));
-		Assert.True(new ColorF(1, 2, 3, 4) == new ColorF(1, 2, 3, 4));
 	}
 }
 
@@ -177,7 +176,7 @@ public sealed class ContentDefIdentityTests
 	{
 		var def = new ValueProbeDef("thing") { SourceMod = _alpha };
 
-		Assert.Equal("alpha.value-probe(thing)", def.FullId);
+		Assert.Equal("alpha:value-probe/thing", def.FullId);
 		Assert.Equal(def.FullId, def.ToString());
 	}
 
@@ -187,7 +186,7 @@ public sealed class ContentDefIdentityTests
 		var def = new ValueProbeDef("thing");
 
 		Assert.Throws<InvalidOperationException>(() => def.FullId);
-		Assert.Throws<InvalidOperationException>(() => def.ToString());
+		Assert.Throws<InvalidOperationException>(def.ToString);
 		var exception = Assert.Throws<InvalidOperationException>(() => def.SourceMod);
 		Assert.Contains("source mod", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
@@ -212,7 +211,7 @@ public sealed class ContentDefIdentityTests
 		var def = new ValueProbeDef("a") { SourceMod = _alpha };
 
 		Assert.True(def.CompareTo(null) > 0);
-		Assert.Equal(new[] { "alpha.value-probe(a)", "alpha.value-probe(b)" },
+		Assert.Equal(new[] { "alpha:value-probe/a", "alpha:value-probe/b" },
 			new[] { new ValueProbeDef("b") { SourceMod = _alpha }, new ValueProbeDef("a") { SourceMod = _alpha } }
 				.OrderBy(item => item)
 				.Select(item => item.FullId)

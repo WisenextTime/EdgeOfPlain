@@ -37,6 +37,7 @@ public static class MapOperatorBuilder
 	private static readonly TomlSerializerOptions _options = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
 	};
 
 	private static readonly Func<Stream, Map> _loader = stream =>

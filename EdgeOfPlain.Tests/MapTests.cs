@@ -51,14 +51,14 @@ public sealed class MapTests
 	public void RoundTripPreservesTilesets()
 	{
 		var map = new Map(2, 2);
-		map.Tilesets.Add(new TileSetData { TileSet = "TestTile", FirstGid = 7 });
+		map.Tilesets.Add(new TileSetData { TileSet = "testTile", FirstGid = 7 });
 
 		var toml = TomlSerializer.Serialize(map, Options);
 		var restored = TomlSerializer.Deserialize<Map>(toml, Options);
 
 		Assert.NotNull(restored);
 		var tileset = Assert.Single(restored.Tilesets);
-		Assert.Equal("TestTile", tileset.TileSet);
+		Assert.Equal("testTile", tileset.TileSet);
 		Assert.Equal(7, tileset.FirstGid);
 	}
 

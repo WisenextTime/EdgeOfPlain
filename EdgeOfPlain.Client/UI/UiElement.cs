@@ -69,7 +69,7 @@ public class UiElement
 
 	public void Clear()
 	{
-		foreach (var child in _children) child.Parent = null;
+		foreach (var child in _children) Remove(child);
 
 		_children.Clear();
 	}

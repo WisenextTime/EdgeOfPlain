@@ -3,5 +3,5 @@ tiles = "7c2xEQAgDAOxUJC5sv9UsIMvnfznWlNV83/Cbhifz+fz+Xw+n8/n8/n8fT9dh/H5fD6fz+f
 width = 64
 height = 64
 [[tilesets]]
-tileSet = "TestTile"
+tileSet = "testTile"
 firstGid = 1

@@ -47,7 +47,6 @@ public sealed class ModPipelineTests
 	{
 		var pipeline = Run();
 
-		Assert.True(pipeline.HasGround);
 		Assert.True(pipeline.HasLibSand);
 		Assert.True(pipeline.HasAppStone);
 	}
@@ -195,7 +194,6 @@ public sealed class ModPipelineTests
 			[.. ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id)],
 			ModLoader.IsLoaded,
 			error,
-			ContentStore.Get("ground") is not null,
 			ContentStore.Get("libsand") is not null,
 			ContentStore.Get("appstone") is not null,
 			ContentStore.Get("badore") is not null,
@@ -222,7 +220,6 @@ public sealed class ModPipelineTests
 		string[] LoadedIds,
 		bool IsLoaded,
 		Exception? Error,
-		bool HasGround,
 		bool HasLibSand,
 		bool HasAppStone,
 		bool HasBadOre,

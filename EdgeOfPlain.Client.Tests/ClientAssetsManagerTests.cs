@@ -25,7 +25,7 @@ public sealed class ClientAssetsManagerTests : IDisposable
 		public void Dispose() => IsDisposed = true;
 	}
 
-	private sealed record NullAsset;
+	public sealed record NullAsset;
 
 	public ClientAssetsManagerTests()
 	{

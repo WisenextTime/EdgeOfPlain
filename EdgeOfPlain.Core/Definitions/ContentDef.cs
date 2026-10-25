@@ -12,26 +12,23 @@ namespace EdgeOfPlain.Core.Definitions;
 [method: TomlConstructor]
 public abstract class ContentDef(string id) : IComparable<ContentDef>
 {
-	private bool _hasSourceMod;
+	private ModInfo? _sourceMod;
 
 	public string Id { get; } = id;
 
 	[TomlIgnore]
-	public string FullId => ToString();
+	public ContentKey Key => new(SourceMod.Id, ContentTypeRegistry.Discriminator(GetType()), Id);
+
+	[TomlIgnore]
+	public string FullId => $"{SourceMod.Id}:{ContentTypeRegistry.Discriminator(GetType())}/{Id}";
 
 	[TomlIgnore]
 	public ModInfo SourceMod
 	{
-		get => _hasSourceMod
-			? field
-			: throw new InvalidOperationException(
-				$"Content '{GetType().Name}({Id})' has no source mod assigned. " +
-				$"It must be registered through the mod loading pipeline.");
-		internal set
-		{
-			field = value;
-			_hasSourceMod = true;
-		}
+		get => _sourceMod ?? throw new InvalidOperationException(
+			$"Content '{GetType().Name}({Id})' has no source mod assigned. " +
+			$"It must be registered through the mod loading pipeline.");
+		internal set => _sourceMod = value;
 	}
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
@@ -47,7 +44,7 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 			: $"{prefix}{SourceMod.Id}/{normalized.TrimStart('/')}";
 	}
 
-	public override string ToString() => $"{SourceMod.Id}.{ContentTypeRegistry.Discriminator(GetType())}({Id})";
+	public override string ToString() => FullId;
 }
 
 [AttributeUsage(AttributeTargets.Class)]
@@ -106,6 +103,7 @@ public static class ContentSerializer
 		return new TomlSerializerOptions
 		{
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			PropertyNameCaseInsensitive = true,
 			PolymorphismOptions = new TomlPolymorphismOptions
 			{
 				TypeDiscriminatorPropertyName = "type",

@@ -264,14 +264,14 @@ public sealed class FileIOTests
 	{
 		using var scope = new HeadScope();
 
-		using (var write = FileIO.OpenWrite(scope["a.txt"]))
+		using (var write = await FileIO.OpenWriteAsync(scope["a.txt"], TestContext.Current.CancellationToken))
 			write.Write("stream"u8);
 
-		Assert.Equal("stream", FileIO.ReadAllText(scope["a.txt"]));
+		Assert.Equal("stream", await FileIO.ReadAllTextAsync(scope["a.txt"], TestContext.Current.CancellationToken));
 
-		using (var read = FileIO.OpenRead(scope["a.txt"]))
+		using (var read = await FileIO.OpenReadAsync(scope["a.txt"], TestContext.Current.CancellationToken))
 		using (var reader = new StreamReader(read))
-			Assert.Equal("stream", reader.ReadToEnd());
+			Assert.Equal("stream", await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
 
 		var cancellationToken = TestContext.Current.CancellationToken;
 

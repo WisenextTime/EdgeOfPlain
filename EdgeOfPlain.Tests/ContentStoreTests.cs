@@ -25,7 +25,7 @@ public sealed class ContentStoreTests : IDisposable
 	[Fact]
 	public void AddAndGet_ReturnsRegisteredDefinition()
 	{
-		var terrain = new TerrainDef("store-ground");
+		var terrain = new TerrainDef("store-ground") { SourceMod = TestMods.Base };
 
 		ContentStore.Add(terrain);
 
@@ -45,9 +45,9 @@ public sealed class ContentStoreTests : IDisposable
 	[Fact]
 	public void All_FiltersByRequestedType()
 	{
-		ContentStore.Add(new TerrainDef("store-a"));
-		ContentStore.Add(new TilesetDef("store-b"));
-		ContentStore.Add(new TerrainDef("store-c"));
+		ContentStore.Add(new TerrainDef("store-a") { SourceMod = TestMods.Base });
+		ContentStore.Add(new TilesetDef("store-b") { SourceMod = TestMods.Base });
+		ContentStore.Add(new TerrainDef("store-c") { SourceMod = TestMods.Base });
 
 		Assert.Equal(
 			new[] { "store-a", "store-c" },
@@ -59,37 +59,37 @@ public sealed class ContentStoreTests : IDisposable
 	[Fact]
 	public void Add_DuplicateId_Throws()
 	{
-		ContentStore.Add(new TerrainDef("store-dup"));
+		ContentStore.Add(new TerrainDef("store-dup") { SourceMod = TestMods.Base });
 
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-dup")));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-dup") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]
 	public void Remove_DeletesDefinitionAndThrowsWhenMissing()
 	{
-		ContentStore.Add(new TerrainDef("store-remove"));
+		ContentStore.Add(new TerrainDef("store-remove") { SourceMod = TestMods.Base });
 
-		ContentStore.Remove(new TerrainDef("store-remove"));
+		ContentStore.Remove(new TerrainDef("store-remove") { SourceMod = TestMods.Base });
 
 		Assert.Null(ContentStore.Get("store-remove"));
-		Assert.False(ContentStore.TryRemove(new TerrainDef("store-remove")));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-remove")));
+		Assert.False(ContentStore.TryRemove(new TerrainDef("store-remove") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-remove") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]
 	public void TryRemove_ReportsWhetherDefinitionExisted()
 	{
-		ContentStore.Add(new TerrainDef("store-try"));
+		ContentStore.Add(new TerrainDef("store-try") { SourceMod = TestMods.Base });
 
-		Assert.True(ContentStore.TryRemove(new TerrainDef("store-try")));
-		Assert.False(ContentStore.TryRemove(new TerrainDef("store-try")));
+		Assert.True(ContentStore.TryRemove(new TerrainDef("store-try") { SourceMod = TestMods.Base }));
+		Assert.False(ContentStore.TryRemove(new TerrainDef("store-try") { SourceMod = TestMods.Base }));
 		Assert.Equal(0, ContentStore.Count);
 	}
 
 	[Fact]
 	public void Seal_FreezesTheStore()
 	{
-		ContentStore.Add(new TerrainDef("store-sealed"));
+		ContentStore.Add(new TerrainDef("store-sealed") { SourceMod = TestMods.Base });
 		Assert.False(ContentStore.IsSealed);
 
 		ContentStore.Seal();
@@ -97,15 +97,15 @@ public sealed class ContentStoreTests : IDisposable
 		Assert.True(ContentStore.IsSealed);
 		Assert.Equal(1, ContentStore.Count);
 		Assert.NotNull(ContentStore.Get("store-sealed"));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-late")));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-sealed")));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.TryRemove(new TerrainDef("store-sealed")));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-late") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.TryRemove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]
 	public void Reset_ClearsDefinitionsAndSeal()
 	{
-		ContentStore.Add(new TerrainDef("store-reset"));
+		ContentStore.Add(new TerrainDef("store-reset") { SourceMod = TestMods.Base });
 		ContentStore.Seal();
 
 		ContentStore.Reset();

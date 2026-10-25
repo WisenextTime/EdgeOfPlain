@@ -1,0 +1,4 @@
+type = "terrain"
+
+id = "ground"
+passage = "ground, air"

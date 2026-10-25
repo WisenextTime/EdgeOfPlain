@@ -19,7 +19,7 @@ public sealed class TestScene : Scene
 
 	private readonly RenderMetadata _block = new()
 	{
-		Texture = "assets://base/Textures/Tiles/TestTile#main",
+		Texture = "assets://base/Textures/Tiles/testTile#main",
 		Layer = 3,
 		Color = new ColorF(120, 70, 40, 255),
 	};

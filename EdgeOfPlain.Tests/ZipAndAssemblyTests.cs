@@ -24,7 +24,7 @@ public sealed class ZipFileSystemTests
 		}
 
 		buffer.Position = 0;
-		return new ZipFileSystem(buffer, false);
+		return new ZipFileSystem(buffer);
 	}
 
 	[Fact]
@@ -130,8 +130,8 @@ public sealed class AssemblyResourceSystemTests
 	{
 		using var resourceSystem = new AssemblyResourceSystem(typeof(Core.Launcher).Assembly);
 
-		Assert.True(resourceSystem.FileExists("Contents/Tilesets/TestTile.toml"));
-		Assert.True(resourceSystem.FileExists("Textures/Tiles/TestTile.png"));
+		Assert.True(resourceSystem.FileExists("Contents/Tilesets/testTile.toml"));
+		Assert.True(resourceSystem.FileExists("Textures/Tiles/testTile.png"));
 	}
 
 	[Fact]

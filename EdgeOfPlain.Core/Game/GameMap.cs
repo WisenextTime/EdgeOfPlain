@@ -8,13 +8,12 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Exceptions;
 using EdgeOfPlain.Core.Framework.Mods;
 
-namespace EdgeOfPlain.Core.World;
+namespace EdgeOfPlain.Core.Game;
 
 public sealed class GameMap
 {
 	public const int DefaultChunkSize = 32;
 	public const int TileSize = 32;
-	public const ushort EmptyTileId = Map.EmptyGid;
 
 	private readonly ushort[,] _tiles;
 	private readonly MapTileset[] _tilesets;
@@ -92,7 +91,7 @@ public sealed class GameMap
 		return true;
 	}
 
-	public bool IsPassable(int tileX, int tileY, TerrainDef.PassageMask passage)
+	public bool IsPassable(int tileX, int tileY, PassageMask passage)
 		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain && terrain.Allows(passage);
 
 	public int GetMoveCost(int tileX, int tileY)
@@ -116,7 +115,6 @@ public sealed class GameMap
 
 	private MapTile ResolveTile(int tileX, int tileY, ushort id)
 	{
-		// Gid 0 is reserved for empty tiles, even if a tileset claims that range.
 		if (id == Map.EmptyGid)
 			return new MapTile(0, null, -1, -1, -1, RectangleF.Empty, null, null);
 
@@ -131,14 +129,14 @@ public sealed class GameMap
 		var column = localId % tileset.Columns;
 		var row = localId / tileset.Columns;
 
-		var terrain = ContentStore.Get<TerrainDef>(tileData.Terrain) ??
+		var terrain = ContentStore.Get<TerrainDef>(tileData.Terrain, tileset.Definition) ??
 		              throw new MapException($"Unknow terrain {tileData.Terrain}");
 
 		TileRendererDef? renderer = null;
 
 		if (!string.IsNullOrWhiteSpace(tileData.Renderer))
 		{
-			renderer = ContentStore.Get<TileRendererDef>(tileData.Renderer) ??
+			renderer = ContentStore.Get<TileRendererDef>(tileData.Renderer, tileset.Definition) ??
 			           throw new MapException($"Unknow renderer {tileData.Renderer}");
 		}
 
@@ -208,31 +206,29 @@ public sealed class GameMap
 
 	private static TileRendererDef[] CollectRenderers(MapTileset[] tilesets)
 	{
-		var ids = new HashSet<string>(StringComparer.Ordinal);
+		var renderers = new Dictionary<ContentKey, TileRendererDef>();
 
 		foreach (var tileset in tilesets)
-		foreach (var tileData in tileset.TileDataValues)
 		{
-			if (!string.IsNullOrWhiteSpace(tileData.Renderer))
-				ids.Add(tileData.Renderer);
+			foreach (var tileData in tileset.TileDataValues)
+			{
+				if (string.IsNullOrWhiteSpace(tileData.Renderer)) continue;
+
+				var renderer = ContentStore.Get<TileRendererDef>(tileData.Renderer, tileset.Definition)
+				               ?? throw new InvalidOperationException($"Tile renderer '{tileData.Renderer}' is not registered.");
+
+				renderers.TryAdd(renderer.Key, renderer);
+			}
 		}
 
-		var sortedIds = new List<string>(ids);
-		sortedIds.Sort(StringComparer.Ordinal);
+		var keys = new List<ContentKey>(renderers.Keys);
+		keys.Sort();
 
-		var renderers = new List<TileRendererDef>(sortedIds.Count);
+		var result = new List<TileRendererDef>(keys.Count);
 
-		foreach (var id in sortedIds)
-		{
-			var renderer = ContentStore.Get<TileRendererDef>(id);
+		foreach (var key in keys) result.Add(renderers[key]);
 
-			if (renderer is null)
-				throw new InvalidOperationException($"Tile renderer '{id}' is not registered.");
-
-			renderers.Add(renderer);
-		}
-
-		return [.. renderers];
+		return [.. result];
 	}
 
 	private static void ValidateTiles(ushort[,] tiles, MapTileset[] tilesets)

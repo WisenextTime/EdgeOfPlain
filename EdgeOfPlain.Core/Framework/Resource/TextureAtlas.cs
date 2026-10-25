@@ -11,10 +11,11 @@ public sealed class TextureAtlas
 	private static readonly TomlSerializerOptions _options = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
 	};
 
 	[TomlRequired]
-	[TomlPropertyName("Sprite")]
+	[TomlPropertyName("sprite")]
 	public List<SpriteData> Sprites { get; set; } = [];
 
 	public static TextureAtlas Parse(string toml)

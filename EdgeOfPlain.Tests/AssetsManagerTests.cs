@@ -218,7 +218,7 @@ public sealed class AssetsManagerTests
 			await AssetsManager.SaveResourceAsync(
 				new TextProbe("async"), scope["out.txt"], TestContext.Current.CancellationToken);
 
-			Assert.Equal("async!", FileIO.ReadAllText(scope["out.txt"]));
+			Assert.Equal("async!", await FileIO.ReadAllTextAsync(scope["out.txt"]));
 		}
 		finally
 		{
@@ -240,7 +240,7 @@ public sealed class AssetsManagerTests
 			await AssetsManager.SaveResourceAsync(
 				new TextProbe("sync-save"), scope["out.txt"], TestContext.Current.CancellationToken);
 
-			Assert.Equal("sync-save", FileIO.ReadAllText(scope["out.txt"]));
+			Assert.Equal("sync-save", await FileIO.ReadAllTextAsync(scope["out.txt"], TestContext.Current.CancellationToken));
 		}
 		finally
 		{

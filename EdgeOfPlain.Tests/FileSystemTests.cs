@@ -53,7 +53,7 @@ public sealed class FileSystemTests
 			.Add("nested/b.toml", "2")
 			.Add("nested/deeper/c.toml", "3");
 
-		var top = fileSystem.EnumerateFiles(string.Empty, "*.toml", SearchOption.TopDirectoryOnly).ToArray();
+		var top = fileSystem.EnumerateFiles(string.Empty, "*.toml").ToArray();
 		var all = fileSystem.EnumerateFiles(string.Empty, "*.toml", SearchOption.AllDirectories).ToArray();
 
 		Assert.Equal(new[] { "a.toml" }, top);
@@ -97,7 +97,7 @@ public sealed class FileSystemTests
 		var text = await fileSystem.ReadAllTextAsync("a.txt", TestContext.Current.CancellationToken);
 
 		Assert.Equal("hello", text);
-		Assert.Equal("hello", fileSystem.ReadAllText("a.txt"));
+		Assert.Equal("hello", await fileSystem.ReadAllTextAsync("a.txt", TestContext.Current.CancellationToken));
 	}
 
 	[Fact]

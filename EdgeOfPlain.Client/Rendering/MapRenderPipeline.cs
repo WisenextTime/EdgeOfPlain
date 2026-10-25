@@ -6,7 +6,7 @@ using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Graphics;
-using EdgeOfPlain.Core.World;
+using EdgeOfPlain.Core.Game;
 using SFML.Graphics;
 using SFML.Graphics.Glsl;
 using SFML.System;
@@ -238,7 +238,7 @@ public sealed class TileRenderer : IDisposable
 
 		if (definition is null)
 		{
-			Shader = ClientAssetsManager.Get<Shader>("assets://base/Shaders/DefaultTile.glsl");
+			Shader = ClientAssetsManager.Get<Shader>("assets://base/Shaders/defaultTile.glsl");
 			return;
 		}
 
@@ -308,7 +308,7 @@ public sealed class TileRenderer : IDisposable
 			shader.SetUniform("u_cameraSize", new Vec2(world.X, world.Y));
 			shader.SetUniform("u_cameraRotation", camera.Rotation);
 
-			if (Definition?.Id is null or "RandomTileColor")
+			if (Definition?.Id is null or "randomTileColor")
 				shader.SetUniform("u_zoom", camera.Zoom);
 		}
 

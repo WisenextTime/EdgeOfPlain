@@ -24,8 +24,8 @@ public sealed class CoreAssetsTests
 	[Fact]
 	public void ContentAssetsAreUnaffected()
 	{
-		Assert.True(CoreAssets.Content.FileExists("Contents/Tilesets/TestTile.toml"));
-		Assert.False(CoreAssets.Bootstrap.FileExists("Contents/Tilesets/TestTile.toml"));
+		Assert.True(CoreAssets.Content.FileExists("Contents/Tilesets/testTile.toml"));
+		Assert.False(CoreAssets.Bootstrap.FileExists("Contents/Tilesets/testTile.toml"));
 	}
 
 	[Fact]

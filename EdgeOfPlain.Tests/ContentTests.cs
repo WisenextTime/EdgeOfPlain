@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using EdgeOfPlain.Core.Definitions;
+using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
 using Xunit;
 
@@ -44,12 +45,12 @@ public sealed class TerrainTests
 	[Fact]
 	public void Allows_MatchesAnyRequestedFlag()
 	{
-		var ground = new TerrainDef("ground") { Passage = TerrainDef.PassageMask.Ground };
+		var ground = new TerrainDef("ground") { Passage = PassageMask.Ground };
 
-		Assert.True(ground.Allows(TerrainDef.PassageMask.Ground));
-		Assert.True(ground.Allows(TerrainDef.PassageMask.Air | TerrainDef.PassageMask.Ground));
-		Assert.False(ground.Allows(TerrainDef.PassageMask.Air));
-		Assert.False(ground.Allows(TerrainDef.PassageMask.Water | TerrainDef.PassageMask.Cliff));
+		Assert.True(ground.Allows(PassageMask.Ground));
+		Assert.True(ground.Allows(PassageMask.Air | PassageMask.Ground));
+		Assert.False(ground.Allows(PassageMask.Air));
+		Assert.False(ground.Allows(PassageMask.Water | PassageMask.Cliff));
 	}
 
 	[Fact]
@@ -57,13 +58,13 @@ public sealed class TerrainTests
 	{
 		var airAndGround = new TerrainDef("x")
 		{
-			Passage = TerrainDef.PassageMask.Air | TerrainDef.PassageMask.Ground,
+			Passage = PassageMask.Air | PassageMask.Ground,
 		};
 
-		Assert.True(airAndGround.Allows(TerrainDef.PassageMask.Air));
-		Assert.True(airAndGround.Allows(TerrainDef.PassageMask.Air | TerrainDef.PassageMask.Water));
-		Assert.False(airAndGround.Allows(TerrainDef.PassageMask.None));
-		Assert.False(new TerrainDef("bare").Allows(TerrainDef.PassageMask.Air));
+		Assert.True(airAndGround.Allows(PassageMask.Air));
+		Assert.True(airAndGround.Allows(PassageMask.Air | PassageMask.Water));
+		Assert.False(airAndGround.Allows(PassageMask.None));
+		Assert.False(new TerrainDef("bare").Allows(PassageMask.Air));
 	}
 
 	[Fact]
@@ -72,7 +73,7 @@ public sealed class TerrainTests
 		var terrain = new TerrainDef("bare");
 
 		Assert.Equal(1, terrain.MoveCost);
-		Assert.Equal(TerrainDef.PassageMask.None, terrain.Passage);
+		Assert.Equal(PassageMask.None, terrain.Passage);
 	}
 }
 
@@ -156,7 +157,7 @@ public sealed class ContentSerializerTests
 
 		var original = new TerrainDef("mud")
 		{
-			Passage = TerrainDef.PassageMask.Ground,
+			Passage = PassageMask.Ground,
 			MoveCost = 3,
 		};
 
@@ -166,7 +167,7 @@ public sealed class ContentSerializerTests
 		var terrain = Assert.IsType<TerrainDef>(restored);
 		Assert.Equal("mud", terrain.Id);
 		Assert.Equal(3, terrain.MoveCost);
-		Assert.Equal(TerrainDef.PassageMask.Ground, terrain.Passage);
+		Assert.Equal(PassageMask.Ground, terrain.Passage);
 	}
 
 	[Fact]

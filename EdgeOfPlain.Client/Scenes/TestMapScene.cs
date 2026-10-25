@@ -9,13 +9,13 @@ using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
-using EdgeOfPlain.Core.World;
+using EdgeOfPlain.Core.Game;
 
 namespace EdgeOfPlain.Client.Scenes;
 
 public sealed class TestMapScene : Scene
 {
-	public const string MapPath = "assets://base/Map/TestMap.toml";
+	public const string MapPath = "assets://base/Map/testMap.toml";
 
 	private const int UiLayer = 1000;
 

@@ -17,6 +17,7 @@ public sealed class ModPackage : IDisposable
 	public static readonly TomlSerializerOptions ManifestOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
 	};
 
 	private readonly ZipFileSystem _zip;

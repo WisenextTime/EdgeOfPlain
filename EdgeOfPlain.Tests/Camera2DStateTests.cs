@@ -19,7 +19,7 @@ public sealed class Camera2DStateTests
 	[Fact]
 	public void PushShiftsPreviousToCurrent()
 	{
-		var first = new Camera2D(new Vector2(10, 20), 1f);
+		var first = new Camera2D(new Vector2(10, 20));
 		var second = new Camera2D(new Vector2(30, 40), 2f);
 		var state = new Camera2DState(first);
 
@@ -44,7 +44,7 @@ public sealed class Camera2DStateTests
 	[Fact]
 	public void EvaluateInterpolatesPreviousAndCurrent()
 	{
-		var from = new Camera2D(new Vector2(0, 0), 1f);
+		var from = new Camera2D(new Vector2(0, 0));
 		var to = new Camera2D(new Vector2(100, 100), 3f);
 		var state = new Camera2DState(from);
 
@@ -58,7 +58,7 @@ public sealed class Camera2DStateTests
 	[Fact]
 	public void SetAppliesImmediatelyWithoutInterpolation()
 	{
-		var from = new Camera2D(new Vector2(0, 0), 1f);
+		var from = new Camera2D(new Vector2(0, 0));
 		var zoomed = new Camera2D(new Vector2(0, 0), 2f);
 		var state = new Camera2DState(from);
 
@@ -75,7 +75,7 @@ public sealed class Camera2DStateTests
 	[Fact]
 	public void PushingCurrentAgainCommitsInterpolation()
 	{
-		var from = new Camera2D(new Vector2(0, 0), 1f);
+		var from = new Camera2D(new Vector2(0, 0));
 		var to = new Camera2D(new Vector2(10, 0), 2f);
 		var state = new Camera2DState(from);
 
@@ -89,8 +89,8 @@ public sealed class Camera2DStateTests
 	[Fact]
 	public void EvaluateClampsAlpha()
 	{
-		var from = new Camera2D(new Vector2(0, 0), 1f);
-		var to = new Camera2D(new Vector2(100, 0), 1f);
+		var from = new Camera2D(new Vector2(0, 0));
+		var to = new Camera2D(new Vector2(100, 0));
 		var state = new Camera2DState(from);
 
 		state.Push(to);
