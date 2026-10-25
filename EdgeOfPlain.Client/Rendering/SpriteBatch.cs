@@ -15,6 +15,7 @@ public sealed class SpriteBatch(IRenderTarget target)
 	: ISpriteBatch, IDisposable
 {
 	private const float DefaultQuadSize = 16f;
+	private const int MaxNineSliceParts = 256;
 
 	private readonly IRenderTarget _target = target ?? throw new ArgumentNullException(nameof(target));
 
@@ -65,39 +66,24 @@ public sealed class SpriteBatch(IRenderTarget target)
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
+		var texture = string.IsNullOrEmpty(metadata.Texture) ? null : ResolveTexture(metadata.Texture);
+		var shader = string.IsNullOrEmpty(metadata.Shader) ? null : metadata.Shader;
+		var bucket = ResolveBucket(new GroupKey(metadata.Layer, texture?.TexturePath, shader));
+
+		if (metadata.NineSlice is { } slice)
+		{
+			AppendNineSlice(bucket, metadata, slice, x, y);
+
+			return;
+		}
+
 		SubmittedSprites++;
 
-		var texture = string.IsNullOrEmpty(metadata.Texture) ? null : ResolveTexture(metadata.Texture);
-		var viewBounds = _cameraBounds;
-
-		if (!TryBuildQuad(metadata, texture, x, y, viewBounds, out var quad))
+		if (!TryBuildQuad(metadata, texture, x, y, out var quad))
 		{
 			CulledSprites++;
 			return;
 		}
-
-		var shader = string.IsNullOrEmpty(metadata.Shader) ? null : metadata.Shader;
-		var key = new GroupKey(metadata.Layer, texture?.TexturePath, shader);
-
-		Bucket bucket;
-		if (_lastBucket is not null && key.Equals(_lastKey))
-		{
-			bucket = _lastBucket;
-		}
-		else
-		{
-			if (!_buckets.TryGetValue(key, out var existing))
-			{
-				existing = new Bucket();
-				_buckets[key] = existing;
-			}
-
-			bucket = existing;
-			_lastKey = key;
-			_lastBucket = bucket;
-		}
-
-		if (bucket.Count == 0) _activeKeys.Add(key);
 
 		bucket.Append(quad, metadata.Color);
 	}
@@ -158,7 +144,101 @@ public sealed class SpriteBatch(IRenderTarget target)
 		_activeKeys.Clear();
 	}
 
-	private static bool TryBuildQuad(RenderMetadata metadata, TextureData? texture, float x, float y, RectangleF? view, out Quad quad)
+	private Bucket ResolveBucket(in GroupKey key)
+	{
+		if (_lastBucket is not null && key.Equals(_lastKey)) return _lastBucket;
+
+		if (!_buckets.TryGetValue(key, out var bucket))
+		{
+			bucket = new Bucket();
+			_buckets[key] = bucket;
+		}
+
+		if (bucket.Count == 0) _activeKeys.Add(key);
+
+		_lastKey = key;
+		_lastBucket = bucket;
+
+		return bucket;
+	}
+
+	private void AppendNineSlice(Bucket bucket, RenderMetadata metadata, NineSlice slice, float x, float y)
+	{
+		var destination = new RectangleF(
+			0f,
+			0f,
+			metadata.Size?.X ?? slice.Source.Width,
+			metadata.Size?.Y ?? slice.Source.Height);
+
+		var effective = slice;
+		if (effective.Mode == NineSliceMode.Tile && effective.TiledPartCount(destination) > MaxNineSliceParts)
+			effective = effective with { Mode = NineSliceMode.Stretch };
+
+		var count = effective.CountParts(destination);
+		if (count == 0) return;
+
+		Span<NineSlicePart> parts = stackalloc NineSlicePart[count];
+		var filled = effective.SplitParts(destination, parts);
+
+		float cos = 1f, sin = 0f;
+		if (metadata.Rotation != 0f)
+		{
+			cos = MathF.Cos(metadata.Rotation);
+			sin = MathF.Sin(metadata.Rotation);
+		}
+
+		for (var index = 0; index < filled; index++)
+		{
+			var part = parts[index];
+
+			var quad = BuildQuad(
+				part.Destination.Left - metadata.Origin.X,
+				part.Destination.Top - metadata.Origin.Y,
+				part.Destination.Right - metadata.Origin.X,
+				part.Destination.Bottom - metadata.Origin.Y,
+				x, y, cos, sin,
+				part.Source.Left, part.Source.Top, part.Source.Right, part.Source.Bottom);
+
+			SubmittedSprites++;
+
+			if (IsOutside(quad))
+			{
+				CulledSprites++;
+				continue;
+			}
+
+			bucket.Append(quad, metadata.Color);
+		}
+	}
+
+	private static Quad BuildQuad(
+		float left, float top, float right, float bottom,
+		float x, float y, float cos, float sin,
+		float texLeft, float texTop, float texRight, float texBottom) =>
+		new(
+			x + left * cos - top * sin,
+			y + left * sin + top * cos,
+			x + right * cos - top * sin,
+			y + right * sin + top * cos,
+			x + right * cos - bottom * sin,
+			y + right * sin + bottom * cos,
+			x + left * cos - bottom * sin,
+			y + left * sin + bottom * cos,
+			texLeft, texTop, texRight, texBottom);
+
+	private bool IsOutside(in Quad quad)
+	{
+		if (_cameraBounds is not { } bounds) return false;
+
+		var minX = MathF.Min(MathF.Min(quad.X0, quad.X1), MathF.Min(quad.X2, quad.X3));
+		var maxX = MathF.Max(MathF.Max(quad.X0, quad.X1), MathF.Max(quad.X2, quad.X3));
+		var minY = MathF.Min(MathF.Min(quad.Y0, quad.Y1), MathF.Min(quad.Y2, quad.Y3));
+		var maxY = MathF.Max(MathF.Max(quad.Y0, quad.Y1), MathF.Max(quad.Y2, quad.Y3));
+
+		return maxX < bounds.Left || minX > bounds.Right || maxY < bounds.Top || minY > bounds.Bottom;
+	}
+
+	private bool TryBuildQuad(RenderMetadata metadata, TextureData? texture, float x, float y, out Quad quad)
 	{
 		var source = metadata.Source ?? texture?.Source;
 		var natural = source is { } region
@@ -176,42 +256,18 @@ public sealed class SpriteBatch(IRenderTarget target)
 			sin = MathF.Sin(metadata.Rotation);
 		}
 
-		var left = -metadata.Origin.X * scale.X;
-		var top = -metadata.Origin.Y * scale.Y;
-		var right = (width - metadata.Origin.X) * scale.X;
-		var bottom = (height - metadata.Origin.Y) * scale.Y;
-
-		var x0 = x + left * cos - top * sin;
-		var y0 = y + left * sin + top * cos;
-		var x1 = x + right * cos - top * sin;
-		var y1 = y + right * sin + top * cos;
-		var x2 = x + right * cos - bottom * sin;
-		var y2 = y + right * sin + bottom * cos;
-		var x3 = x + left * cos - bottom * sin;
-		var y3 = y + left * sin + bottom * cos;
-
-		if (view is { } bounds)
-		{
-			var minX = MathF.Min(MathF.Min(x0, x1), MathF.Min(x2, x3));
-			var maxX = MathF.Max(MathF.Max(x0, x1), MathF.Max(x2, x3));
-			var minY = MathF.Min(MathF.Min(y0, y1), MathF.Min(y2, y3));
-			var maxY = MathF.Max(MathF.Max(y0, y1), MathF.Max(y2, y3));
-
-			if (maxX < bounds.Left || minX > bounds.Right || maxY < bounds.Top || minY > bounds.Bottom)
-			{
-				quad = default;
-				return false;
-			}
-		}
-
 		var texLeft = source?.Left ?? 0;
 		var texTop = source?.Top ?? 0;
 
-		quad = new Quad(
-			x0, y0, x1, y1, x2, y2, x3, y3,
-			texLeft, texTop, texLeft + natural.X, texTop + natural.Y);
+		quad = BuildQuad(
+			-metadata.Origin.X * scale.X,
+			-metadata.Origin.Y * scale.Y,
+			(width - metadata.Origin.X) * scale.X,
+			(height - metadata.Origin.Y) * scale.Y,
+			x, y, cos, sin,
+			texLeft, texTop, texLeft + width, texTop + height);
 
-		return true;
+		return !IsOutside(quad);
 	}
 
 	private void ApplyCamera(Camera2D? source)

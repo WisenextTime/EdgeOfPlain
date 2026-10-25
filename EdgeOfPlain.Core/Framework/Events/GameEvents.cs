@@ -1,5 +1,4 @@
 using System.Drawing;
-using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Scenes;
 
 namespace EdgeOfPlain.Core.Framework.Events;
@@ -16,5 +15,3 @@ public enum SceneChangeKind
 public readonly record struct SceneChangedEvent(SceneChangeKind Kind, IScene? Previous, IScene? Current);
 
 public readonly record struct WindowResizedEvent(Size Previous, Size Current);
-
-public readonly record struct MapLoadedEvent(Map Source);
