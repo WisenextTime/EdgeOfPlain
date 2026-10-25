@@ -247,6 +247,9 @@ public sealed class NineSliceTests
 		public void DrawText(string text, int size, float x, float y, uint layer)
 		{
 		}
+
+		public Vector2 MeasureText(string text, int size)
+			=> new(text.Length * size * 0.5f, size);
 	}
 
 	private readonly record struct RecordedDraw(

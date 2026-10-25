@@ -97,6 +97,20 @@ public sealed class SpriteBatch(IRenderTarget target)
 		_texts.Add(new TextEntry(text, (uint)size, x, y, layer, _texts.Count));
 	}
 
+	public Vector2 MeasureText(string text, int size)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
+
+		if (string.IsNullOrEmpty(text)) return Vector2.Zero;
+
+		var measure = ResolveText((uint)size);
+		measure.DisplayedString = text;
+
+		var bounds = measure.GetGlobalBounds();
+
+		return new Vector2(bounds.Width, bounds.Height);
+	}
+
 	public void End()
 	{
 		switch (_activeKeys.Count)
