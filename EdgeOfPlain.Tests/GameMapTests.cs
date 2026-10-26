@@ -36,8 +36,7 @@ public sealed class GameMapTests : IDisposable
 
 		var gameMap = GameMap.Build(map);
 
-		Assert.Equal(32, gameMap.TileWidth);
-		Assert.Equal(32, gameMap.TileHeight);
+		Assert.Equal(32, GameMap.TileSize);
 		Assert.Equal(new RectangleF(0f, 0f, 96f, 64f), gameMap.Bounds);
 		Assert.Single(gameMap.Tilesets);
 		Assert.Single(gameMap.Chunks);
@@ -211,8 +210,7 @@ public sealed class GameMapTests : IDisposable
 
 		var gameMap = GameMap.Build(map);
 
-		Assert.Equal(32, gameMap.TileWidth);
-		Assert.Equal(32, gameMap.TileHeight);
+		Assert.Equal(32, GameMap.TileSize);
 		Assert.Equal(new RectangleF(0f, 0f, 64f, 64f), gameMap.Bounds);
 
 		var tile = gameMap.GetTile(0, 0);

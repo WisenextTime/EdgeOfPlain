@@ -36,8 +36,6 @@ public sealed class GameMap
 
 	public int Width => _tiles.GetLength(0);
 	public int Height => _tiles.GetLength(1);
-	public int TileWidth => TileSize;
-	public int TileHeight => TileSize;
 	public int ChunkSize { get; }
 	public RectangleF Bounds { get; }
 	public IReadOnlyList<MapTileset> Tilesets => _tilesets;
@@ -98,20 +96,20 @@ public sealed class GameMap
 		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain ? terrain.MoveCost : 0;
 
 	public Vector2 TileToWorld(int tileX, int tileY)
-		=> new(tileX * (float)TileWidth, tileY * (float)TileHeight);
+		=> new(tileX * (float)TileSize, tileY * (float)TileSize);
 
 	public Vector2 TileCenter(int tileX, int tileY)
-		=> new((tileX + 0.5f) * TileWidth, (tileY + 0.5f) * TileHeight);
+		=> new((tileX + 0.5f) * TileSize, (tileY + 0.5f) * TileSize);
 
 	public Point WorldToTile(Vector2 world)
-		=> new((int)MathF.Floor(world.X / TileWidth), (int)MathF.Floor(world.Y / TileHeight));
+		=> new((int)MathF.Floor(world.X / TileSize), (int)MathF.Floor(world.Y / TileSize));
 
 	public RectangleF GetTileBounds(int tileX, int tileY)
 		=> new(
-			tileX * (float)TileWidth,
-			tileY * (float)TileHeight,
-			TileWidth,
-			TileHeight);
+			tileX * (float)TileSize,
+			tileY * (float)TileSize,
+			TileSize,
+			TileSize);
 
 	private MapTile ResolveTile(int tileX, int tileY, ushort id)
 	{

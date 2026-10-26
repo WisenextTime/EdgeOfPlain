@@ -1,6 +1,8 @@
 using System;
 using EdgeOfPlain.Core.Definitions;
+using EdgeOfPlain.Core.Definitions.Components;
 using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Game.Components;
 
 namespace EdgeOfPlain.Core.Content;
 
@@ -17,6 +19,7 @@ public class Base : Mod
 
 	public override void InitMod(ModContext context)
 	{
-		
+		ComponentManager.RegisterComponent(HealthComponent.CreateComponent);
+		ComponentManager.RegisterComponent(TransformComponent.CreateComponent);
 	}
 }

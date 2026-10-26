@@ -20,7 +20,6 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Assets\Contents\Units\Test\" />
-	  <Folder Include="Game\References\" />
 	</ItemGroup>
 
 </Project>
