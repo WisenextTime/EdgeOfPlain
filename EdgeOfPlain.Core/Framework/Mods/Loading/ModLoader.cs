@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.IO;
+using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Utils;
 
@@ -85,6 +86,7 @@ public static class ModLoader
 		ModResourceLoader.LoadAll(LoadedMods);
 		ContentStore.Seal();
 		ComponentManager.Seal();
+		CommandRegistry.Seal();
 	}
 
 	private static void LoadPackage(string sourcePath)
