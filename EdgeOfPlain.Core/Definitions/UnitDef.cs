@@ -2,6 +2,7 @@ using Tomlyn.Serialization;
 
 namespace EdgeOfPlain.Core.Definitions;
 
+[ContentTypeName("unit")]
 public class UnitDef(string id) : ContentDef(id)
 {
 	[TomlRequired] public int MaxHealth { get; set; }

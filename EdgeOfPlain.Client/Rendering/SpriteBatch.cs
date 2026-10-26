@@ -274,10 +274,10 @@ public sealed class SpriteBatch(IRenderTarget target)
 		var texTop = source?.Top ?? 0;
 
 		quad = BuildQuad(
-			-metadata.Origin.X * scale.X,
-			-metadata.Origin.Y * scale.Y,
-			(width - metadata.Origin.X) * scale.X,
-			(height - metadata.Origin.Y) * scale.Y,
+			-metadata.Origin.X,
+			-metadata.Origin.Y,
+			width * scale.X - metadata.Origin.X,
+			height * scale.Y - metadata.Origin.Y,
 			x, y, cos, sin,
 			texLeft, texTop, texLeft + width, texTop + height);
 

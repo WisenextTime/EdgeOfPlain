@@ -1,12 +1,13 @@
 using System.Numerics;
+using EdgeOfPlain.Core.Definitions;
 
-namespace EdgeOfPlain.Core.Definitions.Components;
+namespace EdgeOfPlain.Core.Content.Components;
 
 public struct TransformComponent
 {
 	public Vector2 Position;
 	public float Rotation;
-	
+
 	public static TransformComponent CreateComponent(UnitDef def)
 	{
 		return new TransformComponent

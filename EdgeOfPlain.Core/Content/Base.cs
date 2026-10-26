@@ -1,6 +1,6 @@
 using System;
 using EdgeOfPlain.Core.Definitions;
-using EdgeOfPlain.Core.Definitions.Components;
+using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game.Components;
 
@@ -15,6 +15,7 @@ public class Base : Mod
 		typeof(TerrainDef),
 		typeof(TilesetDef),
 		typeof(TileRendererDef),
+		typeof(UnitDef),
 	];
 
 	public override void InitMod(ModContext context)

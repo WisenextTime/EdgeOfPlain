@@ -15,6 +15,8 @@ public static class ComponentManager
 	private static Action<Entity, UnitDef>[] _compiled = [];
 	private static Signature _signature;
 
+	public static bool IsSealed => _isSealed;
+
 	private static void ThrowIfSealed()
 	{
 		if (_isSealed) throw new InvalidOperationException("Component registry is already sealed.");
@@ -25,6 +27,9 @@ public static class ComponentManager
 		ArgumentNullException.ThrowIfNull(factory);
 		ThrowIfSealed();
 		var type = ComponentRegistry.Add<T>();
+		if (_types.Contains(type))
+			throw new InvalidOperationException($"Component {typeof(T).Name} is already registered.");
+
 		ArrayRegistry.Add<T>();
 		_types.Add(type);
 		_appliers.Add((entity, def) => entity.Set(factory(def)));

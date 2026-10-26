@@ -64,7 +64,7 @@ public sealed class SpriteBatchTests : IDisposable
 	}
 
 	[Fact]
-	public void OriginAndScaleAreAppliedToQuadVertices()
+	public void OriginIsInDestinationUnitsAndAppliedToQuadVertices()
 	{
 		var target = new FakeRenderTarget();
 		using var batch = new SpriteBatch(target);
@@ -82,12 +82,42 @@ public sealed class SpriteBatchTests : IDisposable
 
 		var vertices = Assert.Single(target.VertexBatches).Vertices;
 
-		Assert.Equal(90f, vertices[0].Position.X, 3);
-		Assert.Equal(80f, vertices[0].Position.Y, 3);
-		Assert.Equal(110f, vertices[1].Position.X, 3);
-		Assert.Equal(80f, vertices[1].Position.Y, 3);
-		Assert.Equal(110f, vertices[2].Position.X, 3);
-		Assert.Equal(120f, vertices[2].Position.Y, 3);
+		Assert.Equal(95f, vertices[0].Position.X, 3);
+		Assert.Equal(90f, vertices[0].Position.Y, 3);
+		Assert.Equal(115f, vertices[1].Position.X, 3);
+		Assert.Equal(90f, vertices[1].Position.Y, 3);
+		Assert.Equal(115f, vertices[2].Position.X, 3);
+		Assert.Equal(130f, vertices[2].Position.Y, 3);
+	}
+
+	[Fact]
+	public void OriginAtHalfOfSizeCentersTheQuadOnPosition()
+	{
+		var target = new FakeRenderTarget();
+		using var batch = new SpriteBatch(target);
+		var metadata = new RenderMetadata
+		{
+			Layer = 1,
+			Size = new Vector2(40),
+			Origin = new Vector2(20, 20),
+		};
+
+		batch.Begin();
+		batch.Draw(metadata, 100, 100);
+		batch.End();
+
+		var vertices = Assert.Single(target.VertexBatches).Vertices;
+		var left = MathF.Min(vertices[0].Position.X, vertices[1].Position.X);
+		var right = MathF.Max(vertices[0].Position.X, vertices[2].Position.X);
+		var top = MathF.Min(vertices[0].Position.Y, vertices[2].Position.Y);
+		var bottom = MathF.Max(vertices[0].Position.Y, vertices[2].Position.Y);
+
+		Assert.Equal(80f, left, 3);
+		Assert.Equal(120f, right, 3);
+		Assert.Equal(80f, top, 3);
+		Assert.Equal(120f, bottom, 3);
+		Assert.Equal(100f, (left + right) / 2f, 3);
+		Assert.Equal(100f, (top + bottom) / 2f, 3);
 	}
 
 	[Fact]

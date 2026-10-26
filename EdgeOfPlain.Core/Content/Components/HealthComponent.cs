@@ -1,4 +1,6 @@
-namespace EdgeOfPlain.Core.Definitions.Components;
+using EdgeOfPlain.Core.Definitions;
+
+namespace EdgeOfPlain.Core.Content.Components;
 
 public struct HealthComponent
 {
