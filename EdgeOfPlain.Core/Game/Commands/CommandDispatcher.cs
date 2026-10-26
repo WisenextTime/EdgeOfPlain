@@ -52,6 +52,11 @@ public sealed class CommandDispatcher(CommandBus bus)
 					applied += bus.CountType(type);
 					apply(world, bus);
 				}
+				else if (CommandRegistry.FindApplier(type) is { } entry)
+				{
+					applied += bus.CountType(type);
+					entry.Apply(world, bus);
+				}
 				else
 				{
 					LogUtils.LogMessage($"no applier registered for command type '{type.FullName}'", LogUtils.LogType.Warning);

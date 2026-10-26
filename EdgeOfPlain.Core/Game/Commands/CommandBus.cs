@@ -13,6 +13,16 @@ public sealed class CommandBus
 
 	public IReadOnlyList<Type> PendingTypes => _pendingTypes;
 
+	public int PendingCount
+	{
+		get
+		{
+			var total = 0;
+			foreach (var queue in _queues) total += queue.Count;
+			return total;
+		}
+	}
+
 	public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand
 	{
 		var queue = GetOrCreate<TCommand>();

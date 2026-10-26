@@ -91,18 +91,9 @@ public static class ContentStore
 
 	public static TDef? Get<TDef>(ContentKey key) where TDef : ContentDef => Get(key) as TDef;
 
-	/// <summary>
-	/// Looks up content without a referrer: either a fully qualified key (<c>mod:type/id</c>) or a bare id
-	/// that only one mod defines. A bare id defined by several mods throws
-	/// <see cref="ContentResolutionException"/> instead of guessing.
-	/// </summary>
 	public static ContentDef? Get(string reference)
 		=> TryResolve(reference, null, typeof(ContentDef), out var def) ? def : null;
 
-	/// <summary>
-	/// Looks up a reference written inside <paramref name="source"/>: a bare id is resolved in the
-	/// mod that owns <paramref name="source"/>, a qualified key resolves globally.
-	/// </summary>
 	public static ContentDef? Get(string reference, ContentDef source)
 		=> TryResolve(reference, source, typeof(ContentDef), out var def) ? def : null;
 

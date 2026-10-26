@@ -86,7 +86,7 @@ public sealed class TestMapScene : Scene
 		if (!overUi && input.WasMouseButtonPressed(MouseButton.Left)) QueueSpawn(input);
 		if (input.WasMouseButtonPressed(MouseButton.Right)) QueueDelete(input);
 
-		_gameWorld.ApplyCommands();
+		_gameWorld.Step();
 	}
 
 	public override void Draw(RenderTime time)

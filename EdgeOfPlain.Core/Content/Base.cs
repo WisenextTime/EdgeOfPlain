@@ -1,8 +1,9 @@
 using System;
-using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Content.Components;
+using EdgeOfPlain.Core.Content.Systems;
+using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
-using EdgeOfPlain.Core.Game.Components;
+using EdgeOfPlain.Core.Game.Commands;
 
 namespace EdgeOfPlain.Core.Content;
 
@@ -20,7 +21,13 @@ public class Base : Mod
 
 	public override void InitMod(ModContext context)
 	{
-		ComponentManager.RegisterComponent(HealthComponent.CreateComponent);
-		ComponentManager.RegisterComponent(TransformComponent.CreateComponent);
+		context.AddComponent(HealthComponent.CreateComponent);
+		context.AddComponent(TransformComponent.CreateComponent);
+
+		context.AddQueue(new DeathQueueSystem());
+
+		context.AddApplier(new SpawnUnitApplier());
+		context.AddApplier(new DeleteUnitApplier());
+		context.AddApplier(new UnitDiedApplier());
 	}
 }

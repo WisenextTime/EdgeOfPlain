@@ -8,6 +8,7 @@ using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Mods.Loading;
 using EdgeOfPlain.Core.Framework.Resource;
+using EdgeOfPlain.Core.Game.Commands;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -114,6 +115,14 @@ public sealed class ModPipelineTests
 		Assert.All(pipeline.ProbeFiles, file => Assert.Contains("base/Probe/Tiles/", file));
 	}
 
+	[Fact]
+	public void CommandRegistryIsSealedAfterLoading()
+	{
+		Run();
+
+		Assert.True(CommandRegistry.IsSealed);
+	}
+
 	private static Pipeline Execute()
 	{
 		var root = new TempDirectory();
@@ -137,6 +146,7 @@ public sealed class ModPipelineTests
 		ContentStore.Reset();
 		ContentTypeRegistry.Reset();
 		ContentSerializer.ResetOptions();
+		CommandRegistry.Reset();
 		AssetsManager.Clear();
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
 

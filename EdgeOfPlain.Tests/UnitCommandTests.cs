@@ -20,8 +20,8 @@ public sealed class UnitCommandTests
 	{
 		if (ComponentManager.IsSealed) return;
 
-		ComponentManager.RegisterComponent(HealthComponent.CreateComponent);
-		ComponentManager.RegisterComponent(TransformComponent.CreateComponent);
+		ComponentManager.StageComponent(HealthComponent.CreateComponent, "test");
+		ComponentManager.StageComponent(TransformComponent.CreateComponent, "test");
 		ComponentManager.Seal();
 	}
 
@@ -80,9 +80,11 @@ public sealed class UnitCommandTests
 	}
 
 	[Fact]
-	public void GameWorldRegistersUnitAppliersAndAppliesCommands()
+	public void GameWorldAppliesCommandsThroughItsDispatcher()
 	{
 		using var game = new GameWorld(GameMap.Build(new Map(2, 2)));
+		game.Dispatcher.Register(new SpawnUnitApplier());
+
 		var def = new UnitDef("testUnit") { MaxHealth = 10 };
 
 		game.Commands.Enqueue(new SpawnUnitCommand(
