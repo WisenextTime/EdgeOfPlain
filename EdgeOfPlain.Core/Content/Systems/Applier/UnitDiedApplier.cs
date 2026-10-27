@@ -1,6 +1,6 @@
 using Arch.Core;
 using Arch.Core.Extensions;
-using EdgeOfPlain.Core.Game;
+using EdgeOfPlain.Core.Content.Systems.Commands;
 using EdgeOfPlain.Core.Game.Commands;
 
 namespace EdgeOfPlain.Core.Content.Systems;

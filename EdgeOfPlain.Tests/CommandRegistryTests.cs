@@ -4,6 +4,7 @@ using Arch.Core;
 using EdgeOfPlain.Core.Content;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems;
+using EdgeOfPlain.Core.Content.Systems.Commands;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game;
