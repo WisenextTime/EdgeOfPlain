@@ -2,7 +2,7 @@ using Arch.Core;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Game.Systems;
 
-namespace EdgeOfPlain.Core.Content.Systems;
+namespace EdgeOfPlain.Core.Content.Systems.Queues;
 
 public class DeathQueueSystem : IQueueSystem
 {

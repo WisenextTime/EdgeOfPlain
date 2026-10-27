@@ -1,13 +1,7 @@
 using Arch.Core;
-using Arch.Core.Extensions;
-using EdgeOfPlain.Core.Game.Systems;
+using EdgeOfPlain.Core.Game.Commands;
 
-namespace EdgeOfPlain.Core.Game.Commands;
-
-public readonly struct DeleteUnitCommand(EntityHandle target) : ICommand
-{
-	internal readonly EntityHandle Target = target;
-}
+namespace EdgeOfPlain.Core.Content.Systems.Applier;
 
 public sealed class DeleteUnitApplier : ICommandApplier<DeleteUnitCommand>
 {

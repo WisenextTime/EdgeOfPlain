@@ -4,6 +4,7 @@ using Arch.Core;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
 using EdgeOfPlain.Core.Content.Components;
+using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Events;
