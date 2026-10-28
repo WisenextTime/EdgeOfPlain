@@ -23,7 +23,16 @@ public class GameWorld : IDisposable
 
 	public QueueWorld QueueView() => new(_world, Commands);
 
-	/// <summary>依次运行已注册的队列系统，把组件状态翻译成命令。</summary>
+	public int RunFrameSystems(float delta)
+	{
+		var systems = CommandRegistry.FrameSystems;
+		if (systems.Count == 0) return 0;
+
+		foreach (var system in systems) system.Operation(_world, delta);
+
+		return systems.Count;
+	}
+
 	public int RunQueues()
 	{
 		var queues = CommandRegistry.Queues;
@@ -37,12 +46,28 @@ public class GameWorld : IDisposable
 
 	public int ApplyCommands() => Dispatcher.ApplyAll(_world);
 
-	/// <summary>跑一帧命令管线：队列 → 应用。</summary>
-	public int Step()
+	public int CollectEntities(in QueryDescription description, Span<EntityHandle> destination)
 	{
+		var count = _world.CountEntities(in description);
+		if (count == 0) return 0;
+
+		Span<Entity> entities = count <= 256 ? stackalloc Entity[count] : new Entity[count];
+		_world.GetEntities(in description, entities);
+
+		var copy = Math.Min(count, destination.Length);
+		for (var i = 0; i < copy; i++) destination[i] = new EntityHandle(entities[i]);
+
+		return count;
+	}
+
+	public int Step(float delta)
+	{
+		RunFrameSystems(delta);
 		RunQueues();
 		return ApplyCommands();
 	}
+
+	public int Step() => Step(0f);
 
 	public void Dispose()
 	{

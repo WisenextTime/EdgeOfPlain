@@ -15,8 +15,8 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Game;
-using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Systems;
+using EdgeOfPlain.Core.Game.Waypoint;
 
 namespace EdgeOfPlain.Client.Scenes;
 
@@ -29,6 +29,7 @@ public sealed class TestMapScene : Scene
 
 	private const float UnitVisualSize = 40f;
 	private const float DeleteRadius = 24f;
+	private const int MaxUnitsPerOrder = 512;
 
 	private static readonly Vector2 _unitOrigin = new(UnitVisualSize / 2f, UnitVisualSize / 2f);
 
@@ -87,7 +88,7 @@ public sealed class TestMapScene : Scene
 		if (!overUi && input.WasMouseButtonPressed(MouseButton.Left)) QueueSpawn(input);
 		if (input.WasMouseButtonPressed(MouseButton.Right)) QueueDelete(input);
 
-		_gameWorld.Step();
+		_gameWorld.Step((float)time.Delta);
 	}
 
 	public override void Draw(RenderTime time)
@@ -174,7 +175,19 @@ public sealed class TestMapScene : Scene
 			found = true;
 		});
 
-		if (found) _gameWorld.Commands.Enqueue(new DeleteUnitCommand(target));
+		if (found)
+		{
+			_gameWorld.Commands.Enqueue(new DeleteUnitCommand(target));
+			return;
+		}
+
+		// 没点中单位时，把点击点当作移动指令下发给所有单位。
+		var handles = new EntityHandle[MaxUnitsPerOrder];
+		var count = _gameWorld.CollectEntities(description, handles);
+
+		for (var i = 0; i < Math.Min(count, handles.Length); i++)
+			_gameWorld.Commands.Enqueue(new WaypointCommand(handles[i], WaypointType.Move, WaypointAddType.Replace,
+				new GroundTarget(point)));
 	}
 
 	private void DrawUnits(Camera2D camera)

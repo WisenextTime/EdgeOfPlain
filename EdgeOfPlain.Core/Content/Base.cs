@@ -2,6 +2,7 @@ using System;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Content.Systems.Applier;
+using EdgeOfPlain.Core.Content.Systems.Frame;
 using EdgeOfPlain.Core.Content.Systems.Queues;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
@@ -26,6 +27,10 @@ public class Base : Mod
 		context.AddComponent(TransformComponent.CreateComponent);
 
 		context.AddQueue(new DeathQueueSystem());
+
+		var waypoints = new WaypointFrameSystem();
+		context.AddApplier(waypoints);
+		context.AddFrameSystem(waypoints);
 
 		context.AddApplier(new SpawnUnitApplier());
 		context.AddApplier(new DeleteUnitApplier());

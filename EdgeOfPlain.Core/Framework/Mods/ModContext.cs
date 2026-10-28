@@ -13,6 +13,7 @@ public class ModContext : IDisposable
 	private readonly List<ContentDef> _registeredDefs = [];
 	private readonly List<Type> _registeredAppliers = [];
 	private readonly List<IQueueSystem> _registeredQueues = [];
+	private readonly List<IFrameSystem> _registeredFrameSystems = [];
 	public bool IsDisposed { get; private set; }
 
 	public ModContext(Mod sourceMod)
@@ -52,6 +53,16 @@ public class ModContext : IDisposable
 		_registeredAppliers.Add(typeof(TCommand));
 	}
 
+	/// <summary>注册一个帧系统；每帧在队列系统之前执行，拿到可写世界，可以直接读写实体。</summary>
+	public void AddFrameSystem(IFrameSystem system)
+	{
+		ObjectDisposedException.ThrowIf(IsDisposed, this);
+		ArgumentNullException.ThrowIfNull(system);
+
+		CommandRegistry.RegisterFrameSystem(system);
+		_registeredFrameSystems.Add(system);
+	}
+
 	/// <summary>注册一个队列系统；每帧由 <c>GameWorld.RunQueues</c> 依次执行，用来把组件状态翻译成命令。</summary>
 	public void AddQueue(IQueueSystem queue)
 	{
@@ -75,6 +86,9 @@ public class ModContext : IDisposable
 
 		foreach (var queue in _registeredQueues)
 			CommandRegistry.TryUnregisterQueue(queue);
+
+		foreach (var system in _registeredFrameSystems)
+			CommandRegistry.TryUnregisterFrameSystem(system);
 	}
 
 	private void Clear()
@@ -83,6 +97,7 @@ public class ModContext : IDisposable
 		_registeredDefs.Clear();
 		_registeredAppliers.Clear();
 		_registeredQueues.Clear();
+		_registeredFrameSystems.Clear();
 	}
 
 	public void Dispose()
