@@ -37,6 +37,7 @@ public static class CommandRegistry
 	private static readonly List<ICommandApplierEntry> _appliers = [];
 	private static readonly Dictionary<Type, ICommandApplierEntry> _applierByType = [];
 	private static readonly List<IQueueSystem> _queues = [];
+	private static readonly List<IFrameSystem> _frameSystems = [];
 
 	private static bool _isSealed;
 
@@ -46,9 +47,13 @@ public static class CommandRegistry
 
 	public static int QueueCount => _queues.Count;
 
+	public static int FrameSystemCount => _frameSystems.Count;
+
 	internal static IReadOnlyList<ICommandApplierEntry> Appliers => _appliers;
 
 	public static IReadOnlyList<IQueueSystem> Queues => _queues;
+
+	public static IReadOnlyList<IFrameSystem> FrameSystems => _frameSystems;
 
 	internal static void RegisterApplier<TCommand>(ICommandApplier<TCommand> applier)
 		where TCommand : struct, ICommand
@@ -93,6 +98,23 @@ public static class CommandRegistry
 		return _queues.Remove(queue);
 	}
 
+	internal static void RegisterFrameSystem(IFrameSystem system)
+	{
+		ArgumentNullException.ThrowIfNull(system);
+		ThrowIfSealed();
+
+		if (_frameSystems.Contains(system))
+			throw new InvalidOperationException($"Frame system '{system.GetType().FullName}' is already registered.");
+
+		_frameSystems.Add(system);
+	}
+
+	internal static bool TryUnregisterFrameSystem(IFrameSystem system)
+	{
+		ArgumentNullException.ThrowIfNull(system);
+		return _frameSystems.Remove(system);
+	}
+
 	internal static ICommandApplierEntry? FindApplier(Type commandType)
 		=> _applierByType.GetValueOrDefault(commandType);
 
@@ -108,6 +130,7 @@ public static class CommandRegistry
 		_appliers.Clear();
 		_applierByType.Clear();
 		_queues.Clear();
+		_frameSystems.Clear();
 		_isSealed = false;
 	}
 

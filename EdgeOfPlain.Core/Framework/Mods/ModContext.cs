@@ -13,6 +13,7 @@ public class ModContext : IDisposable
 	private readonly List<ContentDef> _registeredDefs = [];
 	private readonly List<Type> _registeredAppliers = [];
 	private readonly List<IQueueSystem> _registeredQueues = [];
+	private readonly List<IFrameSystem> _registeredFrameSystems = [];
 	public bool IsDisposed { get; private set; }
 
 	public ModContext(Mod sourceMod)
@@ -32,7 +33,6 @@ public class ModContext : IDisposable
 		_registeredDefs.Add(content);
 	}
 
-	/// <summary>注册一个单位组件；同一组件类型只能注册一次，mod 加载完成后不再接受注册。</summary>
 	public void AddComponent<T>(Func<UnitDef, T> factory) where T : unmanaged
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -42,7 +42,6 @@ public class ModContext : IDisposable
 		_registeredComponents.Add(typeof(T));
 	}
 
-	/// <summary>注册一条命令的处理器；同一命令类型只能注册一次，mod 加载完成后不再接受注册。</summary>
 	public void AddApplier<TCommand>(ICommandApplier<TCommand> applier) where TCommand : struct, ICommand
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -52,7 +51,15 @@ public class ModContext : IDisposable
 		_registeredAppliers.Add(typeof(TCommand));
 	}
 
-	/// <summary>注册一个队列系统；每帧由 <c>GameWorld.RunQueues</c> 依次执行，用来把组件状态翻译成命令。</summary>
+	public void AddFrameSystem(IFrameSystem system)
+	{
+		ObjectDisposedException.ThrowIf(IsDisposed, this);
+		ArgumentNullException.ThrowIfNull(system);
+
+		CommandRegistry.RegisterFrameSystem(system);
+		_registeredFrameSystems.Add(system);
+	}
+
 	public void AddQueue(IQueueSystem queue)
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -75,6 +82,9 @@ public class ModContext : IDisposable
 
 		foreach (var queue in _registeredQueues)
 			CommandRegistry.TryUnregisterQueue(queue);
+
+		foreach (var system in _registeredFrameSystems)
+			CommandRegistry.TryUnregisterFrameSystem(system);
 	}
 
 	private void Clear()
@@ -83,6 +93,7 @@ public class ModContext : IDisposable
 		_registeredDefs.Clear();
 		_registeredAppliers.Clear();
 		_registeredQueues.Clear();
+		_registeredFrameSystems.Clear();
 	}
 
 	public void Dispose()
