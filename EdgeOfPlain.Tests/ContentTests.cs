@@ -205,6 +205,29 @@ public sealed class ContentSerializerTests
 	}
 
 	[Fact]
+	public void BuildingDefRoundTripsThroughToml()
+	{
+		RegistryProbes.Ensure(typeof(BuildingDef));
+		ContentSerializer.ResetOptions();
+
+		var toml = """
+		           type = "building"
+		           id = "tower"
+		           maxHealth = 200
+		           initHealth = 1.0
+		           texture = "Textures/Buildings/tower#tower"
+		           """;
+
+		var restored = ContentSerializer.Deserialize<ContentDef>(toml);
+
+		var building = Assert.IsType<BuildingDef>(restored);
+		Assert.Equal("tower", building.Id);
+		Assert.Equal(200, building.MaxHealth);
+		Assert.Equal(1f, building.InitHealth);
+		Assert.Equal("Textures/Buildings/tower#tower", building.Texture);
+	}
+
+	[Fact]
 	public void ContentDefToStringContainsTypeAndId()
 	{
 		RegistryProbes.Ensure(typeof(DuplicateProbeDef));

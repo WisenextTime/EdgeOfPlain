@@ -8,7 +8,7 @@ public struct TransformComponent
 	public Vector2 Position;
 	public float Rotation;
 
-	public static TransformComponent CreateComponent(UnitDef def)
+	public static TransformComponent CreateComponent(EntityDef def)
 	{
 		return new TransformComponent
 		{

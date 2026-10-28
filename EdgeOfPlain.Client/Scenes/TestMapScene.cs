@@ -150,7 +150,7 @@ public sealed class TestMapScene : Scene
 			Rotation = Random.Shared.NextSingle() * MathF.Tau,
 		};
 
-		_gameWorld.Commands.Enqueue(new SpawnUnitCommand(_unitDef, transform));
+		_gameWorld.Commands.Enqueue(new SpawnEntityCommand(_unitDef, transform, 0));
 	}
 
 	private void QueueDelete(IInputState input)
@@ -177,7 +177,7 @@ public sealed class TestMapScene : Scene
 
 		if (found)
 		{
-			_gameWorld.Commands.Enqueue(new DeleteUnitCommand(target));
+			_gameWorld.Commands.Enqueue(new DeleteEntityCommand(target));
 			return;
 		}
 

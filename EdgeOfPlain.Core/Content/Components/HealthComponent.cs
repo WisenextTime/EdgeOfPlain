@@ -7,7 +7,7 @@ public struct HealthComponent
 	public int MaxHealth;
 	public int Health;
 
-	public static HealthComponent CreateComponent(UnitDef def)
+	public static HealthComponent CreateComponent(EntityDef def)
 	{
 		return new HealthComponent
 		{

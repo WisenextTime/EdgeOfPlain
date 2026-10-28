@@ -1,11 +1,11 @@
 using System;
 using EdgeOfPlain.Core.Content.Components;
-using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Content.Systems.Applier;
 using EdgeOfPlain.Core.Content.Systems.Frame;
 using EdgeOfPlain.Core.Content.Systems.Queues;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Game.Components;
 
 namespace EdgeOfPlain.Core.Content;
 
@@ -19,12 +19,15 @@ public class Base : Mod
 		typeof(TilesetDef),
 		typeof(TileRendererDef),
 		typeof(UnitDef),
+		typeof(BuildingDef),
 	];
 
 	public override void InitMod(ModContext context)
 	{
 		context.AddComponent(HealthComponent.CreateComponent);
 		context.AddComponent(TransformComponent.CreateComponent);
+		context.AddComponent(TeamComponent.CreateComponent);
+		context.AddComponent(VelocityComponent.CreateComponent, ComponentScope<UnitDef>.ForDefType());
 
 		context.AddQueue(new DeathQueueSystem());
 
@@ -32,8 +35,8 @@ public class Base : Mod
 		context.AddApplier(waypoints);
 		context.AddFrameSystem(waypoints);
 
-		context.AddApplier(new SpawnUnitApplier());
-		context.AddApplier(new DeleteUnitApplier());
-		context.AddApplier(new UnitDiedApplier());
+		context.AddApplier(new SpawnEntityApplier());
+		context.AddApplier(new DeleteEntityApplier());
+		context.AddApplier(new EntityDiedApplier());
 	}
 }

@@ -122,7 +122,7 @@ public sealed class CommandDispatcherTests
 	}
 
 	[Fact]
-	public void UnitDiedApplierDestroysTheEntity()
+	public void EntityDiedApplierDestroysTheEntity()
 	{
 		using var world = World.Create();
 		var doomed = world.Create(new HealthComponent { Health = 0 });
@@ -130,7 +130,7 @@ public sealed class CommandDispatcherTests
 
 		var bus = new CommandBus();
 		var dispatcher = new CommandDispatcher(bus);
-		dispatcher.Register(new UnitDiedApplier());
+		dispatcher.Register(new EntityDiedApplier());
 
 		new DeathQueueSystem().Operation(new QueueWorld(world, bus));
 

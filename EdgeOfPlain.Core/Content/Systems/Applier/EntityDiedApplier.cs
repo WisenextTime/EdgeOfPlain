@@ -4,9 +4,9 @@ using EdgeOfPlain.Core.Game.Commands;
 
 namespace EdgeOfPlain.Core.Content.Systems.Applier;
 
-public sealed class UnitDiedApplier : ICommandApplier<UnitDiedCommand>
+public sealed class EntityDiedApplier : ICommandApplier<EntityDiedCommand>
 {
-	public void Apply(World world, in UnitDiedCommand command)
+	public void Apply(World world, in EntityDiedCommand command)
 	{
 		var entity = command.Entity.Value;
 		if (entity.IsAlive()) world.Destroy(entity);

@@ -6,9 +6,9 @@ using EdgeOfPlain.Core.Game.Waypoint;
 
 namespace EdgeOfPlain.Core.Content.Systems;
 
-public record struct UnitDiedCommand(EntityHandle Entity) : ICommand;
-public record struct SpawnUnitCommand(UnitDef Definition, TransformComponent Transform) : ICommand;
-public record struct DeleteUnitCommand(EntityHandle Target) : ICommand;
+public record struct EntityDiedCommand(EntityHandle Entity) : ICommand;
+public record struct SpawnEntityCommand(EntityDef Definition, TransformComponent Transform, int Team) : ICommand;
+public record struct DeleteEntityCommand(EntityHandle Target) : ICommand;
 
 public record struct WaypointCommand(
 	EntityHandle Entity,

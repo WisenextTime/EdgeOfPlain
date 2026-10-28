@@ -1,11 +1,11 @@
-using Tomlyn.Serialization;
-
 namespace EdgeOfPlain.Core.Definitions;
 
 [ContentTypeName("unit")]
-public class UnitDef(string id) : ContentDef(id)
+public class UnitDef(string id) : EntityDef(id)
 {
-	[TomlRequired] public int MaxHealth { get; set; }
-	public float InitHealth { get; set; } = 1f;
-	[TomlRequired] public string Texture { get; set; } = "";
+	public float MaxVelocity { get; set; } = 60f;
+	public float Acceleration { get; set; } = 1f;
+
+	public float MaxRotationalVelocity { get; set; } = 1f;
+	public float RotationalAcceleration { get; set; } = 1f;
 }

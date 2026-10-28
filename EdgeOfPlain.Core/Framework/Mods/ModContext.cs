@@ -33,12 +33,16 @@ public class ModContext : IDisposable
 		_registeredDefs.Add(content);
 	}
 
-	public void AddComponent<T>(Func<UnitDef, T> factory) where T : unmanaged
+	public void AddComponent<T>(Func<EntityDef, T> factory) where T : unmanaged
+		=> AddComponent(factory, ComponentScope<EntityDef>.All);
+
+	public void AddComponent<TDef, T>(Func<TDef, T> factory, ComponentScope<TDef> scope) where TDef : EntityDef where T : unmanaged
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
 		ArgumentNullException.ThrowIfNull(factory);
+		ArgumentNullException.ThrowIfNull(scope);
 
-		ComponentManager.StageComponent(factory, SourceMod.ModInfo.Id);
+		ComponentManager.StageComponent(factory, scope, SourceMod.ModInfo.Id);
 		_registeredComponents.Add(typeof(T));
 	}
 

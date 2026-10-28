@@ -137,11 +137,11 @@ public sealed class CommandRegistryTests : IDisposable
 		using var context = new ModContext(mod);
 		mod.InitMod(context);
 
-		Assert.Equal(3, CommandRegistry.ApplierCount);
+		Assert.Equal(4, CommandRegistry.ApplierCount);
 		Assert.Single(CommandRegistry.Queues);
-		Assert.NotNull(CommandRegistry.FindApplier(typeof(SpawnUnitCommand)));
-		Assert.NotNull(CommandRegistry.FindApplier(typeof(DeleteUnitCommand)));
-		Assert.NotNull(CommandRegistry.FindApplier(typeof(UnitDiedCommand)));
+		Assert.NotNull(CommandRegistry.FindApplier(typeof(SpawnEntityCommand)));
+		Assert.NotNull(CommandRegistry.FindApplier(typeof(DeleteEntityCommand)));
+		Assert.NotNull(CommandRegistry.FindApplier(typeof(EntityDiedCommand)));
 	}
 
 	[Fact]

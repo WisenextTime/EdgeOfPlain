@@ -15,9 +15,9 @@ using Xunit;
 namespace EdgeOfPlain.Tests;
 
 [Collection("ComponentManager")]
-public sealed class UnitCommandTests
+public sealed class EntityCommandTests
 {
-	public UnitCommandTests()
+	public EntityCommandTests()
 	{
 		if (ComponentManager.IsSealed) return;
 
@@ -38,7 +38,7 @@ public sealed class UnitCommandTests
 			Rotation = 1.25f,
 		};
 
-		new SpawnUnitApplier().Apply(world, new SpawnUnitCommand(def, transform));
+		new SpawnEntityApplier().Apply(world, new SpawnEntityCommand(def, transform, 0));
 
 		Assert.Equal(1, world.Size);
 
@@ -51,15 +51,30 @@ public sealed class UnitCommandTests
 	}
 
 	[Fact]
+	public void SpawnApplierCreatesBuildingEntitiesFromBuildingDef()
+	{
+		using var world = World.Create();
+
+		var def = new BuildingDef("tower") { MaxHealth = 100 };
+		new SpawnEntityApplier().Apply(world, new SpawnEntityCommand(def, new TransformComponent(), 0));
+
+		Assert.Equal(1, world.Size);
+
+		var entity = SingleEntity(world);
+
+		Assert.Equal(100, entity.Get<HealthComponent>().MaxHealth);
+	}
+
+	[Fact]
 	public void DeleteApplierDestroysTheEntity()
 	{
 		using var world = World.Create();
 
 		var def = new UnitDef("testUnit") { MaxHealth = 10 };
-		new SpawnUnitApplier().Apply(world, new SpawnUnitCommand(def, new TransformComponent()));
+		new SpawnEntityApplier().Apply(world, new SpawnEntityCommand(def, new TransformComponent(), 0));
 
 		var handle = new EntityHandle(SingleEntity(world));
-		new DeleteUnitApplier().Apply(world, new DeleteUnitCommand(handle));
+		new DeleteEntityApplier().Apply(world, new DeleteEntityCommand(handle));
 
 		Assert.Equal(0, world.Size);
 	}
@@ -70,12 +85,12 @@ public sealed class UnitCommandTests
 		using var world = World.Create();
 
 		var def = new UnitDef("testUnit") { MaxHealth = 10 };
-		new SpawnUnitApplier().Apply(world, new SpawnUnitCommand(def, new TransformComponent()));
+		new SpawnEntityApplier().Apply(world, new SpawnEntityCommand(def, new TransformComponent(), 0));
 
 		var entity = SingleEntity(world);
 		world.Destroy(entity);
 
-		new DeleteUnitApplier().Apply(world, new DeleteUnitCommand(new EntityHandle(entity)));
+		new DeleteEntityApplier().Apply(world, new DeleteEntityCommand(new EntityHandle(entity)));
 
 		Assert.Equal(0, world.Size);
 	}
@@ -84,13 +99,14 @@ public sealed class UnitCommandTests
 	public void GameWorldAppliesCommandsThroughItsDispatcher()
 	{
 		using var game = new GameWorld(GameMap.Build(new Map(2, 2)));
-		game.Dispatcher.Register(new SpawnUnitApplier());
+		game.Dispatcher.Register(new SpawnEntityApplier());
 
 		var def = new UnitDef("testUnit") { MaxHealth = 10 };
 
-		game.Commands.Enqueue(new SpawnUnitCommand(
+		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = new Vector2(1f, 2f) }));
+			new TransformComponent { Position = new Vector2(1f, 2f) },
+			0));
 
 		Assert.Equal(1, game.ApplyCommands());
 		Assert.Equal(1, game.QueueView().Count);
