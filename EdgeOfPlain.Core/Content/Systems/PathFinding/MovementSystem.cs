@@ -25,13 +25,7 @@ public sealed class MovementSystem : IFrameSystem
 		foreach (var (handle, path) in pathfinding.Paths)
 		{
 			var entity = handle.Value;
-			if (!entity.IsAlive())
-			{
-				arrived.Add(handle);
-				continue;
-			}
-
-			if (path.Index >= path.Waypoints.Count)
+			if (!entity.IsAlive() || path.Index >= path.Waypoints.Count)
 			{
 				arrived.Add(handle);
 				continue;
@@ -63,14 +57,14 @@ public sealed class MovementSystem : IFrameSystem
 			desired = Vector2.Normalize(desired.LengthSquared() < 0.0001f ? direction : desired);
 
 			var desiredAngle = MathF.Atan2(desired.Y, desired.X);
-			var angleDiff = NormalizeAngle(desiredAngle - transform.Rotation);
+			var angleDiff = MathLib.AngleExtension.Normalize(desiredAngle - transform.Rotation);
 
 			if (!avoidanceActive && velocity.AlignBeforeTurn && MathF.Abs(angleDiff) > TurnThreshold)
 			{
 				var turn = Math.Clamp(
 					angleDiff,
-					-velocity.MaxRotationalVelocity * delta,
-					velocity.MaxRotationalVelocity * delta);
+					-velocity.RotationalVelocity * delta,
+					velocity.RotationalVelocity * delta);
 
 				transform.Rotation += turn;
 				velocity.RotationalVelocity = turn / delta;
@@ -79,8 +73,8 @@ public sealed class MovementSystem : IFrameSystem
 			{
 				transform.Rotation += Math.Clamp(
 					angleDiff,
-					-velocity.MaxRotationalVelocity * delta,
-					velocity.MaxRotationalVelocity * delta);
+					-velocity.RotationalVelocity * delta,
+					velocity.RotationalVelocity * delta);
 
 				if (avoidanceActive)
 					velocity.Velocity = MathF.Max(
@@ -104,7 +98,7 @@ public sealed class MovementSystem : IFrameSystem
 	private static Vector2 SteerAroundObstacles(World world, Entity self, Vector2 position, Vector2 desired)
 	{
 		var avoidance = Vector2.Zero;
-		var avoidRadiusSq = AvoidRadius * AvoidRadius;
+		const float avoidRadiusSq = AvoidRadius * AvoidRadius;
 		var description = new QueryDescription().WithAll<TransformComponent>();
 
 		world.Query(description, (Entity other, ref TransformComponent otherTransform) =>
@@ -129,12 +123,5 @@ public sealed class MovementSystem : IFrameSystem
 		});
 
 		return avoidance;
-	}
-
-	private static float NormalizeAngle(float angle)
-	{
-		while (angle > MathF.PI) angle -= MathF.Tau;
-		while (angle < -MathF.PI) angle += MathF.Tau;
-		return angle;
 	}
 }

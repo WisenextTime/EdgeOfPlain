@@ -79,7 +79,7 @@ public readonly struct QueueWorld
 
 public readonly struct EntityHandle : IEquatable<EntityHandle>, IComparable<EntityHandle>
 {
-	internal readonly Entity Value;
+	public readonly Entity Value;
 
 	internal EntityHandle(Entity value) => Value = value;
 

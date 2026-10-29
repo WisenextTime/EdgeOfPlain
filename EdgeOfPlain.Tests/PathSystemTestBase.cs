@@ -56,8 +56,7 @@ public abstract class PathSystemTestBase : IDisposable
 		MaxHealth = 10,
 		MaxVelocity = 60f,
 		Acceleration = 100f,
-		MaxRotationalVelocity = 10f,
-		RotationalAcceleration = 10f,
+		RotationalVelocity = 10f,
 	};
 
 	protected static void StepUntilArrived(GameWorld game, EntityHandle handle, int maxSteps = 300)

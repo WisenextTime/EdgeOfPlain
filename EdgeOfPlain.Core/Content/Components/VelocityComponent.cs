@@ -8,8 +8,6 @@ public struct VelocityComponent
 	public float Acceleration;
 	public float Velocity;
 
-	public float MaxRotationalVelocity;
-	public float RotationalAcceleration;
 	public float RotationalVelocity;
 
 	public bool AlignBeforeTurn;
@@ -20,8 +18,7 @@ public struct VelocityComponent
 		{
 			MaxVelocity = def.MaxVelocity,
 			Acceleration = def.Acceleration,
-			MaxRotationalVelocity = def.MaxRotationalVelocity,
-			RotationalAcceleration = def.RotationalAcceleration,
+			RotationalVelocity = def.RotationalVelocity,
 			AlignBeforeTurn = def.AlignBeforeTurn,
 		};
 	}

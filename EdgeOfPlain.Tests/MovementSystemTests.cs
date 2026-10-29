@@ -139,8 +139,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			AlignBeforeTurn = false,
 			MaxVelocity = 60f,
 			Acceleration = 100f,
-			MaxRotationalVelocity = 10f,
-			RotationalAcceleration = 10f,
+			RotationalVelocity = 10f,
 		};
 		var start = new Vector2(16f, 16f);
 

@@ -1,6 +1,0 @@
-type = "unit"
-
-id = "testUnit"
-maxHealth = 100
-initHealth = 1.0
-texture = "Textures/Units/circle#circle"

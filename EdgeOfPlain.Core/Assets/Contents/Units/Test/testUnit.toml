@@ -1,0 +1,5 @@
+type = "unit"
+
+id = "testUnit"
+maxHealth = 100
+texture = "Textures/Units/Test/circle#circle"
