@@ -10,7 +10,7 @@ public class DeathQueueSystem : IQueueSystem
 	{
 		world.Query(new QueryDescription(), (in EntityHandle entity, in HealthComponent health) =>
 		{
-			if (health.Health <= 0) world.Enqueue(new EntityDiedCommand(entity));
+			if (health.Health <= 0) world.Enqueue(new DeleteEntityCommand(entity));
 		});
 	}
 }

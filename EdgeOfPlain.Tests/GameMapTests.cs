@@ -113,10 +113,10 @@ public sealed class GameMapTests : IDisposable
 
 		Assert.True(gameMap.IsPassable(0, 0, PassageMask.Water));
 		Assert.False(gameMap.IsPassable(0, 0, PassageMask.Ground));
-		Assert.Equal(4, gameMap.GetMoveCost(0, 0));
-
+		Assert.Equal(4, gameMap.GetMoveCost(0, 0, PassageMask.Water));
+	
 		Assert.False(gameMap.IsPassable(1, 0, PassageMask.Water));
-		Assert.Equal(0, gameMap.GetMoveCost(1, 0));
+		Assert.Equal(0, gameMap.GetMoveCost(1, 0, PassageMask.Water));
 	}
 
 	[Fact]

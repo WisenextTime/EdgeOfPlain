@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using EdgeOfPlain.Core.Game.Commands;
+using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 
 namespace EdgeOfPlain.Core.Game;
@@ -12,14 +13,20 @@ public class GameWorld : IDisposable
 	public GameWorld(GameMap map)
 	{
 		Map = map ?? throw new ArgumentNullException(nameof(map));
+		WorldPathfinding.Create(_world, Map);
 		Dispatcher = new CommandDispatcher(Commands);
 	}
 
 	public GameMap Map { get; }
 
+	public World World => _world;
+
 	public CommandBus Commands { get; } = new();
 
 	public CommandDispatcher Dispatcher { get; }
+
+	public WorldPathfinding Pathfinding => WorldPathfinding.TryGet(_world)
+		?? throw new InvalidOperationException("World pathfinding is not registered for this world.");
 
 	public QueueWorld QueueView() => new(_world, Commands);
 
@@ -71,6 +78,7 @@ public class GameWorld : IDisposable
 
 	public void Dispose()
 	{
+		WorldPathfinding.Dispose(_world);
 		_world.Dispose();
 		GC.SuppressFinalize(this);
 	}

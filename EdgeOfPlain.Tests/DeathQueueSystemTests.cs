@@ -21,7 +21,7 @@ public sealed class DeathQueueSystemTests
 		var bus = new CommandBus();
 		new DeathQueueSystem().Operation(new QueueWorld(world, bus));
 
-		Assert.Equal(2, bus.Count<EntityDiedCommand>());
+		Assert.Equal(2, bus.Count<DeleteEntityCommand>());
 	}
 
 	[Fact]
@@ -33,9 +33,9 @@ public sealed class DeathQueueSystemTests
 		var bus = new CommandBus();
 		new DeathQueueSystem().Operation(new QueueWorld(world, bus));
 
-		var command = bus.Pending<EntityDiedCommand>()[0];
-		Assert.Equal(entity.Id, command.Entity.Id);
-		Assert.Equal(entity.Version, command.Entity.Version);
+		var command = bus.Pending<DeleteEntityCommand>()[0];
+		Assert.Equal(entity.Id, command.Target.Id);
+		Assert.Equal(entity.Version, command.Target.Version);
 	}
 
 	[Fact]

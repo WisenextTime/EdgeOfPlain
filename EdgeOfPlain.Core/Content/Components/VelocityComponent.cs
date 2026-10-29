@@ -12,6 +12,8 @@ public struct VelocityComponent
 	public float RotationalAcceleration;
 	public float RotationalVelocity;
 
+	public bool AlignBeforeTurn;
+
 	public static VelocityComponent CreateComponent(UnitDef def)
 	{
 		return new VelocityComponent
@@ -20,6 +22,7 @@ public struct VelocityComponent
 			Acceleration = def.Acceleration,
 			MaxRotationalVelocity = def.MaxRotationalVelocity,
 			RotationalAcceleration = def.RotationalAcceleration,
+			AlignBeforeTurn = def.AlignBeforeTurn,
 		};
 	}
 }

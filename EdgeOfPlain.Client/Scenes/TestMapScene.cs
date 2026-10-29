@@ -15,6 +15,7 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Game;
+using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 
@@ -181,12 +182,11 @@ public sealed class TestMapScene : Scene
 			return;
 		}
 
-		// 没点中单位时，把点击点当作移动指令下发给所有单位。
 		var handles = new EntityHandle[MaxUnitsPerOrder];
 		var count = _gameWorld.CollectEntities(description, handles);
 
 		for (var i = 0; i < Math.Min(count, handles.Length); i++)
-			_gameWorld.Commands.Enqueue(new WaypointCommand(handles[i], WaypointType.Move, WaypointAddType.Replace,
+			_gameWorld.Commands.Enqueue(new WaypointCommand(new UnitGroup(handles[i]), WaypointType.Move, WaypointAddType.Replace,
 				new GroundTarget(point)));
 	}
 

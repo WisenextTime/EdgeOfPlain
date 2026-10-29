@@ -90,10 +90,10 @@ public sealed class GameMap
 	}
 
 	public bool IsPassable(int tileX, int tileY, PassageMask passage)
-		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain && terrain.Allows(passage);
+		=> GetMoveCost(tileX, tileY, passage) > 0;
 
-	public int GetMoveCost(int tileX, int tileY)
-		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain ? terrain.MoveCost : 0;
+	public int GetMoveCost(int tileX, int tileY, PassageMask passage)
+		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain ? terrain.GetMoveCost(passage) : 0;
 
 	public Vector2 TileToWorld(int tileX, int tileY)
 		=> new(tileX * (float)TileSize, tileY * (float)TileSize);

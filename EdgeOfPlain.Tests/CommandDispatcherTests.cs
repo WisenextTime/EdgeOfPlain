@@ -130,7 +130,7 @@ public sealed class CommandDispatcherTests
 
 		var bus = new CommandBus();
 		var dispatcher = new CommandDispatcher(bus);
-		dispatcher.Register(new EntityDiedApplier());
+		dispatcher.Register(new DeleteEntityApplier());
 
 		new DeathQueueSystem().Operation(new QueueWorld(world, bus));
 
