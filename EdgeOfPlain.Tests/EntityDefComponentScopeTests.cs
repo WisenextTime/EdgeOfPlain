@@ -5,6 +5,7 @@ using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game.Components;
+using FixedMathSharp;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -187,7 +188,7 @@ public sealed class EntityDefComponentScopeTests
 		var unit = ComponentManager.CreateEntity(world, new UnitDef("u") { MaxVelocity = 50f });
 		var building = ComponentManager.CreateEntity(world, new BuildingDef("b"));
 
-		Assert.Equal(50f, unit.Get<VelocityComponent>().MaxVelocity);
+		Assert.Equal((Fixed64)50, unit.Get<VelocityComponent>().MaxVelocity);
 		Assert.False(building.Has<VelocityComponent>());
 	}
 

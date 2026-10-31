@@ -1,64 +1,65 @@
 using System;
-using System.Numerics;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.MathLib;
 
 public static class Vector2Extension
 {
-	public const float Epsilon = 1e-6f;
-	extension(Vector2 vec2)
+	public static readonly Fixed64 Epsilon = (Fixed64)1e-6;
+
+	extension(Vector2d vec2)
 	{
-		public static float Cross(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
-		public Vector2 Perpendicular() => new(-vec2.Y, vec2.X);
+		public static Fixed64 Cross(Vector2d a, Vector2d b) => a.X * b.Y - a.Y * b.X;
+		public Vector2d Perpendicular() => new(-vec2.Y, vec2.X);
 
-		public Vector2 Rotate(float rad)
-		{
-			var (s, c) = MathF.SinCos(rad);
-			return new Vector2(vec2.X * c - vec2.Y * s, vec2.X * s + vec2.Y * c);
-		}
+		public Vector2d RotateAround(Vector2d pivot, Fixed64 rad) => pivot + (vec2 - pivot).Rotate(rad);
 
-		public Vector2 RotateAround(Vector2 pivot, float rad) => pivot + (vec2 - pivot).Rotate(rad);
-		public Vector2 Project(Vector2 onto)
+		public Vector2d Project(Vector2d onto)
 		{
-			var denominator = Vector2.Dot(onto, onto);
+			var denominator = Vector2d.Dot(onto, onto);
 			return denominator > Epsilon * Epsilon
-				? onto * (Vector2.Dot(vec2, onto) / denominator)
-				: Vector2.Zero;
+				? onto * (Vector2d.Dot(vec2, onto) / denominator)
+				: Vector2d.Zero;
 		}
 
-		public Vector2 Reject(Vector2 onto) => vec2 - vec2.Project(onto);
-		public float Angle() => MathF.Atan2(vec2.Y, vec2.X);
+		public Vector2d Reject(Vector2d onto) => vec2 - vec2.Project(onto);
+		public Fixed64 Angle() => FixedMath.Atan2(vec2.Y, vec2.X);
 
-		public static float AngleBetween(Vector2 a, Vector2 b)
+		public static Fixed64 AngleBetween(Vector2d a, Vector2d b)
 		{
-			var lengthSquaredA = a.LengthSquared();
-			var lengthSquaredB = b.LengthSquared();
+			var lengthSquaredA = a.MagnitudeSquared;
+			var lengthSquaredB = b.MagnitudeSquared;
 
 			if (lengthSquaredA <= Epsilon * Epsilon || lengthSquaredB <= Epsilon * Epsilon)
-				return 0f;
+				return Fixed64.Zero;
 
-			var cosine = Vector2.Dot(a, b) / MathF.Sqrt(lengthSquaredA * lengthSquaredB);
-			return MathF.Acos(Math.Clamp(cosine, -1f, 1f));
+			var cosine = Vector2d.Dot(a, b) / FixedMath.Sqrt(lengthSquaredA * lengthSquaredB);
+			return FixedMath.Acos(FixedMath.Clamp(cosine, -Fixed64.One, Fixed64.One));
 		}
 
-		public Vector2 NormalizedOrZero()
+		public Vector2d NormalizedOrZero()
 		{
-			var lengthSquared = vec2.LengthSquared();
+			var lengthSquared = vec2.MagnitudeSquared;
 			return lengthSquared > Epsilon * Epsilon
-				? vec2 / MathF.Sqrt(lengthSquared)
-				: Vector2.Zero;
+				? vec2.Normalized
+				: Vector2d.Zero;
 		}
 
-		public Vector2 MoveToward(Vector2 target, float maxDelta)
+		public Vector2d MoveToward(Vector2d target, Fixed64 maxDelta)
 		{
-			ArgumentOutOfRangeException.ThrowIfNegative(maxDelta);
+			if (maxDelta < Fixed64.Zero)
+				throw new ArgumentOutOfRangeException(nameof(maxDelta));
 
 			var d = target - vec2;
-			var len = d.Length();
+			var len = d.Magnitude;
 			return len <= maxDelta || len < Epsilon ? target : vec2 + d * (maxDelta / len);
 		}
-		
-		public static bool Approximately(Vector2 a, Vector2 b, float eps = Epsilon)
-			=> MathF.Abs(a.X -b.X) < eps && MathF.Abs(a.Y - b.Y) < eps;
+
+		public static bool Approximately(Vector2d a, Vector2d b, Fixed64 eps)
+			=> FixedMath.Abs(a.X - b.X) < eps && FixedMath.Abs(a.Y - b.Y) < eps;
+
+		public static bool Approximately(Vector2d a, Vector2d b)
+			=> Approximately(a, b, Epsilon);
 	}
 }

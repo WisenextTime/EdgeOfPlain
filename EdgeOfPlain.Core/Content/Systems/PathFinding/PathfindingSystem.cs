@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
@@ -8,6 +7,8 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Content.Systems.PathFinding;
 
@@ -57,9 +58,9 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 			pathfinding.Repath(handle, waypoints);
 	}
 
-	private static List<Vector2> BuildPath(FlowField field, GameMap map, int startX, int startY)
+	private static List<Vector2d> BuildPath(FlowField field, GameMap map, int startX, int startY)
 	{
-		var waypoints = new List<Vector2>();
+		var waypoints = new List<Vector2d>();
 		var (x, y) = (startX, startY);
 		var (goalX, goalY) = FlowField.Unpack(field.GoalTile);
 
@@ -75,9 +76,9 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		return Compress(waypoints);
 	}
 
-	private static List<Vector2> Compress(List<Vector2> waypoints)
+	private static List<Vector2d> Compress(List<Vector2d> waypoints)
 	{
-		var result = new List<Vector2>(waypoints.Count);
+		var result = new List<Vector2d>(waypoints.Count);
 
 		foreach (var waypoint in waypoints)
 		{
@@ -92,7 +93,7 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 			var directionA = current - previous;
 			var directionB = waypoint - current;
 
-			if (Vector2.Dot(directionA, directionB) > 0.999f * directionA.Length() * directionB.Length())
+			if (Vector2d.Dot(directionA, directionB) > ((Fixed64)0.999) * directionA.Magnitude * directionB.Magnitude)
 				result.RemoveAt(result.Count - 1);
 
 			result.Add(waypoint);

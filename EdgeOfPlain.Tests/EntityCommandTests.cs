@@ -10,6 +10,8 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -34,8 +36,8 @@ public sealed class EntityCommandTests
 		var def = new UnitDef("testUnit") { MaxHealth = 40, InitHealth = 0.5f };
 		var transform = new TransformComponent
 		{
-			Position = new Vector2(3f, 4f),
-			Rotation = 1.25f,
+			Position = new Vector2d((Fixed64)3, (Fixed64)4),
+			Rotation = (Fixed64)1.25,
 		};
 
 		new SpawnEntityApplier().Apply(world, new SpawnEntityCommand(def, transform, 0));
@@ -44,8 +46,8 @@ public sealed class EntityCommandTests
 
 		var entity = SingleEntity(world);
 
-		Assert.Equal(new Vector2(3f, 4f), entity.Get<TransformComponent>().Position);
-		Assert.Equal(1.25f, entity.Get<TransformComponent>().Rotation);
+		Assert.Equal(new Vector2d((Fixed64)3, (Fixed64)4), entity.Get<TransformComponent>().Position);
+		Assert.Equal((Fixed64)1.25, entity.Get<TransformComponent>().Rotation);
 		Assert.Equal(40, entity.Get<HealthComponent>().MaxHealth);
 		Assert.Equal(20, entity.Get<HealthComponent>().Health);
 	}
@@ -105,7 +107,7 @@ public sealed class EntityCommandTests
 
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = new Vector2(1f, 2f) },
+			new TransformComponent { Position = new Vector2d((Fixed64)1, (Fixed64)2) },
 			0));
 
 		Assert.Equal(1, game.ApplyCommands());

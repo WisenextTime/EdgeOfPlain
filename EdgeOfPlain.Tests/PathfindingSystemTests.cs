@@ -1,4 +1,3 @@
-using System.Numerics;
 using Arch.Core;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems;
@@ -22,13 +21,13 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Step();
 
 		var entity = SingleEntity(game);
 		var handle = new EntityHandle(entity);
 
-		var goal = new Vector2(7 * 32f + 16f, 7 * 32f + 16f);
+		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
 			new UnitGroup(handle),
 			WaypointType.Move,
@@ -51,13 +50,13 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Step();
 
 		var entity = SingleEntity(game);
 		var handle = new EntityHandle(entity);
 
-		var goal = new Vector2(4 * 32f + 16f, 2 * 32f + 16f);
+		var goal = V(4 * 32f + 16f, 2 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
 			new UnitGroup(handle),
 			WaypointType.Move,
@@ -78,7 +77,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Step();
 
 		var entity = SingleEntity(game);
@@ -88,7 +87,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
 		var first = game.Pathfinding.Paths[handle];
@@ -97,7 +96,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(16f, 7 * 32f + 16f))));
+			new GroundTarget(V(16f, 7 * 32f + 16f))));
 		game.Step();
 
 		var second = game.Pathfinding.Paths[handle];

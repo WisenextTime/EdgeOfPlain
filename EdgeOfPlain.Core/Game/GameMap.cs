@@ -7,6 +7,8 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Exceptions;
 using EdgeOfPlain.Core.Framework.Mods;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Game;
 
@@ -95,14 +97,14 @@ public sealed class GameMap
 	public int GetMoveCost(int tileX, int tileY, PassageMask passage)
 		=> TryGetTile(tileX, tileY, out var tile) && tile.Terrain is { } terrain ? terrain.GetMoveCost(passage) : 0;
 
-	public Vector2 TileToWorld(int tileX, int tileY)
-		=> new(tileX * (float)TileSize, tileY * (float)TileSize);
+	public Vector2d TileToWorld(int tileX, int tileY)
+		=> new((Fixed64)(tileX * TileSize), (Fixed64)(tileY * TileSize));
 
-	public Vector2 TileCenter(int tileX, int tileY)
-		=> new((tileX + 0.5f) * TileSize, (tileY + 0.5f) * TileSize);
+	public Vector2d TileCenter(int tileX, int tileY)
+		=> new(((Fixed64)tileX + Fixed64.Half) * (Fixed64)TileSize, ((Fixed64)tileY + Fixed64.Half) * (Fixed64)TileSize);
 
-	public Point WorldToTile(Vector2 world)
-		=> new((int)MathF.Floor(world.X / TileSize), (int)MathF.Floor(world.Y / TileSize));
+	public Point WorldToTile(Vector2d world)
+		=> new((int)FixedMath.Floor(world.X / (Fixed64)TileSize), (int)FixedMath.Floor(world.Y / (Fixed64)TileSize));
 
 	public RectangleF GetTileBounds(int tileX, int tileY)
 		=> new(

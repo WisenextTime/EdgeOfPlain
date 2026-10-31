@@ -18,6 +18,8 @@ using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Client.Scenes;
 
@@ -89,7 +91,7 @@ public sealed class TestMapScene : Scene
 		if (!overUi && input.WasMouseButtonPressed(MouseButton.Left)) QueueSpawn(input);
 		if (input.WasMouseButtonPressed(MouseButton.Right)) QueueDelete(input);
 
-		_gameWorld.Step((float)time.Delta);
+		_gameWorld.Step((Fixed64)time.Delta);
 	}
 
 	public override void Draw(RenderTime time)
@@ -148,7 +150,7 @@ public sealed class TestMapScene : Scene
 		var transform = new TransformComponent
 		{
 			Position = ToWorld(input.MousePosition),
-			Rotation = Random.Shared.NextSingle() * MathF.Tau,
+			Rotation = (Fixed64)(Random.Shared.NextSingle() * MathF.Tau),
 		};
 
 		_gameWorld.Commands.Enqueue(new SpawnEntityCommand(_unitDef, transform, 0));
@@ -164,11 +166,11 @@ public sealed class TestMapScene : Scene
 
 		EntityHandle target = default;
 		var found = false;
-		var best = DeleteRadius * DeleteRadius;
+		var best = (Fixed64)(DeleteRadius * DeleteRadius);
 
 		queue.Query(description, (in EntityHandle handle, in TransformComponent transform) =>
 		{
-			var distance = Vector2.DistanceSquared(transform.Position, point);
+			var distance = (transform.Position - point).MagnitudeSquared;
 			if (distance > best) return;
 
 			best = distance;
@@ -208,18 +210,19 @@ public sealed class TestMapScene : Scene
 					Layer = UnitLayer,
 					Size = new Vector2(UnitVisualSize),
 					Origin = _unitOrigin,
-					Rotation = transform.Rotation,
+					Rotation = (float)transform.Rotation,
 				},
-				transform.Position.X,
-				transform.Position.Y);
+				(float)transform.Position.X,
+				(float)transform.Position.Y);
 		});
 		sprites.End();
 	}
 
-	private Vector2 ToWorld(Vector2 screen)
+	private Vector2d ToWorld(Vector2 screen)
 	{
 		var size = GameContext.Window.Size;
-		return GameContext.WorldCamera.Current.ScreenToWorld(screen, new Vector2(size.Width, size.Height));
+		var world = GameContext.WorldCamera.Current.ScreenToWorld(screen, new Vector2(size.Width, size.Height));
+		return new Vector2d((Fixed64)world.X, (Fixed64)world.Y);
 	}
 
 	private void CreateZoomButton(string text, Vector2 offset, float factor)

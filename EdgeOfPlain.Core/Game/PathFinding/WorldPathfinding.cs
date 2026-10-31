@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Arch.Core;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game.Systems;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Game.PathFinding;
 
@@ -40,10 +41,10 @@ public sealed class WorldPathfinding
 
 	public bool HasPath(EntityHandle entity) => _paths.ContainsKey(entity);
 
-	public void SetPath(EntityHandle entity, List<Vector2> waypoints, long targetTile)
+	public void SetPath(EntityHandle entity, List<Vector2d> waypoints, long targetTile)
 		=> _paths[entity] = new EntityPath(waypoints, targetTile);
 
-	public void Repath(EntityHandle entity, List<Vector2> waypoints)
+	public void Repath(EntityHandle entity, List<Vector2d> waypoints)
 	{
 		if (!_paths.TryGetValue(entity, out var path)) return;
 
@@ -101,13 +102,13 @@ public sealed class WorldPathfinding
 		return best;
 	}
 
-	public Vector2 TileCenter(int tileX, int tileY) => Map.TileCenter(tileX, tileY);
+	public Vector2d TileCenter(int tileX, int tileY) => Map.TileCenter(tileX, tileY);
 }
 
-public sealed class EntityPath(List<Vector2> waypoints, long targetTile)
+public sealed class EntityPath(List<Vector2d> waypoints, long targetTile)
 {
 
-	public List<Vector2> Waypoints { get; } = waypoints;
+	public List<Vector2d> Waypoints { get; } = waypoints;
 	public long TargetTile { get; } = targetTile;
 	public int Index { get; set; }
 	public int RepathAttempts { get; set; }

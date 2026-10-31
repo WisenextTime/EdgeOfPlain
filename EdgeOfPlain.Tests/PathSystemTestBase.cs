@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
@@ -12,6 +11,8 @@ using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -60,10 +61,12 @@ public abstract class PathSystemTestBase : IDisposable
 		RotationalVelocity = 10f,
 	};
 
+	protected static Vector2d V(float x, float y) => new((Fixed64)x, (Fixed64)y);
+
 	protected static void StepUntilArrived(GameWorld game, EntityHandle handle, int maxSteps = 300)
 	{
 		for (var i = 0; i < maxSteps && game.Pathfinding.HasPath(handle); i++)
-			game.Step(0.1f);
+			game.Step((Fixed64)0.1);
 	}
 
 	protected static Entity SingleEntity(GameWorld game)
@@ -78,14 +81,14 @@ public abstract class PathSystemTestBase : IDisposable
 		return entities[0];
 	}
 
-	protected static List<Entity> UnitsNear(GameWorld game, Vector2 near)
+	protected static List<Entity> UnitsNear(GameWorld game, Vector2d near)
 	{
 		var result = new List<Entity>();
 		var description = new QueryDescription().WithAll<TransformComponent, VelocityComponent>();
 
 		game.World.Query(description, (Entity entity, ref TransformComponent _, ref VelocityComponent _) =>
 		{
-			if (Vector2.DistanceSquared(entity.Get<TransformComponent>().Position, near) < 100f)
+			if ((entity.Get<TransformComponent>().Position - near).MagnitudeSquared < (Fixed64)100)
 				result.Add(entity);
 		});
 

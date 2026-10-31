@@ -3,6 +3,7 @@ using Arch.Core;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
+using FixedMathSharp;
 
 namespace EdgeOfPlain.Core.Game;
 
@@ -30,7 +31,7 @@ public class GameWorld : IDisposable
 
 	public QueueWorld QueueView() => new(_world, Commands);
 
-	public int RunFrameSystems(float delta)
+	public int RunFrameSystems(Fixed64 delta)
 	{
 		var systems = CommandRegistry.FrameSystems;
 		if (systems.Count == 0) return 0;
@@ -67,14 +68,14 @@ public class GameWorld : IDisposable
 		return count;
 	}
 
-	public int Step(float delta)
+	public int Step(Fixed64 delta)
 	{
 		RunFrameSystems(delta);
 		RunQueues();
 		return ApplyCommands();
 	}
 
-	public int Step() => Step(0f);
+	public int Step() => Step(Fixed64.Zero);
 
 	public void Dispose()
 	{

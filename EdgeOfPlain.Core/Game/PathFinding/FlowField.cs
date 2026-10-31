@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Definitions.Worlds;
+using FixedMathSharp;
 
 namespace EdgeOfPlain.Core.Game.PathFinding;
 
 public sealed class FlowField
 {
-	private const float Sqrt2 = 1.41421356f;
+	private static readonly Fixed64 Sqrt2 = (Fixed64)1.41421356;
 
 	private static readonly (int Dx, int Dy)[] _directions =
 	[
@@ -17,7 +18,7 @@ public sealed class FlowField
 	private readonly int _height;
 	private readonly int[] _nextX;
 	private readonly int[] _nextY;
-	private readonly float[] _distance;
+	private readonly Fixed64[] _distance;
 
 	public FlowField(
 		GameMap map,
@@ -34,11 +35,11 @@ public sealed class FlowField
 		var count = _width * _height;
 		_nextX = new int[count];
 		_nextY = new int[count];
-		_distance = new float[count];
+		_distance = new Fixed64[count];
 
 		Array.Fill(_nextX, -1);
 		Array.Fill(_nextY, -1);
-		Array.Fill(_distance, float.MaxValue);
+		Array.Fill(_distance, Fixed64.MaxValue);
 
 		var (goalX, goalY) = Unpack(goalTile);
 		Compute(goalX, goalY, cost);
@@ -58,10 +59,9 @@ public sealed class FlowField
 		return (_nextX[index], _nextY[index]);
 	}
 
-	public float Distance(int tileX, int tileY)
+	public Fixed64 Distance(int tileX, int tileY)
 	{
-		if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return float.MaxValue;
-
+		if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return Fixed64.MaxValue;
 		return _distance[Index(tileX, tileY)];
 	}
 
@@ -74,10 +74,10 @@ public sealed class FlowField
 	private void Compute(int goalX, int goalY, Func<int, int, PassageMask, int> cost)
 	{
 		var start = Index(goalX, goalY);
-		_distance[start] = 0f;
+		_distance[start] = (Fixed64)0;
 
-		var queue = new PriorityQueue<(int X, int Y), (float Distance, int Tie)>();
-		queue.Enqueue((goalX, goalY), (0f, 0));
+		var queue = new PriorityQueue<(int X, int Y), (Fixed64 Distance, int Tie)>();
+		queue.Enqueue((goalX, goalY), ((Fixed64)0, 0));
 
 		var tie = 0;
 
@@ -95,7 +95,7 @@ public sealed class FlowField
 
 				if ((uint)nx >= (uint)_width || (uint)ny >= (uint)_height) continue;
 
-				float moveCost;
+				Fixed64 moveCost;
 
 				if (dx != 0 && dy != 0)
 				{
@@ -105,14 +105,14 @@ public sealed class FlowField
 
 					if (destination <= 0 || sideA <= 0 || sideB <= 0) continue;
 
-					moveCost = Sqrt2 * MathF.Max(MathF.Max(sideA, sideB), destination);
+					moveCost = Sqrt2 * FixedMath.Max(FixedMath.Max((Fixed64)sideA, (Fixed64)sideB), (Fixed64)destination);
 				}
 				else
 				{
-					moveCost = cost(nx, ny, Mask);
+					moveCost = (Fixed64)cost(nx, ny, Mask);
 				}
 
-				if (moveCost <= 0f) continue;
+				if (moveCost <= Fixed64.Zero) continue;
 
 				var newDistance = _distance[Index(x, y)] + moveCost;
 				var neighbor = Index(nx, ny);

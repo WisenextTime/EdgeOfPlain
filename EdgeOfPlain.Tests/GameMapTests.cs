@@ -6,6 +6,8 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -92,9 +94,9 @@ public sealed class GameMapTests : IDisposable
 
 		var gameMap = GameMap.Build(map);
 
-		Assert.Equal(new Vector2(64f, 96f), gameMap.TileToWorld(2, 3));
-		Assert.Equal(new Vector2(80f, 112f), gameMap.TileCenter(2, 3));
-		Assert.Equal(new Point(2, 3), gameMap.WorldToTile(new Vector2(65f, 97f)));
+		Assert.Equal(new Vector2d((Fixed64)64, (Fixed64)96), gameMap.TileToWorld(2, 3));
+		Assert.Equal(new Vector2d((Fixed64)80, (Fixed64)112), gameMap.TileCenter(2, 3));
+		Assert.Equal(new Point(2, 3), gameMap.WorldToTile(new Vector2d((Fixed64)65, (Fixed64)97)));
 		Assert.Equal(new RectangleF(64f, 96f, 32f, 32f), gameMap.GetTileBounds(2, 3));
 	}
 

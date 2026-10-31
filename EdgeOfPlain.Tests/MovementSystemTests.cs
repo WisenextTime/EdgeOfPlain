@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
@@ -12,6 +11,8 @@ using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -27,8 +28,8 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		var start = new Vector2(16f, 16f);
-		var goal = new Vector2(7 * 32f + 16f, 7 * 32f + 16f);
+		var start = V(16f, 16f);
+		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
 
 		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = start }, 1));
 		game.Step();
@@ -48,7 +49,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		StepUntilArrived(game, handle);
 
 		Assert.False(game.Pathfinding.HasPath(handle));
-		Assert.True(Vector2.Distance(entity.Get<TransformComponent>().Position, goal) < 32f);
+		Assert.True(entity.Get<TransformComponent>().Position.Distance(goal) < (Fixed64)32);
 	}
 
 	[Fact]
@@ -59,17 +60,17 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = new Vector2(4 * 32f + 16f, 4 * 32f + 16f) },
+			new TransformComponent { Position = V(4 * 32f + 16f, 4 * 32f + 16f) },
 			1));
 		game.Step();
 
-		var a = UnitsNear(game, new Vector2(16f, 16f)).Single();
-		var b = UnitsNear(game, new Vector2(4 * 32f + 16f, 4 * 32f + 16f)).Single();
+		var a = UnitsNear(game, V(16f, 16f)).Single();
+		var b = UnitsNear(game, V(4 * 32f + 16f, 4 * 32f + 16f)).Single();
 
-		var goal = new Vector2(7 * 32f + 16f, 7 * 32f + 16f);
+		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
 			new UnitGroup(new EntityHandle(a)),
 			WaypointType.Move,
@@ -78,20 +79,18 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		game.Step();
 
 		var handle = new EntityHandle(a);
-		var minDistance = float.MaxValue;
+		var minDistance = Fixed64.MaxValue;
 
 		for (var i = 0; i < 300 && game.Pathfinding.HasPath(handle); i++)
 		{
-			game.Step(0.1f);
-			minDistance = Math.Min(
+			game.Step((Fixed64)0.1);
+			minDistance = FixedMath.Min(
 				minDistance,
-				Vector2.Distance(
-					a.Get<TransformComponent>().Position,
-					b.Get<TransformComponent>().Position));
+				a.Get<TransformComponent>().Position.Distance(b.Get<TransformComponent>().Position));
 		}
 
 		Assert.False(game.Pathfinding.HasPath(handle));
-		Assert.True(minDistance > 8f);
+		Assert.True(minDistance > (Fixed64)8);
 	}
 
 	[Fact]
@@ -109,11 +108,11 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			RotationalVelocity = 10f,
 			AlignBeforeTurn = true,
 		};
-		var start = new Vector2(16f, 16f);
+		var start = V(16f, 16f);
 
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = start, Rotation = MathF.PI },
+			new TransformComponent { Position = start, Rotation = (Fixed64)MathF.PI },
 			1));
 		game.Step();
 
@@ -124,14 +123,14 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
-		game.Step(0.1f);
+		game.Step((Fixed64)0.1);
 
 		var transform = entity.Get<TransformComponent>();
 		Assert.Equal(start, transform.Position);
-		Assert.NotEqual(MathF.PI, transform.Rotation);
+		Assert.NotEqual((Fixed64)MathF.PI, transform.Rotation);
 	}
 
 	[Fact]
@@ -150,11 +149,11 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			Acceleration = 100f,
 			RotationalVelocity = 10f,
 		};
-		var start = new Vector2(16f, 16f);
+		var start = V(16f, 16f);
 
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = start, Rotation = MathF.PI / 2 },
+			new TransformComponent { Position = start, Rotation = (Fixed64)(MathF.PI / 2) },
 			1));
 		game.Step();
 
@@ -165,10 +164,10 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
-		game.Step(0.1f);
+		game.Step((Fixed64)0.1);
 
 		var transform = entity.Get<TransformComponent>();
 		Assert.NotEqual(start, transform.Position);
@@ -191,7 +190,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		};
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			def,
-			new TransformComponent { Position = new Vector2(16f, 16f), Rotation = MathF.PI },
+			new TransformComponent { Position = V(16f, 16f), Rotation = (Fixed64)MathF.PI },
 			1));
 		game.Step();
 
@@ -202,21 +201,21 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
-		for (var i = 0; i < 4; i++) game.Step(0.1f);
+		for (var i = 0; i < 4; i++) game.Step((Fixed64)0.1);
 
 		game.Commands.Enqueue(new WaypointCommand(
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(16f, 7 * 32f + 16f))));
+			new GroundTarget(V(16f, 7 * 32f + 16f))));
 		game.Step();
-		game.Step(0.1f);
+		game.Step((Fixed64)0.1);
 
 		var rotation = entity.Get<TransformComponent>().Rotation;
-		Assert.True(rotation > 0.5f, $"Rotation {rotation} should keep full turn rate after alignment.");
+		Assert.True(rotation > (Fixed64)0.5, $"Rotation {rotation} should keep full turn rate after alignment.");
 	}
 
 	[Fact]
@@ -227,7 +226,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Step();
 
 		var entity = SingleEntity(game);
@@ -237,13 +236,13 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
 		StepUntilArrived(game, handle);
 
 		Assert.False(game.Pathfinding.HasPath(handle));
-		Assert.Equal(0f, entity.Get<VelocityComponent>().Velocity);
+		Assert.Equal(Fixed64.Zero, entity.Get<VelocityComponent>().Velocity);
 	}
 
 	[Fact]
@@ -254,7 +253,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		var goal = new Vector2(15 * 32f + 16f, 15 * 32f + 16f);
+		var goal = V(15 * 32f + 16f, 15 * 32f + 16f);
 
 		const int cols = 6;
 
@@ -262,7 +261,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		for (var col = 0; col < cols; col++)
 			game.Commands.Enqueue(new SpawnEntityCommand(
 				def,
-				new TransformComponent { Position = new Vector2(col * 32f + 16f, row * 32f + 16f) },
+				new TransformComponent { Position = V(col * 32f + 16f, row * 32f + 16f) },
 				1));
 
 		game.Step();
@@ -279,7 +278,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		game.Step();
 
 		for (var i = 0; i < 900 && handles.Any(handle => game.Pathfinding.HasPath(handle)); i++)
-			game.Step(0.1f);
+			game.Step((Fixed64)0.1);
 
 		Assert.All(handles, handle => Assert.False(game.Pathfinding.HasPath(handle)));
 	}
@@ -292,7 +291,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		RegisterSystems(game);
 
 		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = new Vector2(16f, 16f) }, 1));
+		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
 		game.Step();
 
 		var entity = SingleEntity(game);
@@ -302,12 +301,12 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new UnitGroup(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
-			new GroundTarget(new Vector2(7 * 32f + 16f, 7 * 32f + 16f))));
+			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
 		Assert.True(game.Pathfinding.HasPath(handle));
 
-		var blocked = new Vector2(3 * 32f + 16f, 3 * 32f + 16f);
+		var blocked = V(3 * 32f + 16f, 3 * 32f + 16f);
 		game.Commands.Enqueue(new SpawnEntityCommand(
 			new BuildingDef("tower") { MaxHealth = 100, Collision = new Footprint(0, 0, 0, 0) },
 			new TransformComponent { Position = blocked },

@@ -1,34 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.MathLib;
+using FixedMathSharp;
+using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Content.Systems.PathFinding;
 
 public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 {
-	private const float TurnThreshold = 0.05f;
-	private const float ArriveRadius = 24f;
-	private const float CongestionArriveRadius = 48f;
-	private const float AvoidRadius = 64f;
-	private const float AvoidWidth = 28f;
-	private const float SeparationRadius = 32f;
+	private static readonly Fixed64 TurnThreshold = (Fixed64)0.05;
+	private static readonly Fixed64 ArriveRadius = (Fixed64)24;
+	private static readonly Fixed64 CongestionArriveRadius = (Fixed64)48;
+	private static readonly Fixed64 AvoidRadius = (Fixed64)64;
+	private static readonly Fixed64 AvoidWidth = (Fixed64)28;
+	private static readonly Fixed64 SeparationRadius = (Fixed64)32;
 	private const int StuckFrameLimit = 90;
 	private const int MaxRepathAttempts = 3;
 
 	private readonly List<EntityHandle> _arrived = [];
 	private readonly List<EntityHandle> _repath = [];
 	private readonly Dictionary<EntityHandle, int> _stuckFrames = [];
-	private readonly Dictionary<EntityHandle, float> _goalDistances = [];
+	private readonly Dictionary<EntityHandle, Fixed64> _goalDistances = [];
 
-	public void Operation(World world, float delta)
+	public void Operation(World world, Fixed64 delta)
 	{
-		if (delta <= 0f) return;
+		if (delta <= Fixed64.Zero) return;
 
 		var state = WorldPathfinding.TryGet(world);
 		if (state is null || state.Count == 0) return;
@@ -49,11 +50,11 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 
 			var waypoint = path.Waypoints[path.Index];
 			var direction = waypoint - transform.Position;
-			var distance = direction.Length();
+			var distance = direction.Magnitude;
 
-			var desired = Vector2.Normalize(direction);
+			var desired = direction.MagnitudeSquared > Fixed64.Zero ? direction.Normalized : Vector2d.Zero;
 			var (avoidance, avoidanceStrength) = SteerAroundObstacles(world, entity, transform.Position, desired);
-			var avoidanceActive = avoidance.LengthSquared() > 0.01f;
+			var avoidanceActive = avoidance.MagnitudeSquared > (Fixed64)0.01;
 
 			var isLastWaypoint = path.Index == path.Waypoints.Count - 1;
 
@@ -63,7 +64,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 
 				if (path.Index >= path.Waypoints.Count)
 				{
-					velocity.Velocity = 0f;
+					velocity.Velocity = Fixed64.Zero;
 					entity.Set(velocity);
 					_stuckFrames.Remove(handle);
 					_goalDistances.Remove(handle);
@@ -75,27 +76,27 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 
 			desired += avoidance;
 
-			desired = Vector2.Normalize(desired.LengthSquared() < 0.0001f ? direction : desired);
+			desired = (desired.MagnitudeSquared < (Fixed64)0.0001 ? direction : desired).Normalized;
 
-			var desiredAngle = MathF.Atan2(desired.Y, desired.X);
+			var desiredAngle = FixedMath.Atan2(desired.Y, desired.X);
 			var angleDiff = AngleExtension.Normalize(desiredAngle - transform.Rotation);
 
 			var targetSpeed = velocity.MaxVelocity;
 
 			if (avoidanceActive)
-				targetSpeed = Math.Min(targetSpeed, velocity.MaxVelocity * (1f - avoidanceStrength * 0.75f));
+				targetSpeed = FixedMath.Min(targetSpeed, velocity.MaxVelocity * (Fixed64.One - avoidanceStrength * (Fixed64)0.75));
 
 			if (isLastWaypoint)
-				targetSpeed = Math.Min(targetSpeed, velocity.MaxVelocity * Math.Clamp(distance / 120f, 0.15f, 1f));
+				targetSpeed = FixedMath.Min(targetSpeed, velocity.MaxVelocity * FixedMath.Clamp(distance / (Fixed64)120, (Fixed64)0.15, Fixed64.One));
 
-			if (!avoidanceActive && velocity.AlignBeforeTurn && MathF.Abs(angleDiff) > TurnThreshold)
+			if (!avoidanceActive && velocity.AlignBeforeTurn && FixedMath.Abs(angleDiff) > TurnThreshold)
 			{
 				transform.Rotation = AngleExtension.MoveTowardsAngle(
 					transform.Rotation,
 					desiredAngle,
 					velocity.RotationalVelocity * delta);
 
-				velocity.Velocity = Math.Max(velocity.Velocity - velocity.Acceleration * delta, 0f);
+				velocity.Velocity = FixedMath.Max(velocity.Velocity - velocity.Acceleration * delta, Fixed64.Zero);
 			}
 			else
 			{
@@ -104,19 +105,19 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 					desiredAngle,
 					velocity.RotationalVelocity * delta);
 
-				velocity.Velocity += Math.Clamp(
+				velocity.Velocity += FixedMath.Clamp(
 					targetSpeed - velocity.Velocity,
 					-velocity.Acceleration * delta,
 					velocity.Acceleration * delta);
 
-				var heading = new Vector2(MathF.Cos(transform.Rotation), MathF.Sin(transform.Rotation));
+				var heading = new Vector2d(FixedMath.Cos(transform.Rotation), FixedMath.Sin(transform.Rotation));
 				transform.Position += heading * velocity.Velocity * delta;
 			}
 
 			entity.Set(transform);
 			entity.Set(velocity);
 
-			var goalDistance = Vector2.Distance(transform.Position, path.Waypoints[^1]);
+			var goalDistance = transform.Position.Distance(path.Waypoints[^1]);
 
 			if (!_goalDistances.TryGetValue(handle, out var previousGoal))
 			{
@@ -124,7 +125,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 				previousGoal = goalDistance;
 			}
 
-			if (goalDistance < previousGoal - 0.5f)
+			if (goalDistance < previousGoal - (Fixed64)0.5)
 			{
 				_goalDistances[handle] = goalDistance;
 				_stuckFrames.Remove(handle);
@@ -147,7 +148,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 				}
 				else
 				{
-					velocity.Velocity = 0f;
+					velocity.Velocity = Fixed64.Zero;
 					entity.Set(velocity);
 					_stuckFrames.Remove(handle);
 					_goalDistances.Remove(handle);
@@ -164,14 +165,14 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 		_repath.Clear();
 	}
 
-	private static (Vector2 Avoidance, float Strength) SteerAroundObstacles(
+	private static (Vector2d Avoidance, Fixed64 Strength) SteerAroundObstacles(
 		World world,
 		Entity self,
-		Vector2 position,
-		Vector2 desired)
+		Vector2d position,
+		Vector2d desired)
 	{
-		var avoidance = Vector2.Zero;
-		var strength = 0f;
+		var avoidance = Vector2d.Zero;
+		var strength = Fixed64.Zero;
 		var description = new QueryDescription().WithAll<TransformComponent, VelocityComponent>();
 
 		world.Query(description, (Entity other, ref TransformComponent otherTransform, ref VelocityComponent otherVelocity) =>
@@ -179,46 +180,46 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (other.Id == self.Id) return;
 
 			var offset = otherTransform.Position - position;
-			var squared = offset.LengthSquared();
+			var squared = offset.MagnitudeSquared;
 
-			if (squared < 1f || squared > AvoidRadius * AvoidRadius) return;
+			if (squared < (Fixed64)1 || squared > AvoidRadius * AvoidRadius) return;
 
-			var distance = MathF.Sqrt(squared);
+			var distance = FixedMath.Sqrt(squared);
 
-			var radialStrength = 1f - distance / SeparationRadius;
+			var radialStrength = Fixed64.One - distance / SeparationRadius;
 
-			if (radialStrength > 0f)
+			if (radialStrength > Fixed64.Zero)
 			{
-				avoidance += Vector2.Normalize(-offset) * radialStrength * 2f;
-				strength = MathF.Max(strength, radialStrength);
+				avoidance += (-offset).Normalized * radialStrength * (Fixed64)2;
+				strength = FixedMath.Max(strength, radialStrength);
 			}
 
-			var ahead = Vector2.Dot(offset, desired);
-			if (ahead <= 0f) return;
+			var ahead = Vector2d.Dot(offset, desired);
+			if (ahead <= Fixed64.Zero) return;
 
 			var lateral = offset - desired * ahead;
-			if (lateral.Length() >= AvoidWidth) return;
+			if (lateral.Magnitude >= AvoidWidth) return;
 
-			if (otherVelocity.Velocity > 1f)
+			if (otherVelocity.Velocity > (Fixed64)1)
 			{
-				var otherHeading = new Vector2(
-					MathF.Cos(otherTransform.Rotation),
-					MathF.Sin(otherTransform.Rotation));
+				var otherHeading = new Vector2d(
+					FixedMath.Cos(otherTransform.Rotation),
+					FixedMath.Sin(otherTransform.Rotation));
 
-				if (Vector2.Dot(otherHeading, desired) > 0.9f) return;
+				if (Vector2d.Dot(otherHeading, desired) > (Fixed64)0.9) return;
 			}
 
-			var lateralLength = lateral.Length();
+			var lateralLength = lateral.Magnitude;
 
-			var side = new Vector2(-desired.Y, desired.X);
+			var side = new Vector2d(-desired.Y, desired.X);
 			var cross = desired.X * offset.Y - desired.Y * offset.X;
-			if (cross > 0f) side = -side;
+			if (cross > Fixed64.Zero) side = -side;
 
-			var away = lateralLength < 1f ? side : Vector2.Normalize(-lateral);
-			var lateralStrength = (1f - distance / AvoidRadius) * (1f - lateralLength / AvoidWidth);
+			var away = lateralLength < (Fixed64)1 ? side : (-lateral).Normalized;
+			var lateralStrength = (Fixed64.One - distance / AvoidRadius) * (Fixed64.One - lateralLength / AvoidWidth);
 
 			avoidance += away * lateralStrength;
-			strength = MathF.Max(strength, lateralStrength);
+			strength = FixedMath.Max(strength, lateralStrength);
 		});
 
 		return (avoidance, strength);
