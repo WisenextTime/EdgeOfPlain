@@ -8,6 +8,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Arch" Version="2.1.0"/>
+		<PackageReference Include="FixedMathSharp" Version="7.1.0" />
+		<PackageReference Include="LiteNetLib" Version="2.1.5" />
 		<PackageReference Include="Tomlyn" Version="2.10.1"/>
 	</ItemGroup>
 	<ItemGroup>
@@ -17,6 +19,10 @@
 	<ItemGroup>
 		<None Remove="Assets\**"/>
 		<EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))"/>
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Net\Client\Steplock\" />
+	  <Folder Include="Net\Server\Steplock\" />
 	</ItemGroup>
 
 </Project>

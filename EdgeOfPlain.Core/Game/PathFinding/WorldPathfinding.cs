@@ -40,8 +40,17 @@ public sealed class WorldPathfinding
 
 	public bool HasPath(EntityHandle entity) => _paths.ContainsKey(entity);
 
-	public void SetPath(EntityHandle entity, List<Vector2> waypoints)
-		=> _paths[entity] = new EntityPath(waypoints);
+	public void SetPath(EntityHandle entity, List<Vector2> waypoints, long targetTile)
+		=> _paths[entity] = new EntityPath(waypoints, targetTile);
+
+	public void Repath(EntityHandle entity, List<Vector2> waypoints)
+	{
+		if (!_paths.TryGetValue(entity, out var path)) return;
+
+		path.Waypoints.Clear();
+		path.Waypoints.AddRange(waypoints);
+		path.Index = 0;
+	}
 
 	public void ClearPath(EntityHandle entity) => _paths.Remove(entity);
 
@@ -95,9 +104,11 @@ public sealed class WorldPathfinding
 	public Vector2 TileCenter(int tileX, int tileY) => Map.TileCenter(tileX, tileY);
 }
 
-public sealed class EntityPath(List<Vector2> waypoints)
+public sealed class EntityPath(List<Vector2> waypoints, long targetTile)
 {
 
 	public List<Vector2> Waypoints { get; } = waypoints;
+	public long TargetTile { get; } = targetTile;
 	public int Index { get; set; }
+	public int RepathAttempts { get; set; }
 }

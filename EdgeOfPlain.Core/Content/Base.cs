@@ -38,7 +38,7 @@ public class Base : Mod
 		var pathfinding = new PathfindingSystem();
 		context.AddApplier(pathfinding);
 
-		var movement = new MovementSystem();
+		var movement = new MovementSystem(pathfinding);
 		context.AddFrameSystem(movement);
 	}
 }

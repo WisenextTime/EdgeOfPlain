@@ -6,6 +6,7 @@ using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
+using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 
 namespace EdgeOfPlain.Core.Content.Systems.PathFinding;
@@ -22,21 +23,38 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		var goal = pathfinding.Map.WorldToTile(ground.Position);
 
 		foreach (var handle in command.Units.Entities)
-		{
-			var entity = handle.Value;
-			if (!entity.IsAlive()) continue;
+			ComputePath(world, handle, (goal.X, goal.Y), fresh: true);
+	}
 
-			var move = entity.Get<MoveTypeComponent>();
-			var goalPoint = (goal.X, goal.Y);
-			var goalTile = pathfinding.ClampGoal(goalPoint, move.Type);
-			var packed = FlowField.Pack(goalTile.X, goalTile.Y);
-			var field = pathfinding.Fields.GetOrCreate(packed, move.Type);
+	public void ComputePath(World world, EntityHandle handle)
+	{
+		var pathfinding = WorldPathfinding.TryGet(world);
+		if (pathfinding is null || !pathfinding.HasPath(handle)) return;
 
-			var tile = pathfinding.Map.WorldToTile(entity.Get<TransformComponent>().Position);
-			var waypoints = BuildPath(field, pathfinding.Map, tile.X, tile.Y);
+		var (x, y) = FlowField.Unpack(pathfinding.Paths[handle].TargetTile);
+		ComputePath(world, handle, (x, y), fresh: false);
+	}
 
-			pathfinding.SetPath(handle, waypoints);
-		}
+	private void ComputePath(World world, EntityHandle handle, (int X, int Y) goalTile, bool fresh)
+	{
+		var pathfinding = WorldPathfinding.TryGet(world);
+		if (pathfinding is null) return;
+
+		var entity = handle.Value;
+		if (!entity.IsAlive()) return;
+
+		var move = entity.Get<MoveTypeComponent>();
+		var clamped = pathfinding.ClampGoal(goalTile, move.Type);
+		var packed = FlowField.Pack(clamped.X, clamped.Y);
+		var field = pathfinding.Fields.GetOrCreate(packed, move.Type);
+
+		var tile = pathfinding.Map.WorldToTile(entity.Get<TransformComponent>().Position);
+		var waypoints = BuildPath(field, pathfinding.Map, tile.X, tile.Y);
+
+		if (fresh || !pathfinding.HasPath(handle))
+			pathfinding.SetPath(handle, waypoints, packed);
+		else
+			pathfinding.Repath(handle, waypoints);
 	}
 
 	private static List<Vector2> BuildPath(FlowField field, GameMap map, int startX, int startY)

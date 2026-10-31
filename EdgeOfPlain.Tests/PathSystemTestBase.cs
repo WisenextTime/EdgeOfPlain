@@ -19,10 +19,11 @@ namespace EdgeOfPlain.Tests;
 public abstract class PathSystemTestBase : IDisposable
 {
 	protected readonly PathfindingSystem Pathfinding = new();
-	protected readonly MovementSystem Movement = new();
+	protected readonly MovementSystem Movement;
 
 	public PathSystemTestBase()
 	{
+		Movement = new MovementSystem(Pathfinding);
 		ContentStore.Reset();
 		ComponentManager.Reset();
 
