@@ -12,7 +12,6 @@ using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -103,9 +102,9 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var def = new UnitDef("aligner")
 		{
 			MaxHealth = 10,
-			MaxVelocity = 60f,
-			Acceleration = 100f,
-			RotationalVelocity = 10f,
+			MaxVelocity = (Fixed64)60,
+			Acceleration = (Fixed64)100,
+			RotationalVelocity = (Fixed64)10,
 			AlignBeforeTurn = true,
 		};
 		var start = V(16f, 16f);
@@ -145,9 +144,9 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			MaxHealth = 10,
 			MoveType = PassageMask.Air,
 			AlignBeforeTurn = false,
-			MaxVelocity = 60f,
-			Acceleration = 100f,
-			RotationalVelocity = 10f,
+			MaxVelocity = (Fixed64)60,
+			Acceleration = (Fixed64)100,
+			RotationalVelocity = (Fixed64)10,
 		};
 		var start = V(16f, 16f);
 
@@ -183,9 +182,9 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var def = new UnitDef("turner")
 		{
 			MaxHealth = 10,
-			MaxVelocity = 60f,
-			Acceleration = 100f,
-			RotationalVelocity = 10f,
+			MaxVelocity = (Fixed64)60,
+			Acceleration = (Fixed64)100,
+			RotationalVelocity = (Fixed64)10,
 			AlignBeforeTurn = true,
 		};
 		game.Commands.Enqueue(new SpawnEntityCommand(

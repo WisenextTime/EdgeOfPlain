@@ -6,6 +6,7 @@ using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
+using FixedMathSharp;
 using SFML.Graphics;
 using SFML.System;
 using SfColor = SFML.Graphics.Color;
@@ -31,7 +32,7 @@ public sealed class LoadingScene(
 	private Text? _text;
 	private Task? _loading;
 	private volatile string _message = "Loading…";
-	private double _completedAt;
+	private Fixed64 _completedAt;
 	private bool _completed;
 	private bool _switched;
 
@@ -72,7 +73,7 @@ public sealed class LoadingScene(
 			return;
 		}
 
-		if (time.TotalSeconds - _completedAt < Hold.TotalSeconds) return;
+		if (time.TotalSeconds - _completedAt < (Fixed64)Hold.TotalSeconds) return;
 
 		_switched = true;
 		_context!.Scenes.Replace(_next());

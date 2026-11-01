@@ -7,6 +7,7 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Time;
+using FixedMathSharp;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -230,9 +231,9 @@ public sealed class SmallLoopAndCameraTests
 		Assert.Equal(default(LogicTime), time);
 		Assert.Equal(0, loop.Tick);
 		Assert.Equal(0, loop.PendingSteps);
-		Assert.Equal(0f, loop.Alpha);
+		Assert.Equal(Fixed64.Zero, loop.Alpha);
 		Assert.Equal(GameLoop.DefaultFixedStep, loop.FixedStep);
-		Assert.Equal(0d, loop.TotalSeconds);
+		Assert.Equal(Fixed64.Zero, loop.TotalSeconds);
 	}
 
 	[Fact]

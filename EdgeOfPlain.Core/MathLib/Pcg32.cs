@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+using FixedMathSharp;
 
 namespace EdgeOfPlain.Core.MathLib;
 
@@ -29,17 +29,10 @@ public struct Pcg32
 		return xorShifted >> rot | xorShifted << (-rot & 31);
 	}
 
-	public float NextFloat() => (NextUint() >> 8) * (1f / (1 << 24));
+	public Fixed64 NextFixed() => Fixed64.FromRaw(NextUint());
 
-	public double NextDouble()
-	{
-		var high = NextUint() >> 5;
-		var low = NextUint() >> 6;
-		return (high * 67108864d + low) / 9007199254740992d;
-	}
-
-	public float RangeFloat(float min, float max) => min + NextFloat() * (max - min);
-	public bool Change(float p) => p > NextFloat();
+	public Fixed64 RangeFixed(Fixed64 min, Fixed64 max) => min + NextFixed() * (max - min);
+	public bool Change(Fixed64 p) => p > NextFixed();
 
 	public int Range(int min, int max)
 	{
@@ -50,36 +43,41 @@ public struct Pcg32
 		return (int)(min + (long)r);
 	}
 
-	public float NextAngle() => NextFloat() * MathF.Tau;
+	public Fixed64 NextAngle() => NextFixed() * Fixed64.TwoPi;
 
-	public Vector2 InsideUnitCircle()
+	public Vector2d InsideUnitCircle()
 	{
 		var angle = NextAngle();
-		var radius = MathF.Sqrt(NextFloat());
-		var (s, c) = MathF.SinCos(angle);
-		return new Vector2(c * radius, s * radius);
+		var radius = FixedMath.Sqrt(NextFixed());
+		var c = FixedMath.Cos(angle);
+		var s = FixedMath.Sin(angle);
+		return new Vector2d(c * radius, s * radius);
 	}
 
-	public Vector2 InsideCircle(Vector2 center, float radius) => center + radius * InsideUnitCircle();
+	public Vector2d InsideCircle(Vector2d center, Fixed64 radius) => center + radius * InsideUnitCircle();
 
-	public Vector2 OnUnitCircle()
+	public Vector2d OnUnitCircle()
 	{
 		var angle = NextAngle();
-		var (s, c) = MathF.SinCos(angle);
-		return new Vector2(c, s);
+		var c = FixedMath.Cos(angle);
+		var s = FixedMath.Sin(angle);
+		return new Vector2d(c, s);
 	}
 
-	public Vector2 OnCircle(Vector2 center, float radius) => center + radius * OnUnitCircle();
-	public Vector2 InsideRect(Vector2 lt, Vector2 rd) => new Vector2(RangeFloat(lt.X, rd.X), RangeFloat(lt.Y, rd.Y));
+	public Vector2d OnCircle(Vector2d center, Fixed64 radius) => center + radius * OnUnitCircle();
+	public Vector2d InsideRect(Vector2d lt, Vector2d rd) => new(RangeFixed(lt.X, rd.X), RangeFixed(lt.Y, rd.Y));
 
-	public float Gaussian(float mean = 0f, float stDev = 1f)
+	public Fixed64 Gaussian() => Gaussian(Fixed64.Zero, Fixed64.One);
+
+	public Fixed64 Gaussian(Fixed64 mean, Fixed64 stDev)
 	{
-		ArgumentOutOfRangeException.ThrowIfNegative(stDev);
+		if (stDev < Fixed64.Zero)
+			throw new ArgumentOutOfRangeException(nameof(stDev));
 
-		var u1 = 1f - NextFloat();
-		var u2 = NextFloat();
-		var mag = MathF.Sqrt(-2f * MathF.Log(u1));
-		return mean + stDev * mag * MathF.Cos(MathF.Tau * u2);
+		var u1 = Fixed64.One - NextFixed();
+		var u2 = NextFixed();
+		var mag = FixedMath.Sqrt(-Fixed64.Two * FixedMath.Ln(u1));
+		return mean + stDev * mag * FixedMath.Cos(Fixed64.TwoPi * u2);
 	}
 
 	public void Shuffle<T>(IList<T> list)
@@ -93,32 +91,32 @@ public struct Pcg32
 		}
 	}
 
-	public int PickWeightedIndex(IEnumerable<float> weights)
+	public int PickWeightedIndex(IEnumerable<Fixed64> weights)
 	{
 		ArgumentNullException.ThrowIfNull(weights);
 
-		var list = weights as float[] ?? [.. weights];
+		var list = weights as Fixed64[] ?? [.. weights];
 
 		if (list.Length == 0)
 			throw new ArgumentException("At least one weight is required.", nameof(weights));
 
-		var total = 0f;
+		var total = Fixed64.Zero;
 		foreach (var weight in list)
 		{
-			if (!float.IsFinite(weight) || weight < 0f)
-				throw new ArgumentOutOfRangeException(nameof(weights), "Weights must be finite and non-negative.");
+			if (weight < Fixed64.Zero)
+				throw new ArgumentOutOfRangeException(nameof(weights), "Weights must be non-negative.");
 
 			total += weight;
 		}
 
-		if (total <= 0f || !float.IsFinite(total))
-			throw new ArgumentException("The total weight must be positive and finite.", nameof(weights));
+		if (total <= Fixed64.Zero)
+			throw new ArgumentException("The total weight must be positive.", nameof(weights));
 
-		var r = NextFloat() * total;
+		var r = NextFixed() * total;
 		for (var i = 0; i < list.Length; i++)
 		{
 			r -= list[i];
-			if (r < 0f) return i;
+			if (r < Fixed64.Zero) return i;
 		}
 
 		return list.Length - 1;

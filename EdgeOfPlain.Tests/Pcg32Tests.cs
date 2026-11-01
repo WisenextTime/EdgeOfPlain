@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using EdgeOfPlain.Core.MathLib;
+using FixedMathSharp;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -24,13 +24,13 @@ public sealed class Pcg32Tests
 	}
 
 	[Fact]
-	public void NextDoubleMatchesReferenceOutputs()
+	public void NextFixedMatchesReferenceOutputs()
 	{
 		var rng = new Pcg32(42);
-		double[] expected = [0.6303102186438938, 0.7270080560068604, 0.7486033647998483, 0.7491247468042271];
+		uint[] expected = [2707161783, 2068313097, 3122475824, 2211639955];
 
 		foreach (var value in expected)
-			Assert.Equal(value, rng.NextDouble(), 15);
+			Assert.Equal(Fixed64.FromRaw(value), rng.NextFixed());
 	}
 
 	[Fact]
@@ -42,7 +42,7 @@ public sealed class Pcg32Tests
 		for (var i = 0; i < 32; i++)
 		{
 			Assert.Equal(first.NextUint(), second.NextUint());
-			Assert.Equal(first.NextFloat(), second.NextFloat());
+			Assert.Equal(first.NextFixed(), second.NextFixed());
 		}
 	}
 
@@ -113,8 +113,8 @@ public sealed class Pcg32Tests
 
 		for (var i = 0; i < 100; i++)
 		{
-			Assert.Equal(1, rng.PickWeightedIndex([0f, 1f, 0f]));
-			Assert.Equal(0, rng.PickWeightedIndex([1f, 0f]));
+			Assert.Equal(1, rng.PickWeightedIndex([Fixed64.Zero, Fixed64.One, Fixed64.Zero]));
+			Assert.Equal(0, rng.PickWeightedIndex([Fixed64.One, Fixed64.Zero]));
 		}
 	}
 
@@ -124,28 +124,20 @@ public sealed class Pcg32Tests
 		var rng = new Pcg32(3);
 
 		Assert.Throws<ArgumentException>(() => rng.PickWeightedIndex([]));
-		Assert.Throws<ArgumentException>(() => rng.PickWeightedIndex([0f, 0f]));
-		Assert.Throws<ArgumentOutOfRangeException>(() => rng.PickWeightedIndex([-1f, 2f]));
-		Assert.Throws<ArgumentOutOfRangeException>(() => rng.PickWeightedIndex([float.NaN]));
-		Assert.Throws<ArgumentOutOfRangeException>(() => rng.PickWeightedIndex([float.PositiveInfinity]));
+		Assert.Throws<ArgumentException>(() => rng.PickWeightedIndex([Fixed64.Zero, Fixed64.Zero]));
+		Assert.Throws<ArgumentOutOfRangeException>(() => rng.PickWeightedIndex([(Fixed64)(-1), (Fixed64)2]));
 	}
 
 	[Fact]
-	public void NextFloatIsInUnitInterval()
+	public void NextFixedIsInUnitInterval()
 	{
 		var rng = new Pcg32(8);
 
 		for (var i = 0; i < 10_000; i++)
-			Assert.InRange(rng.NextFloat(), 0f, MathF.BitDecrement(1f));
-	}
-
-	[Fact]
-	public void NextDoubleIsInUnitInterval()
-	{
-		var rng = new Pcg32(8);
-
-		for (var i = 0; i < 10_000; i++)
-			Assert.InRange(rng.NextDouble(), 0d, Math.BitDecrement(1d));
+		{
+			var value = rng.NextFixed();
+			Assert.True(value >= Fixed64.Zero && value < Fixed64.One);
+		}
 	}
 
 	[Fact]
@@ -155,14 +147,19 @@ public sealed class Pcg32Tests
 
 		for (var i = 0; i < 1000; i++)
 		{
-			Assert.True(rng.InsideUnitCircle().Length() <= 1f);
+			Assert.True(rng.InsideUnitCircle().Magnitude <= Fixed64.One);
 
-			var point = rng.InsideRect(new Vector2(-2, -3), new Vector2(4, 5));
-			Assert.InRange(point.X, -2f, 4f);
-			Assert.InRange(point.Y, -3f, 5f);
+			var point = rng.InsideRect(
+				new Vector2d((Fixed64)(-2), (Fixed64)(-3)),
+				new Vector2d((Fixed64)4, (Fixed64)5));
+			Assert.True(point.X >= (Fixed64)(-2) && point.X <= (Fixed64)4);
+			Assert.True(point.Y >= (Fixed64)(-3) && point.Y <= (Fixed64)5);
 
-			Assert.InRange(rng.RangeFloat(-1f, 1f), -1f, 1f);
-			Assert.InRange(rng.NextAngle(), 0f, MathF.Tau);
+			var ranged = rng.RangeFixed((Fixed64)(-1), Fixed64.One);
+			Assert.True(ranged >= (Fixed64)(-1) && ranged <= Fixed64.One);
+
+			var angle = rng.NextAngle();
+			Assert.True(angle >= Fixed64.Zero && angle <= Fixed64.TwoPi);
 		}
 	}
 
@@ -171,8 +168,8 @@ public sealed class Pcg32Tests
 	{
 		var rng = new Pcg32(12);
 
-		Assert.False(rng.Change(0f));
-		Assert.True(rng.Change(1f));
+		Assert.False(rng.Change(Fixed64.Zero));
+		Assert.True(rng.Change(Fixed64.One));
 	}
 
 	[Fact]
@@ -181,8 +178,8 @@ public sealed class Pcg32Tests
 		var rng = new Pcg32(13);
 
 		for (var i = 0; i < 1000; i++)
-			Assert.True(float.IsFinite(rng.Gaussian()));
+			_ = rng.Gaussian();
 
-		Assert.Throws<ArgumentOutOfRangeException>(() => rng.Gaussian(stDev: -1f));
+		Assert.Throws<ArgumentOutOfRangeException>(() => rng.Gaussian((Fixed64)0, (Fixed64)(-1)));
 	}
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
@@ -11,7 +10,6 @@ using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -33,7 +31,7 @@ public sealed class EntityCommandTests
 	{
 		using var world = World.Create();
 
-		var def = new UnitDef("testUnit") { MaxHealth = 40, InitHealth = 0.5f };
+		var def = new UnitDef("testUnit") { MaxHealth = 40, InitHealth = (Fixed64)0.5 };
 		var transform = new TransformComponent
 		{
 			Position = new Vector2d((Fixed64)3, (Fixed64)4),

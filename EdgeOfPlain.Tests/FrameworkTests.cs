@@ -8,18 +8,19 @@ using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
+using FixedMathSharp;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
 
 internal sealed class FakeTimeSource : ITimeSource
 {
-	public double ElapsedSeconds { get; set; }
+	public Fixed64 ElapsedSeconds { get; set; }
 }
 
 public sealed class GameLoopTests
 {
-	private const double Step = GameLoop.DefaultFixedStep;
+	private static readonly Fixed64 _step = GameLoop.DefaultFixedStep;
 
 	[Fact]
 	public void ProducesNoStepBeforeOneFixedStepElapsed()
@@ -27,12 +28,12 @@ public sealed class GameLoopTests
 		var time = new FakeTimeSource();
 		var loop = new GameLoop(time);
 
-		time.ElapsedSeconds = Step / 2;
+		time.ElapsedSeconds = _step / (Fixed64)2;
 		loop.BeginFrame();
 
 		Assert.False(loop.TryStep(out _));
 		Assert.Equal(0, loop.Tick);
-		Assert.Equal(0.5f, loop.Alpha, 5);
+		Assert.Equal(0.5, (double)loop.Alpha, 5);
 	}
 
 	[Fact]
@@ -41,7 +42,7 @@ public sealed class GameLoopTests
 		var time = new FakeTimeSource();
 		var loop = new GameLoop(time);
 
-		time.ElapsedSeconds = Step * 2;
+		time.ElapsedSeconds = _step * (Fixed64)2;
 		loop.BeginFrame();
 
 		Assert.True(loop.TryStep(out var first));
@@ -49,7 +50,7 @@ public sealed class GameLoopTests
 		Assert.False(loop.TryStep(out _));
 		Assert.Equal(1, first.Tick);
 		Assert.Equal(2, second.Tick);
-		Assert.Equal(2 * Step, loop.TotalSeconds, 9);
+		Assert.Equal((double)_step * 2, (double)loop.TotalSeconds, 9);
 	}
 
 	[Fact]
@@ -58,24 +59,24 @@ public sealed class GameLoopTests
 		var time = new FakeTimeSource();
 		var loop = new GameLoop(time);
 
-		time.ElapsedSeconds = 10;
+		time.ElapsedSeconds = (Fixed64)10;
 		loop.BeginFrame();
 
-		Assert.Equal(5, loop.PendingSteps);
-		Assert.InRange(loop.RenderTime.FrameDelta, 0, GameLoop.MaxFrameDelta);
+		Assert.Equal(2, loop.PendingSteps);
+		Assert.True(loop.RenderTime.FrameDelta >= Fixed64.Zero && loop.RenderTime.FrameDelta <= GameLoop.MaxFrameDelta);
 	}
 
 	[Fact]
 	public void IgnoresNegativeTimeJumps()
 	{
-		var time = new FakeTimeSource { ElapsedSeconds = 5 };
+		var time = new FakeTimeSource { ElapsedSeconds = (Fixed64)5 };
 		var loop = new GameLoop(time);
 
-		time.ElapsedSeconds = 4;
+		time.ElapsedSeconds = (Fixed64)4;
 		loop.BeginFrame();
 
 		Assert.Equal(0, loop.PendingSteps);
-		Assert.Equal(0d, loop.RenderTime.FrameDelta);
+		Assert.Equal(Fixed64.Zero, loop.RenderTime.FrameDelta);
 	}
 
 	[Fact]
@@ -84,19 +85,19 @@ public sealed class GameLoopTests
 		var time = new FakeTimeSource();
 		var loop = new GameLoop(time);
 
-		time.ElapsedSeconds = Step * 1.5;
+		time.ElapsedSeconds = _step * (Fixed64)1.5;
 		loop.BeginFrame();
 		Assert.True(loop.TryStep(out _));
 
-		Assert.Equal(0.5f, loop.Alpha, 5);
+		Assert.Equal(0.5, (double)loop.Alpha, 5);
 	}
 
 	[Fact]
 	public void RejectsInvalidSettings()
 	{
 		Assert.Throws<ArgumentNullException>(() => new GameLoop(null!));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), 0));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), Step, 0));
+		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), (Fixed64)0));
+		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), _step, 0));
 	}
 }
 

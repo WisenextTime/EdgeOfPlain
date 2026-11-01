@@ -17,9 +17,9 @@ public struct VelocityComponent
 	{
 		return new VelocityComponent
 		{
-			MaxVelocity = (Fixed64)def.MaxVelocity,
-			Acceleration = (Fixed64)def.Acceleration,
-			RotationalVelocity = (Fixed64)def.RotationalVelocity,
+			MaxVelocity = def.MaxVelocity,
+			Acceleration = def.Acceleration,
+			RotationalVelocity = def.RotationalVelocity,
 			AlignBeforeTurn = def.AlignBeforeTurn,
 		};
 	}

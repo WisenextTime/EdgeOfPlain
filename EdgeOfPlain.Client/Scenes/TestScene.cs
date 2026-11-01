@@ -75,8 +75,8 @@ public sealed class TestScene : Scene
 
 	public override void Draw(RenderTime time)
 	{
-		var camera = GameContext.WorldCamera.Evaluate(time.Alpha);
-		var position = Vector2.Lerp(_previous, _current, time.Alpha);
+		var camera = GameContext.WorldCamera.Evaluate((float)time.Alpha);
+		var position = Vector2.Lerp(_previous, _current, (float)time.Alpha);
 
 		GameContext.Window.Camera = camera;
 

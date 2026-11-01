@@ -19,7 +19,6 @@ using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Client.Scenes;
 
@@ -80,23 +79,30 @@ public sealed class TestMapScene : Scene
 			e => ResizeUi(new Vector2(e.Current.Width, e.Current.Height)));
 	}
 
-	public override void Update(LogicTime time, IInputState input)
+	public override bool HandleInput(IInputState input)
 	{
 		_ui?.Update(input);
 
-		if (_gameWorld is null) return;
+		if (_gameWorld is null) return false;
 
 		var overUi = _ui?.PointerOverUi ?? false;
 
 		if (!overUi && input.WasMouseButtonPressed(MouseButton.Left)) QueueSpawn(input);
 		if (input.WasMouseButtonPressed(MouseButton.Right)) QueueDelete(input);
 
-		_gameWorld.Step((Fixed64)time.Delta);
+		return true;
+	}
+
+	public override void Update(LogicTime time, IInputState input)
+	{
+		if (_gameWorld is null) return;
+
+		_gameWorld.Step(time.Delta);
 	}
 
 	public override void Draw(RenderTime time)
 	{
-		var camera = GameContext.WorldCamera.Evaluate(time.Alpha);
+		var camera = GameContext.WorldCamera.Evaluate((float)time.Alpha);
 		GameContext.Window.Camera = camera;
 
 		if (_pipeline is not null)

@@ -185,7 +185,7 @@ public sealed class EntityDefComponentScopeTests
 		ComponentManager.Seal();
 
 		using var world = World.Create();
-		var unit = ComponentManager.CreateEntity(world, new UnitDef("u") { MaxVelocity = 50f });
+		var unit = ComponentManager.CreateEntity(world, new UnitDef("u") { MaxVelocity = (Fixed64)50 });
 		var building = ComponentManager.CreateEntity(world, new BuildingDef("b"));
 
 		Assert.Equal((Fixed64)50, unit.Get<VelocityComponent>().MaxVelocity);

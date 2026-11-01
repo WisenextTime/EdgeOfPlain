@@ -4,6 +4,7 @@ using System.Reflection;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
+using FixedMathSharp;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -223,7 +224,7 @@ public sealed class ContentSerializerTests
 		var building = Assert.IsType<BuildingDef>(restored);
 		Assert.Equal("tower", building.Id);
 		Assert.Equal(200, building.MaxHealth);
-		Assert.Equal(1f, building.InitHealth);
+		Assert.Equal((Fixed64)1, building.InitHealth);
 		Assert.Equal("Textures/Buildings/tower#tower", building.Texture);
 	}
 

@@ -12,7 +12,6 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -56,9 +55,9 @@ public abstract class PathSystemTestBase : IDisposable
 	protected static UnitDef FastUnit(string id) => new UnitDef(id)
 	{
 		MaxHealth = 10,
-		MaxVelocity = 60f,
-		Acceleration = 100f,
-		RotationalVelocity = 10f,
+		MaxVelocity = (Fixed64)60,
+		Acceleration = (Fixed64)100,
+		RotationalVelocity = (Fixed64)10,
 	};
 
 	protected static Vector2d V(float x, float y) => new((Fixed64)x, (Fixed64)y);
