@@ -1,6 +1,5 @@
 using System;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.MathLib;
 

@@ -1,6 +1,5 @@
 using EdgeOfPlain.Core.Definitions;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Content.Components;
 
@@ -8,6 +7,9 @@ public struct TransformComponent
 {
 	public Vector2d Position;
 	public Fixed64 Rotation;
+
+	public Vector2d PreviousPosition;
+	public Fixed64 PreviousRotation;
 
 	public static TransformComponent CreateComponent(EntityDef def)
 	{

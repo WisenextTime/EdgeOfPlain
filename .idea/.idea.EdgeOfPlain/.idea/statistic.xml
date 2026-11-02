@@ -5,5 +5,11 @@
     <option name="separateTabsFileTypes" value="java;xml;css;html;js;properties;jsp;txt;php;php4;php5;phtml;inc;py;vue;kt;cs;fs;fsx" />
     <option name="excludeDotArtifactDirectory" value="true" />
     <option name="activateWhenOpenProject" value="true" />
+    <option name="excludedDirectories">
+      <list>
+        <option value="$PROJECT_DIR$/EdgeOfPlain.Tests" />
+        <option value="$PROJECT_DIR$/EdgeOfPlain.Client.Tests" />
+      </list>
+    </option>
   </component>
 </project>

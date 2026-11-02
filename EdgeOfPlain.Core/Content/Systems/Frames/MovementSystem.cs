@@ -1,24 +1,23 @@
-using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
+using EdgeOfPlain.Core.Content.Systems.Applier;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.MathLib;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
-namespace EdgeOfPlain.Core.Content.Systems.PathFinding;
+namespace EdgeOfPlain.Core.Content.Systems.Frames;
 
 public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 {
-	private static readonly Fixed64 TurnThreshold = (Fixed64)0.05;
-	private static readonly Fixed64 ArriveRadius = (Fixed64)24;
-	private static readonly Fixed64 CongestionArriveRadius = (Fixed64)48;
-	private static readonly Fixed64 AvoidRadius = (Fixed64)64;
-	private static readonly Fixed64 AvoidWidth = (Fixed64)28;
-	private static readonly Fixed64 SeparationRadius = (Fixed64)32;
+	private static readonly Fixed64 _turnThreshold = (Fixed64)0.05;
+	private static readonly Fixed64 _arriveRadius = (Fixed64)24;
+	private static readonly Fixed64 _congestionArriveRadius = (Fixed64)48;
+	private static readonly Fixed64 _avoidRadius = (Fixed64)64;
+	private static readonly Fixed64 _avoidWidth = (Fixed64)28;
+	private static readonly Fixed64 _separationRadius = (Fixed64)32;
 	private const int StuckFrameLimit = 90;
 	private const int MaxRepathAttempts = 3;
 
@@ -58,7 +57,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 
 			var isLastWaypoint = path.Index == path.Waypoints.Count - 1;
 
-			if (distance <= ArriveRadius || (isLastWaypoint && avoidanceActive && distance <= CongestionArriveRadius))
+			if (distance <= _arriveRadius || (isLastWaypoint && avoidanceActive && distance <= _congestionArriveRadius))
 			{
 				path.Index++;
 
@@ -89,7 +88,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (isLastWaypoint)
 				targetSpeed = FixedMath.Min(targetSpeed, velocity.MaxVelocity * FixedMath.Clamp(distance / (Fixed64)120, (Fixed64)0.15, Fixed64.One));
 
-			if (!avoidanceActive && velocity.AlignBeforeTurn && FixedMath.Abs(angleDiff) > TurnThreshold)
+			if (!avoidanceActive && velocity.AlignBeforeTurn && FixedMath.Abs(angleDiff) > _turnThreshold)
 			{
 				transform.Rotation = AngleExtension.MoveTowardsAngle(
 					transform.Rotation,
@@ -182,11 +181,11 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			var offset = otherTransform.Position - position;
 			var squared = offset.MagnitudeSquared;
 
-			if (squared < (Fixed64)1 || squared > AvoidRadius * AvoidRadius) return;
+			if (squared < (Fixed64)1 || squared > _avoidRadius * _avoidRadius) return;
 
 			var distance = FixedMath.Sqrt(squared);
 
-			var radialStrength = Fixed64.One - distance / SeparationRadius;
+			var radialStrength = Fixed64.One - distance / _separationRadius;
 
 			if (radialStrength > Fixed64.Zero)
 			{
@@ -198,7 +197,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (ahead <= Fixed64.Zero) return;
 
 			var lateral = offset - desired * ahead;
-			if (lateral.Magnitude >= AvoidWidth) return;
+			if (lateral.Magnitude >= _avoidWidth) return;
 
 			if (otherVelocity.Velocity > (Fixed64)1)
 			{
@@ -216,7 +215,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (cross > Fixed64.Zero) side = -side;
 
 			var away = lateralLength < (Fixed64)1 ? side : (-lateral).Normalized;
-			var lateralStrength = (Fixed64.One - distance / AvoidRadius) * (Fixed64.One - lateralLength / AvoidWidth);
+			var lateralStrength = (Fixed64.One - distance / _avoidRadius) * (Fixed64.One - lateralLength / _avoidWidth);
 
 			avoidance += away * lateralStrength;
 			strength = FixedMath.Max(strength, lateralStrength);

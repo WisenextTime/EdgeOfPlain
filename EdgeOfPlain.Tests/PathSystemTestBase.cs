@@ -4,7 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems.Applier;
-using EdgeOfPlain.Core.Content.Systems.PathFinding;
+using EdgeOfPlain.Core.Content.Systems.Frames;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game;

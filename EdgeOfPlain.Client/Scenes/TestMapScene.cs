@@ -95,9 +95,7 @@ public sealed class TestMapScene : Scene
 
 	public override void Update(LogicTime time, IInputState input)
 	{
-		if (_gameWorld is null) return;
-
-		_gameWorld.Step(time.Delta);
+		_gameWorld?.Step(time.Delta);
 	}
 
 	public override void Draw(RenderTime time)
@@ -111,7 +109,7 @@ public sealed class TestMapScene : Scene
 			_pipeline.End();
 		}
 
-		DrawUnits(camera);
+		DrawUnits(camera, time);
 
 		if (_ui is null || _uiSprites is null) return;
 
@@ -153,10 +151,14 @@ public sealed class TestMapScene : Scene
 	{
 		if (_gameWorld is null || _unitDef is null) return;
 
+		var position = ToWorld(input.MousePosition);
+		var rotation = (Fixed64)(Random.Shared.NextSingle() * MathF.Tau);
 		var transform = new TransformComponent
 		{
-			Position = ToWorld(input.MousePosition),
-			Rotation = (Fixed64)(Random.Shared.NextSingle() * MathF.Tau),
+			Position = position,
+			PreviousPosition = position,
+			Rotation = rotation,
+			PreviousRotation = rotation,
 		};
 
 		_gameWorld.Commands.Enqueue(new SpawnEntityCommand(_unitDef, transform, 0));
@@ -198,7 +200,7 @@ public sealed class TestMapScene : Scene
 				new GroundTarget(point)));
 	}
 
-	private void DrawUnits(Camera2D camera)
+	private void DrawUnits(Camera2D camera, RenderTime time)
 	{
 		if (_unitSprites is null || _gameWorld is null || _unitTexture.Length == 0) return;
 
@@ -209,6 +211,8 @@ public sealed class TestMapScene : Scene
 		sprites.Begin(camera);
 		queue.Query(description, (in EntityHandle handle, in TransformComponent transform) =>
 		{
+			var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, time.Alpha);
+			var rotation = FixedMath.Lerp(transform.PreviousRotation, transform.Rotation, time.Alpha);
 			sprites.Draw(
 				new RenderMetadata
 				{
@@ -216,10 +220,10 @@ public sealed class TestMapScene : Scene
 					Layer = UnitLayer,
 					Size = new Vector2(UnitVisualSize),
 					Origin = _unitOrigin,
-					Rotation = (float)transform.Rotation,
+					Rotation = (float)rotation,
 				},
-				(float)transform.Position.X,
-				(float)transform.Position.Y);
+				(float)position.X,
+				(float)position.Y);
 		});
 		sprites.End();
 	}

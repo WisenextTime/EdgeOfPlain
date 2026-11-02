@@ -8,9 +8,8 @@ using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
-namespace EdgeOfPlain.Core.Content.Systems.PathFinding;
+namespace EdgeOfPlain.Core.Content.Systems.Applier;
 
 public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 {
