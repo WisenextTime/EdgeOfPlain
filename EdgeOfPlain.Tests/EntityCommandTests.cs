@@ -8,7 +8,6 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Components;
-using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
 using Xunit;
 
@@ -109,7 +108,6 @@ public sealed class EntityCommandTests
 			0));
 
 		Assert.Equal(1, game.ApplyCommands());
-		Assert.Equal(1, game.QueueView().Count);
 	}
 
 	private static Entity SingleEntity(World world)

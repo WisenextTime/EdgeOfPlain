@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 using SFML.Graphics;
 
 namespace EdgeOfPlain.Client.Resource.Shaders;
@@ -33,7 +34,7 @@ public static class ShaderLoader
 		}
 		catch(Exception e)
 		{
-			LogUtils.LogMessage($"Failed to compile shader '{path}': {e.Message}", LogUtils.LogType.Error);
+			LogUtils.Logger(typeof(ShaderLoader)).LogError("Failed to compile shader '{Path}': {EMessage}", path, e.Message);
 		}
 
 		completed = _next;

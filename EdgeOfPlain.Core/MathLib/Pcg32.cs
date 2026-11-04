@@ -123,6 +123,7 @@ public struct Pcg32
 	}
 
 	public (ulong State, ulong Inc) GetState() => (_state, _inc);
+
 	public void SetState(ulong state, ulong inc)
 	{
 		_state = state;

@@ -3,6 +3,8 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using EdgeOfPlain.Core.Definitions;
+using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
@@ -48,6 +50,9 @@ public static class ContentStore
 			pair => pair.Key,
 			pair => pair.Value.ToArray(),
 			StringComparer.Ordinal);
+
+		LogUtils.Logger(typeof(ContentStore)).LogInformation(
+			"Content store sealed: {Count} entries.", _frozenByKey.Count);
 	}
 
 	internal static bool TryRemove(ContentDef def)

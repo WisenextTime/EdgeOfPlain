@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EdgeOfPlain.Core.Content;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -41,19 +42,23 @@ internal static class ModLoadOrder
 			if (broken >= 0)
 			{
 				var mod = pending[broken];
-				LogUtils.LogMessage($"Mod '{mod.ModInfo.Id}' will not be loaded: {problem}.", LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModLoadOrder)).LogError(
+					"Mod '{ModInfoId}' will not be loaded: {Problem}.", mod.ModInfo.Id, problem);
 				skipped.Add(mod.ModInfo.Id);
 				pending.RemoveAt(broken);
 				continue;
 			}
 
-			LogUtils.LogMessage(
-				$"Cyclic mod dependency detected among: {string.Join(", ", pending.Select(mod => mod.ModInfo.Id))};" +
-				" these mods will not be loaded.",
-				LogUtils.LogType.Error);
+			LogUtils.Logger(typeof(ModLoadOrder)).LogError(
+				"Cyclic mod dependency detected among: {Join}; these mods will not be loaded.",
+				string.Join(", ", pending.Select(mod => mod.ModInfo.Id)));
 			foreach (var mod in pending) skipped.Add(mod.ModInfo.Id);
 			break;
 		}
+
+		LogUtils.Logger(typeof(ModLoadOrder)).LogInformation(
+			"Resolved mod load order: {Order}.",
+			string.Join(" → ", ordered.Select(mod => mod.ModInfo.Id)));
 
 		return ordered.AsReadOnly();
 	}
@@ -74,8 +79,10 @@ internal static class ModLoadOrder
 		Dictionary<string, Mod> byId)
 	{
 		for (var i = 0; i < pending.Count; i++)
+		{
 			if (GetState(pending[i], placed, skipped, byId, out _) == DependencyState.Satisfied)
 				return i;
+		}
 
 		return -1;
 	}
@@ -88,8 +95,10 @@ internal static class ModLoadOrder
 		out string? problem)
 	{
 		for (var i = 0; i < pending.Count; i++)
+		{
 			if (GetState(pending[i], placed, skipped, byId, out problem) == DependencyState.Broken)
 				return i;
+		}
 
 		problem = null;
 		return -1;

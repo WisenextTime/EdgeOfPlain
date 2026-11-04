@@ -188,8 +188,8 @@ public sealed class AssetsManagerTests
 		{
 			AssetsManager.RegisterResourceOperator(new ResourceOperator<TextProbe>(stream => new TextProbe("x")));
 
-			var exception = Assert.Throws<NotSupportedException>(
-				() => AssetsManager.SaveResource(new TextProbe("x"), scope["out.txt"]));
+			var exception =
+				Assert.Throws<NotSupportedException>(() => AssetsManager.SaveResource(new TextProbe("x"), scope["out.txt"]));
 
 			Assert.Contains("does not support saving", exception.Message);
 			Assert.False(FileIO.FileExists(scope["out.txt"]));
@@ -257,9 +257,8 @@ public sealed class AssetsManagerTests
 		{
 			AssetsManager.RegisterResourceOperator(new ResourceOperator<TextProbe>(stream => new TextProbe("x")));
 
-			await Assert.ThrowsAsync<NotSupportedException>(
-				async () => await AssetsManager.SaveResourceAsync(
-					new TextProbe("x"), scope["out.txt"], TestContext.Current.CancellationToken));
+			await Assert.ThrowsAsync<NotSupportedException>(async () => await AssetsManager.SaveResourceAsync(
+				new TextProbe("x"), scope["out.txt"], TestContext.Current.CancellationToken));
 			Assert.False(FileIO.FileExists(scope["out.txt"]));
 		}
 		finally

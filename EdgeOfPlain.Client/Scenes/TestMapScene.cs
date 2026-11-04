@@ -16,7 +16,6 @@ using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
 
@@ -75,8 +74,8 @@ public sealed class TestMapScene : Scene
 		var size = GameContext.Window.Size;
 		ResizeUi(new Vector2(size.Width, size.Height));
 
-		_resizeSubscription = EventBus.Subscribe<WindowResizedEvent>(
-			e => ResizeUi(new Vector2(e.Current.Width, e.Current.Height)));
+		_resizeSubscription =
+			EventBus.Subscribe<WindowResizedEvent>(e => ResizeUi(new Vector2(e.Current.Width, e.Current.Height)));
 	}
 
 	public override bool HandleInput(IInputState input)
@@ -169,14 +168,13 @@ public sealed class TestMapScene : Scene
 		if (_gameWorld is null) return;
 
 		var point = ToWorld(input.MousePosition);
-		var queue = _gameWorld.QueueView();
 		var description = new QueryDescription().WithAll<TransformComponent>();
 
 		EntityHandle target = default;
 		var found = false;
 		var best = (Fixed64)(DeleteRadius * DeleteRadius);
 
-		queue.Query(description, (in EntityHandle handle, in TransformComponent transform) =>
+		_gameWorld.World.Query(description, (ref EntityHandle handle, ref TransformComponent transform) =>
 		{
 			var distance = (transform.Position - point).MagnitudeSquared;
 			if (distance > best) return;
@@ -196,8 +194,10 @@ public sealed class TestMapScene : Scene
 		var count = _gameWorld.CollectEntities(description, handles);
 
 		for (var i = 0; i < Math.Min(count, handles.Length); i++)
+		{
 			_gameWorld.Commands.Enqueue(new WaypointCommand(new UnitGroup(handles[i]), WaypointType.Move, WaypointAddType.Replace,
 				new GroundTarget(point)));
+		}
 	}
 
 	private void DrawUnits(Camera2D camera, RenderTime time)
@@ -205,11 +205,10 @@ public sealed class TestMapScene : Scene
 		if (_unitSprites is null || _gameWorld is null || _unitTexture.Length == 0) return;
 
 		var description = new QueryDescription().WithAll<TransformComponent>();
-		var queue = _gameWorld.QueueView();
 		var sprites = _unitSprites;
 
 		sprites.Begin(camera);
-		queue.Query(description, (in EntityHandle handle, in TransformComponent transform) =>
+		_gameWorld.World.Query(description, (ref EntityHandle handle, ref TransformComponent transform) =>
 		{
 			var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, time.Alpha);
 			var rotation = FixedMath.Lerp(transform.PreviousRotation, transform.Rotation, time.Alpha);

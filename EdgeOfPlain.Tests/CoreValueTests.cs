@@ -228,7 +228,7 @@ public sealed class SmallLoopAndCameraTests
 		var loop = new GameLoop(new FakeTimeSource());
 
 		Assert.False(loop.TryStep(out var time));
-		Assert.Equal(default(LogicTime), time);
+		Assert.Equal(default, time);
 		Assert.Equal(0, loop.Tick);
 		Assert.Equal(0, loop.PendingSteps);
 		Assert.Equal(Fixed64.Zero, loop.Alpha);

@@ -9,6 +9,7 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core;
 
@@ -39,6 +40,10 @@ public abstract class Launcher
 
 		InitFileSystems();
 		InitResourceOperators();
+
+		LogUtils.Logger<Launcher>().LogInformation(
+			"Launcher initialized; data directory '{DataDirectory}', mod directory '{ModDirectory}'.",
+			DataDirectory, ModDirectory);
 	}
 
 	protected void LoadContent(Action<string>? progress = null)
@@ -47,10 +52,16 @@ public abstract class Launcher
 		if (_contentLoaded) throw new InvalidOperationException("Content has already been loaded.");
 		_contentLoaded = true;
 		progress?.Invoke("Loading…");
+		LogUtils.Logger<Launcher>().LogInformation("Content loading started.");
+
 		ModLoader.Discover();
 		progress?.Invoke($"Loading all {ModLoader.Packages.Count} modpacks…");
 		ModLoader.Commit(AssetFileSystem);
+
 		progress?.Invoke($"Already loaded {ModLoader.LoadedMods.Count} modpacks");
+		LogUtils.Logger<Launcher>().LogInformation(
+			"Content loading finished: {Loaded} of {Packages} mod packages loaded.",
+			ModLoader.LoadedMods.Count, ModLoader.Packages.Count);
 	}
 
 	protected virtual void InitFileSystems()
@@ -113,10 +124,12 @@ public abstract class Launcher
 				Scenes.Draw(Loop.RenderTime);
 				window.Present();
 			}
+
+			LogUtils.Logger<Launcher>().LogInformation("Game loop exited.");
 		}
 		catch(Exception e)
 		{
-			LogUtils.LogMessage(e.ToString(), LogUtils.LogType.Error);
+			LogUtils.Logger<Launcher>().LogError("{Error}", e.ToString());
 			throw;
 		}
 	}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -20,9 +21,9 @@ public static class ModAssetMounter
 		foreach (var package in inLoadOrder)
 		{
 			if (!package.HasAssets)
-				LogUtils.LogMessage(
-					$"mod '{package.ModId}' do not contain directory '{ModPackage.AssetDirectoryName}/'.",
-					LogUtils.LogType.Warning);
+				LogUtils.Logger(typeof(ModAssetMounter)).LogWarning(
+					"mod '{PackageModId}' do not contain directory '{AssetDirectoryName}/'.",
+					package.ModId, ModPackage.AssetDirectoryName);
 
 			try
 			{
@@ -30,8 +31,9 @@ public static class ModAssetMounter
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage($"Namespace of mod '{package.ModId}' mount failed.", LogUtils.LogType.Error);
-				LogUtils.LogMessage(e.Message, LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModAssetMounter))
+					.LogError("Namespace of mod '{PackageModId}' mount failed.", package.ModId);
+				LogUtils.Logger(typeof(ModAssetMounter)).LogError("{error}", e.Message);
 				rejected.Add(package.ModId);
 			}
 		}
@@ -44,10 +46,9 @@ public static class ModAssetMounter
 			{
 				if (assets.AddOverrideLayer(target, layer, package.ModId)) continue;
 
-				LogUtils.LogMessage(
-					$"{ModPackage.OverriderDirectoryName}/{target}/ in mod '{package.ModId}' will be ignore, " +
-					$"because of nonexistent target namespace",
-					LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModAssetMounter)).LogError(
+					"{OverriderDirectoryName}/{Target}/ in mod '{PackageModId}' will be ignore, " +
+					"because of nonexistent target namespace", ModPackage.OverriderDirectoryName, target, package.ModId);
 			}
 		}
 
@@ -68,21 +69,23 @@ public static class ModAssetMounter
 		{
 			if (overlay.Shadows.Count == 0 && overlay.Diagnostics.Count == 0) continue;
 
-			LogUtils.LogMessage($"namespace '{name}': {overlay.Shadows.Count} files has been covered");
+			LogUtils.Logger(typeof(ModAssetMounter)).LogInformation("namespace '{Name}': {ShadowsCount} files has been covered",
+				name, overlay.Shadows.Count);
 
 			var listed = 0;
 			foreach (var (path, index) in overlay.Shadows.OrderBy(pair => pair.Key, StringComparer.Ordinal))
 			{
 				if (listed++ >= MaxListedShadows)
 				{
-					LogUtils.LogMessage($"  ...remaining {overlay.Shadows.Count - MaxListedShadows} omitted");
+					LogUtils.Logger(typeof(ModAssetMounter)).LogInformation("  ...remaining {MaxListedShadows} omitted",
+						overlay.Shadows.Count - MaxListedShadows);
 					break;
 				}
-				LogUtils.LogMessage($"  {path} ← {overlay.Layers[index].Name}");
+				LogUtils.Logger(typeof(ModAssetMounter)).LogInformation("  {Path} ← {Name}", path, overlay.Layers[index].Name);
 			}
 
 			foreach (var diagnostic in overlay.Diagnostics)
-				LogUtils.LogMessage($"  {diagnostic}", LogUtils.LogType.Warning);
+				LogUtils.Logger(typeof(ModAssetMounter)).LogWarning("  {Diagnostic}", diagnostic);
 		}
 	}
 }

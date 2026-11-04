@@ -48,11 +48,11 @@ internal static class TestAssets
 	public static byte[] OnePixelPng() => Convert.FromBase64String(OnePixelPngBase64);
 
 	public const string OnePixelAtlas = """
-	                                   [[Sprite]]
-	                                   id = "main"
-	                                   x = 0
-	                                   y = 0
-	                                   width = 1
-	                                   height = 1
-	                                   """;
+	                                    [[Sprite]]
+	                                    id = "main"
+	                                    x = 0
+	                                    y = 0
+	                                    width = 1
+	                                    height = 1
+	                                    """;
 }

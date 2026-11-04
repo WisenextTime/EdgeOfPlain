@@ -7,6 +7,7 @@ using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 using SFML.Graphics;
 
 namespace EdgeOfPlain.Client.Resource.Textures;
@@ -38,9 +39,8 @@ public static class TextureLoader
 
 			if (!images.TryGetValue(WithoutExtension(file), out var texturePath))
 			{
-				LogUtils.LogMessage(
-					$"Atlas '{file}' has no image with the same name in '{directory.Path}'.",
-					LogUtils.LogType.Warning);
+				LogUtils.Logger(typeof(TextureLoader))
+					.LogError("Atlas '{File}' has no image with the same name in '{DirectoryPath}'.", file, directory.Path);
 				continue;
 			}
 
@@ -50,7 +50,8 @@ public static class TextureLoader
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage($"Failed to load texture atlas '{file}': {e.Message}", LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(TextureLoader))
+					.LogError("Failed to load texture atlas '{File}': {EMessage}", file, e.Message);
 			}
 		}
 	}

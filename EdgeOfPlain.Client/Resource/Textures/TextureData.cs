@@ -26,7 +26,7 @@ public sealed class TextureData
 
 	public Vector2 Size => new(Source.Width, Source.Height);
 
-	public SFML.Graphics.Texture Texture => ClientAssetsManager.Get<Texture>(TexturePath);
+	public Texture Texture => ClientAssetsManager.Get<Texture>(TexturePath);
 
 	public static string MakeKey(string texturePath, string spriteId) => $"{texturePath}#{spriteId}";
 }

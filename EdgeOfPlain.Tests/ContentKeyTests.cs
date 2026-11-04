@@ -107,8 +107,8 @@ public sealed class ContentStoreResolutionTests : IDisposable
 	{
 		Arrange();
 
-		var exception = Assert.Throws<ContentResolutionException>(
-			() => ContentStore.Resolve<TerrainDef>("Ore", Referrer(new ModInfo("nobody", new Version(1, 0, 0)))));
+		var exception = Assert.Throws<ContentResolutionException>(()
+			=> ContentStore.Resolve<TerrainDef>("Ore", Referrer(new ModInfo("nobody", new Version(1, 0, 0)))));
 
 		Assert.Contains("not registered", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
@@ -187,8 +187,7 @@ public sealed class ContentStoreResolutionTests : IDisposable
 	{
 		ContentStore.Add(new TerrainDef("Ore") { SourceMod = _alpha });
 
-		Assert.Throws<InvalidOperationException>(
-			() => ContentStore.Add(new TerrainDef("Ore") { SourceMod = _alpha }));
+		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("Ore") { SourceMod = _alpha }));
 	}
 
 	[Fact]

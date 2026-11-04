@@ -10,6 +10,8 @@ using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
+using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Client;
 
@@ -29,6 +31,8 @@ public class Program : Launcher
 
 	private static void Main()
 	{
+		LogUtils.Logger<Program>().LogInformation("Edge of Plain starting.");
+
 		var launcher = new Program();
 		using var window = new GameWindow(1280, 720, "Edge of Plain");
 
@@ -46,6 +50,7 @@ public class Program : Launcher
 		finally
 		{
 			ClientAssetsManager.Dispose();
+			LogUtils.Logger<Program>().LogInformation("Edge of Plain exited.");
 		}
 	}
 

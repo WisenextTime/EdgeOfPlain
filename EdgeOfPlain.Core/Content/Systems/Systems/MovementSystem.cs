@@ -7,6 +7,7 @@ using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.MathLib;
 using FixedMathSharp;
+using EntityHandle = EdgeOfPlain.Core.Game.EntityHandle;
 
 namespace EdgeOfPlain.Core.Content.Systems.Frames;
 
@@ -57,7 +58,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 
 			var isLastWaypoint = path.Index == path.Waypoints.Count - 1;
 
-			if (distance <= _arriveRadius || (isLastWaypoint && avoidanceActive && distance <= _congestionArriveRadius))
+			if (distance <= _arriveRadius || isLastWaypoint && avoidanceActive && distance <= _congestionArriveRadius)
 			{
 				path.Index++;
 
@@ -83,10 +84,12 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			var targetSpeed = velocity.MaxVelocity;
 
 			if (avoidanceActive)
-				targetSpeed = FixedMath.Min(targetSpeed, velocity.MaxVelocity * (Fixed64.One - avoidanceStrength * (Fixed64)0.75));
+				targetSpeed = FixedMath.Min(targetSpeed,
+					velocity.MaxVelocity * (Fixed64.One - avoidanceStrength * (Fixed64)0.75));
 
 			if (isLastWaypoint)
-				targetSpeed = FixedMath.Min(targetSpeed, velocity.MaxVelocity * FixedMath.Clamp(distance / (Fixed64)120, (Fixed64)0.15, Fixed64.One));
+				targetSpeed = FixedMath.Min(targetSpeed,
+					velocity.MaxVelocity * FixedMath.Clamp(distance / (Fixed64)120, (Fixed64)0.15, Fixed64.One));
 
 			if (!avoidanceActive && velocity.AlignBeforeTurn && FixedMath.Abs(angleDiff) > _turnThreshold)
 			{

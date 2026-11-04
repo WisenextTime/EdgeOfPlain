@@ -9,7 +9,6 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
 using Xunit;
@@ -203,7 +202,10 @@ public sealed class MovementSystemTests : PathSystemTestBase
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
 		game.Step();
 
-		for (var i = 0; i < 4; i++) game.Step((Fixed64)0.1);
+		for (var i = 0; i < 4; i++)
+		{
+			game.Step((Fixed64)0.1);
+		}
 
 		game.Commands.Enqueue(new WaypointCommand(
 			new UnitGroup(handle),
@@ -258,10 +260,12 @@ public sealed class MovementSystemTests : PathSystemTestBase
 
 		for (var row = 0; row < cols; row++)
 		for (var col = 0; col < cols; col++)
+		{
 			game.Commands.Enqueue(new SpawnEntityCommand(
 				def,
 				new TransformComponent { Position = V(col * 32f + 16f, row * 32f + 16f) },
 				1));
+		}
 
 		game.Step();
 
@@ -277,7 +281,9 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		game.Step();
 
 		for (var i = 0; i < 900 && handles.Any(handle => game.Pathfinding.HasPath(handle)); i++)
+		{
 			game.Step((Fixed64)0.1);
+		}
 
 		Assert.All(handles, handle => Assert.False(game.Pathfinding.HasPath(handle)));
 	}

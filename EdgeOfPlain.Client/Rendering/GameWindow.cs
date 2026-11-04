@@ -20,13 +20,13 @@ public sealed class GameWindow : IGameWindow, IDisposable
 	public GameWindow(uint width, uint height, string title)
 	{
 		var contextSettings = new ContextSettings(
-			depthBits: 24,
-			stencilBits: 8,
-			antialiasingLevel: 0,
-			majorVersion: 3,
-			minorVersion: 3,
-			attributes: ContextSettings.Attribute.Default,
-			sRgbCapable: false);
+			24,
+			8,
+			0,
+			3,
+			3,
+			ContextSettings.Attribute.Default,
+			false);
 
 		_window = new RenderWindow(
 			new VideoMode(new Vector2u(width, height)),

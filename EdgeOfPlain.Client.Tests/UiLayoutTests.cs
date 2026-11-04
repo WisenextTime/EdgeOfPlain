@@ -113,10 +113,10 @@ public sealed class UiLayoutTests
 
 		var inside = new Vector2(760f, 560f);
 
-		root.UpdatePointer(Pointer(inside, down: true, pressed: true, released: false));
+		root.UpdatePointer(Pointer(inside, true, true, false));
 		Assert.True(button.IsPressed);
 
-		root.UpdatePointer(Pointer(inside, down: false, pressed: false, released: true));
+		root.UpdatePointer(Pointer(inside, false, false, true));
 		Assert.False(button.IsPressed);
 
 		Assert.Equal(1, clicks);
@@ -132,8 +132,8 @@ public sealed class UiLayoutTests
 		root.Add(button);
 		root.Resize(new Vector2(800f, 600f));
 
-		root.UpdatePointer(Pointer(new Vector2(760f, 560f), down: true, pressed: true, released: false));
-		root.UpdatePointer(Pointer(new Vector2(10f, 10f), down: false, pressed: false, released: true));
+		root.UpdatePointer(Pointer(new Vector2(760f, 560f), true, true, false));
+		root.UpdatePointer(Pointer(new Vector2(10f, 10f), false, false, true));
 
 		Assert.Equal(0, clicks);
 		Assert.False(button.IsPressed);
@@ -147,11 +147,11 @@ public sealed class UiLayoutTests
 		root.Add(button);
 		root.Resize(new Vector2(800f, 600f));
 
-		root.UpdatePointer(Pointer(new Vector2(760f, 560f), down: false, pressed: false, released: false));
+		root.UpdatePointer(Pointer(new Vector2(760f, 560f), false, false, false));
 		Assert.True(button.IsHovered);
 		Assert.True(root.PointerOverUi);
 
-		root.UpdatePointer(Pointer(new Vector2(20f, 20f), down: false, pressed: false, released: false));
+		root.UpdatePointer(Pointer(new Vector2(20f, 20f), false, false, false));
 		Assert.False(button.IsHovered);
 		Assert.False(root.PointerOverUi);
 	}

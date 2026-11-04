@@ -109,10 +109,10 @@ public sealed class MathLibTests
 	[Fact]
 	public void MoveTowardRejectsNegativeDelta()
 	{
-		Assert.Throws<ArgumentOutOfRangeException>(
-			() => Vector2d.Zero.MoveToward(new Vector2d((Fixed64)1, (Fixed64)1), (Fixed64)(-1)));
-		Assert.Throws<ArgumentOutOfRangeException>(
-			() => AngleExtension.MoveTowardsAngle(Fixed64.Zero, (Fixed64)1, (Fixed64)(-1)));
+		Assert.Throws<ArgumentOutOfRangeException>(()
+			=> Vector2d.Zero.MoveToward(new Vector2d((Fixed64)1, (Fixed64)1), (Fixed64)(-1)));
+		Assert.Throws<ArgumentOutOfRangeException>(()
+			=> AngleExtension.MoveTowardsAngle(Fixed64.Zero, (Fixed64)1, (Fixed64)(-1)));
 	}
 
 	[Fact]

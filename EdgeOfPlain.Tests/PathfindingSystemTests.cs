@@ -4,7 +4,6 @@ using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using Xunit;
 

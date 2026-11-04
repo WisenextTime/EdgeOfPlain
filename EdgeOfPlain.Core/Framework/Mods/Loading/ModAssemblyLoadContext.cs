@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -41,8 +42,8 @@ internal sealed class ModAssemblyLoadContext : AssemblyLoadContext
 		foreach (var path in _resolvers.Select(resolver => resolver.ResolveAssemblyToPath(assemblyName)).OfType<string>())
 		{
 			if (File.Exists(path)) return LoadFromAssemblyPath(path);
-			LogUtils.LogMessage(
-				$"Dependency manifest of mod '{Name}' points to a missing file: {path}", LogUtils.LogType.Warning);
+			LogUtils.Logger<ModAssemblyLoadContext>()
+				.LogError("Dependency manifest of mod '{Name}' points to a missing file: {Path}", Name, path);
 		}
 
 		var sibling = Path.Combine(_directory, name + ".dll");

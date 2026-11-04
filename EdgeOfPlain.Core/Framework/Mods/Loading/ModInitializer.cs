@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -16,13 +17,18 @@ internal static class ModInitializer
 			var missingDependency = FindMissingDependency(mod, loaded);
 			if (missingDependency is not null)
 			{
-				LogUtils.LogMessage(
-					$"Mod '{mod.ModInfo.Id}' will not be loaded: it depends on '{missingDependency}', which was not loaded.",
-					LogUtils.LogType.Warning);
+				LogUtils.Logger(typeof(ModInitializer)).LogWarning(
+					"Mod '{ModInfoId}' will not be loaded: it depends on '{MissingDependency}', which was not loaded.",
+					mod.ModInfo.Id, missingDependency);
 				continue;
 			}
 
-			if (TryInitialize(mod)) loaded.Add(mod);
+			if (TryInitialize(mod))
+			{
+				LogUtils.Logger(typeof(ModInitializer)).LogInformation(
+					"Mod '{ModInfoId}' initialized.", mod.ModInfo.Id);
+				loaded.Add(mod);
+			}
 		}
 
 		return loaded.AsReadOnly();
@@ -42,7 +48,8 @@ internal static class ModInitializer
 		}
 		catch(Exception e)
 		{
-			LogUtils.LogMessage($"Mod '{mod.ModInfo.Id}' failed to load: {e.Message}", LogUtils.LogType.Error);
+			LogUtils.Logger(typeof(ModInitializer))
+				.LogError("Mod '{ModInfoId}' failed to load: {EMessage}", mod.ModInfo.Id, e.Message);
 			foreach (var registerType in registerTypes) ContentTypeRegistry.TryUnRegisterType(registerType);
 			context.Return();
 			return false;

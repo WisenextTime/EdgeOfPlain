@@ -4,12 +4,10 @@ using Arch.Core;
 using EdgeOfPlain.Core.Content;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems;
-using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
-using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
-using EdgeOfPlain.Core.Game.Systems;
+using LiteNetLib.Utils;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -20,18 +18,14 @@ public sealed class CommandRegistryTests : IDisposable
 	private readonly struct PingCommand(int value) : ICommand
 	{
 		public readonly int Value = value;
+		public void Serialize(NetDataWriter writer) { }
+
+		public void Deserialize(NetDataReader reader) { }
 	}
 
 	private sealed class PingApplier(List<int> sink) : ICommandApplier<PingCommand>
 	{
 		public void Apply(World world, in PingCommand command) => sink.Add(command.Value);
-	}
-
-	private sealed class CountingQueue : IQueueSystem
-	{
-		public int Calls;
-
-		public void Operation(QueueWorld world) => Calls++;
 	}
 
 	private sealed class TestMod : Mod
@@ -91,23 +85,6 @@ public sealed class CommandRegistryTests : IDisposable
 
 		Assert.True(CommandRegistry.IsSealed);
 		Assert.Throws<InvalidOperationException>(() => context.AddApplier(new PingApplier([])));
-		Assert.Throws<InvalidOperationException>(() => context.AddQueue(new CountingQueue()));
-	}
-
-	[Fact]
-	public void GameWorldRunsQueuesRegisteredByMods()
-	{
-		var queue = new CountingQueue();
-		using var context = new ModContext(new TestMod());
-		context.AddQueue(queue);
-
-		using var game = new GameWorld(GameMap.Build(new Map(2, 2)));
-
-		game.RunQueues();
-		game.Step();
-		game.Step();
-
-		Assert.Equal(3, queue.Calls);
 	}
 
 	[Fact]
@@ -115,15 +92,12 @@ public sealed class CommandRegistryTests : IDisposable
 	{
 		var context = new ModContext(new TestMod());
 		context.AddApplier(new PingApplier([]));
-		context.AddQueue(new CountingQueue());
 
 		Assert.Equal(1, CommandRegistry.ApplierCount);
-		Assert.Equal(1, CommandRegistry.QueueCount);
 
 		context.Return();
 
 		Assert.Equal(0, CommandRegistry.ApplierCount);
-		Assert.Equal(0, CommandRegistry.QueueCount);
 		Assert.Null(CommandRegistry.FindApplier(typeof(PingCommand)));
 	}
 
@@ -138,7 +112,6 @@ public sealed class CommandRegistryTests : IDisposable
 		mod.InitMod(context);
 
 		Assert.Equal(3, CommandRegistry.ApplierCount);
-		Assert.Single(CommandRegistry.Queues);
 		Assert.NotNull(CommandRegistry.FindApplier(typeof(SpawnEntityCommand)));
 		Assert.NotNull(CommandRegistry.FindApplier(typeof(DeleteEntityCommand)));
 	}
@@ -148,13 +121,11 @@ public sealed class CommandRegistryTests : IDisposable
 	{
 		using var context = new ModContext(new TestMod());
 		context.AddApplier(new PingApplier([]));
-		context.AddQueue(new CountingQueue());
 		CommandRegistry.Seal();
 
 		CommandRegistry.Reset();
 
 		Assert.False(CommandRegistry.IsSealed);
 		Assert.Equal(0, CommandRegistry.ApplierCount);
-		Assert.Equal(0, CommandRegistry.QueueCount);
 	}
 }

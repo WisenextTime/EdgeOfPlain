@@ -2,7 +2,6 @@ using System;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems.Applier;
 using EdgeOfPlain.Core.Content.Systems.Frames;
-using EdgeOfPlain.Core.Content.Systems.Queues;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game.Components;
@@ -30,14 +29,14 @@ public class Base : Mod
 		context.AddComponent(MoveTypeComponent.CreateComponent);
 		context.AddComponent(VelocityComponent.CreateComponent, ComponentScope<UnitDef>.ForDefType());
 
-		context.AddQueue(new DeathQueueSystem());
+		context.AddQueue(new EntityDeathQueueSystem());
 
 		context.AddApplier(new SpawnEntityApplier());
 		context.AddApplier(new DeleteEntityApplier());
 		var pathfinding = new PathfindingSystem();
 		context.AddApplier(pathfinding);
-		
-		context.AddFrameSystem(new PreviousTransformSystem());
+
+		context.AddFrameSystem(new PreviousTransformFrameSystem());
 		var movement = new MovementSystem(pathfinding);
 		context.AddFrameSystem(movement);
 	}

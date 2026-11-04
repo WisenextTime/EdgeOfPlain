@@ -2,9 +2,9 @@
 
 //VERT
 
-layout(location = 0) in vec2 position;
-layout(location = 1) in vec4 color;
-layout(location = 8) in vec2 texCoord;
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec4 color;
+layout (location = 8) in vec2 texCoord;
 
 uniform vec2 u_cameraPosition;
 uniform vec2 u_cameraSize;
@@ -42,6 +42,6 @@ void main()
     vec2 tileSize = vec2(fwidth(v_texCoord.x), fwidth(v_texCoord.y)) * 32.0 * u_zoom;
     vec2 halfTexel = 0.5 / vec2(textureSize(u_texture, 0));
     vec2 local = clamp(v_texCoord - v_tileOrigin, halfTexel,
-        max(tileSize - halfTexel, halfTexel));
+                       max(tileSize - halfTexel, halfTexel));
     fragColor = texture(u_texture, v_tileOrigin + local);
 }

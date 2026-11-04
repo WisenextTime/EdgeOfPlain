@@ -61,7 +61,8 @@ public sealed class ContentStoreTests : IDisposable
 	{
 		ContentStore.Add(new TerrainDef("store-dup") { SourceMod = TestMods.Base });
 
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-dup") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(()
+			=> ContentStore.Add(new TerrainDef("store-dup") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]
@@ -73,7 +74,8 @@ public sealed class ContentStoreTests : IDisposable
 
 		Assert.Null(ContentStore.Get("store-remove"));
 		Assert.False(ContentStore.TryRemove(new TerrainDef("store-remove") { SourceMod = TestMods.Base }));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-remove") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(()
+			=> ContentStore.Remove(new TerrainDef("store-remove") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]
@@ -97,9 +99,12 @@ public sealed class ContentStoreTests : IDisposable
 		Assert.True(ContentStore.IsSealed);
 		Assert.Equal(1, ContentStore.Count);
 		Assert.NotNull(ContentStore.Get("store-sealed"));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Add(new TerrainDef("store-late") { SourceMod = TestMods.Base }));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.Remove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
-		Assert.Throws<InvalidOperationException>(() => ContentStore.TryRemove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(()
+			=> ContentStore.Add(new TerrainDef("store-late") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(()
+			=> ContentStore.Remove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
+		Assert.Throws<InvalidOperationException>(()
+			=> ContentStore.TryRemove(new TerrainDef("store-sealed") { SourceMod = TestMods.Base }));
 	}
 
 	[Fact]

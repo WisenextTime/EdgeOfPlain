@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Definitions;
+using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
@@ -36,7 +37,8 @@ public class ModContext : IDisposable
 	public void AddComponent<T>(Func<EntityDef, T> factory) where T : unmanaged
 		=> AddComponent(factory, ComponentScope<EntityDef>.All);
 
-	public void AddComponent<TDef, T>(Func<TDef, T> factory, ComponentScope<TDef> scope) where TDef : EntityDef where T : unmanaged
+	public void AddComponent<TDef, T>(Func<TDef, T> factory, ComponentScope<TDef> scope)
+		where TDef : EntityDef where T : unmanaged
 	{
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
 		ArgumentNullException.ThrowIfNull(factory);

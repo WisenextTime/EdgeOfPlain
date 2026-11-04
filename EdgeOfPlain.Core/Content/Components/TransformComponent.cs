@@ -11,12 +11,9 @@ public struct TransformComponent
 	public Vector2d PreviousPosition;
 	public Fixed64 PreviousRotation;
 
-	public static TransformComponent CreateComponent(EntityDef def)
+	public static TransformComponent CreateComponent(EntityDef def) => new()
 	{
-		return new TransformComponent
-		{
-			Position = Vector2d.Zero,
-			Rotation = Fixed64.Zero,
-		};
-	}
+		Position = Vector2d.Zero,
+		Rotation = Fixed64.Zero,
+	};
 }

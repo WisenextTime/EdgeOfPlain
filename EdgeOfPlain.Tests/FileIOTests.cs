@@ -49,7 +49,8 @@ public sealed class FileIOTests
 
 		Assert.Throws<ArgumentException>(() => FileIO.RegisterFileSystem(scope.Head, new MemoryFileSystem()));
 		Assert.Throws<ArgumentNullException>(() => FileIO.RegisterFileSystem(null!, new MemoryFileSystem()));
-		Assert.Throws<ArgumentNullException>(() => FileIO.RegisterFileSystem(HeadScope.UniqueHead("eop-null-"), (FileSystem)null!));
+		Assert.Throws<ArgumentNullException>(()
+			=> FileIO.RegisterFileSystem(HeadScope.UniqueHead("eop-null-"), (FileSystem)null!));
 		Assert.Throws<ArgumentNullException>(()
 			=> FileIO.RegisterFileSystem(HeadScope.UniqueHead("eop-fn-"), (Func<FileSystem>)null!));
 

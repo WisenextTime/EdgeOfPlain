@@ -2,10 +2,10 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Definitions;
+using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 
 namespace EdgeOfPlain.Core.Content.Systems.Applier;
 

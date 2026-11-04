@@ -1,6 +1,7 @@
 using System;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Client.Resource;
 
@@ -21,7 +22,8 @@ public static class ClientAssetLoader
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage($"Failed to load client asset '{file}': {e.Message}", LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ClientAssetLoader))
+					.LogError("Failed to load client asset '{File}': {EMessage}", file, e.Message);
 			}
 		}
 	}

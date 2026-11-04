@@ -10,7 +10,6 @@ using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
-using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
 using Xunit;
 
@@ -52,7 +51,7 @@ public abstract class PathSystemTestBase : IDisposable
 		CommandRegistry.RegisterFrameSystem(Movement);
 	}
 
-	protected static UnitDef FastUnit(string id) => new UnitDef(id)
+	protected static UnitDef FastUnit(string id) => new(id)
 	{
 		MaxHealth = 10,
 		MaxVelocity = (Fixed64)60,
@@ -65,7 +64,9 @@ public abstract class PathSystemTestBase : IDisposable
 	protected static void StepUntilArrived(GameWorld game, EntityHandle handle, int maxSteps = 300)
 	{
 		for (var i = 0; i < maxSteps && game.Pathfinding.HasPath(handle); i++)
+		{
 			game.Step((Fixed64)0.1);
+		}
 	}
 
 	protected static Entity SingleEntity(GameWorld game)

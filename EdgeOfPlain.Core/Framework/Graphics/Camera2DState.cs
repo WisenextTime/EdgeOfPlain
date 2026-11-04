@@ -20,6 +20,7 @@ public sealed class Camera2DState(Camera2D current)
 		Previous = Current;
 		Current = next;
 	}
+
 	public void Set(Camera2D value)
 	{
 		Previous = value;

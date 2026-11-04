@@ -249,7 +249,7 @@ public sealed class GameMap
 			return [];
 
 		var chunks = new List<MapChunk>(
-			((width + chunkSize - 1) / chunkSize) * ((height + chunkSize - 1) / chunkSize));
+			(width + chunkSize - 1) / chunkSize * ((height + chunkSize - 1) / chunkSize));
 
 		for (var tileY = 0; tileY < height; tileY += chunkSize)
 		{
@@ -297,7 +297,7 @@ public sealed class GameMap
 public readonly record struct MapChunk(int TileX, int TileY, int Columns, int Rows, RectangleF Bounds)
 {
 	public int TileCount => Columns * Rows;
-	public Vector2 Position => new Vector2(TileX, TileY);
+	public Vector2 Position => new(TileX, TileY);
 }
 
 public readonly record struct MapTile(

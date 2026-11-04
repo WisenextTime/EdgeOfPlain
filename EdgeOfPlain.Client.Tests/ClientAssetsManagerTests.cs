@@ -66,8 +66,8 @@ public sealed class ClientAssetsManagerTests : IDisposable
 	public void TryGetReportsWhetherAnAssetIsLoaded()
 	{
 		_root.Write("probe.txt", "hello");
-		AssetsManager.RegisterResourceOperator(new ResourceOperator<ProbeAsset>(
-			stream => new ProbeAsset(new StreamReader(stream).ReadToEnd())));
+		AssetsManager.RegisterResourceOperator(
+			new ResourceOperator<ProbeAsset>(stream => new ProbeAsset(new StreamReader(stream).ReadToEnd())));
 
 		Assert.False(ClientAssetsManager.TryGet<ProbeAsset>($"{Head}://probe.txt", out _));
 

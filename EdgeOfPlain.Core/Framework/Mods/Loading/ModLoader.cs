@@ -7,6 +7,7 @@ using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -36,7 +37,7 @@ public static class ModLoader
 		const string modRoot = $"{Launcher.ModHead}://";
 		if (!FileIO.DirectoryExists(modRoot))
 		{
-			LogUtils.LogMessage("Mod directory does not exist, no mod was loaded.", LogUtils.LogType.Warning);
+			LogUtils.Logger(typeof(ModLoader)).LogWarning("Mod directory does not exist, no mod was loaded.");
 			return;
 		}
 
@@ -54,9 +55,13 @@ public static class ModLoader
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage($"Failed to load mod package '{archive.Path}': {e.Message}", LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModLoader)).LogError("Failed to load mod package '{ArchivePath}': {EMessage}",
+					archive.Path, e.Message);
 			}
 		}
+
+		LogUtils.Logger(typeof(ModLoader)).LogInformation(
+			"Discovered {Count} mod package(s).", _packages.Count);
 	}
 
 	public static void Commit(ModFileSystem assets)
@@ -87,6 +92,11 @@ public static class ModLoader
 		ContentStore.Seal();
 		ComponentManager.Seal();
 		CommandRegistry.Seal();
+
+		LogUtils.Logger(typeof(ModLoader)).LogInformation(
+			"All mods finished loading: {Loaded} of {Registered} registered mods succeeded; load order: {Order}.",
+			LoadedMods.Count, ModRegistry.RegisteredMods.Count,
+			string.Join(" → ", order.Select(mod => mod.ModInfo.Id)));
 	}
 
 	private static void LoadPackage(string sourcePath)
@@ -105,6 +115,9 @@ public static class ModLoader
 			           ?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
 			RegisterMods(package, CreateEntryPoints(package), info);
 			_packages.Add(package);
+
+			LogUtils.Logger(typeof(ModLoader)).LogInformation(
+				"Mod package '{FileName}' loaded as '{ModId}'.", Path.GetFileName(zipPath), info.Id);
 		}
 		catch
 		{
@@ -151,9 +164,8 @@ public static class ModLoader
 	{
 		if (rejected.Count == 0) return;
 
-		LogUtils.LogMessage(
-			$"These mods will not be loaded because their assets could not be mounted: {string.Join(", ", rejected)}",
-			LogUtils.LogType.Error);
+		LogUtils.Logger(typeof(ModLoader)).LogError(
+			"These mods will not be loaded because their assets could not be mounted: {Join}", string.Join(", ", rejected));
 
 		foreach (var package in _packages.Where(package => rejected.Contains(package.ModId)).ToArray())
 		{
@@ -177,9 +189,8 @@ public static class ModLoader
 
 			assets.RemoveOverrideLayers(package.ModId);
 			assets.UnregisterNamespace(package.ModId);
-			LogUtils.LogMessage(
-				$"Resources of mod '{package.ModId}' were dropped: the mod did not finish loading.",
-				LogUtils.LogType.Warning);
+			LogUtils.Logger(typeof(ModLoader)).LogWarning(
+				"Resources of mod '{PackageModId}' were dropped: the mod did not finish loading.", package.ModId);
 		}
 	}
 

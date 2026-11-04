@@ -1,6 +1,7 @@
 using System;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
+using LiteNetLib.Utils;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -10,11 +11,15 @@ public sealed class CommandBusTests
 	private struct TestCommand(int value) : ICommand
 	{
 		public int Value = value;
+		public void Serialize(NetDataWriter writer) { }
+		public void Deserialize(NetDataReader reader) { }
 	}
 
 	private readonly struct OtherCommand(int value) : ICommand
 	{
 		public readonly int Value = value;
+		public void Serialize(NetDataWriter writer) { }
+		public void Deserialize(NetDataReader reader) { }
 	}
 
 	[Fact]

@@ -116,7 +116,7 @@ public sealed class GameMapTests : IDisposable
 		Assert.True(gameMap.IsPassable(0, 0, PassageMask.Water));
 		Assert.False(gameMap.IsPassable(0, 0, PassageMask.Ground));
 		Assert.Equal(4, gameMap.GetMoveCost(0, 0, PassageMask.Water));
-	
+
 		Assert.False(gameMap.IsPassable(1, 0, PassageMask.Water));
 		Assert.Equal(0, gameMap.GetMoveCost(1, 0, PassageMask.Water));
 	}
@@ -235,7 +235,9 @@ public sealed class GameMapTests : IDisposable
 
 		for (var y = 0; y < map.Height; y++)
 		for (var x = 0; x < map.Width; x++)
+		{
 			map.Tiles[x, y] = 1;
+		}
 
 		var gameMap = GameMap.Build(map);
 		var localIds = new HashSet<int>();

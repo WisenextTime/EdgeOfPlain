@@ -34,8 +34,10 @@ public readonly record struct NineSlice(
 
 		Span<int> sourceX = [Source.Left, Source.Left + frame.SourceLeft, Source.Right - frame.SourceRight, Source.Right];
 		Span<int> sourceY = [Source.Top, Source.Top + frame.SourceTop, Source.Bottom - frame.SourceBottom, Source.Bottom];
-		Span<float> destX = [destination.Left, destination.Left + frame.DestLeft, destination.Right - frame.DestRight, destination.Right];
-		Span<float> destY = [destination.Top, destination.Top + frame.DestTop, destination.Bottom - frame.DestBottom, destination.Bottom];
+		Span<float> destX =
+			[destination.Left, destination.Left + frame.DestLeft, destination.Right - frame.DestRight, destination.Right];
+		Span<float> destY =
+			[destination.Top, destination.Top + frame.DestTop, destination.Bottom - frame.DestBottom, destination.Bottom];
 
 		var count = 0;
 
@@ -96,7 +98,8 @@ public readonly record struct NineSlice(
 		for (var row = 0; row < frame.RowCount; row++)
 		for (var column = 0; column < frame.ColumnCount; column++)
 		{
-			if (!frame.TrySegment(column, false, out var sourceX, out var sourceWidth, out var destX, out var destWidth)) continue;
+			if (!frame.TrySegment(column, false, out var sourceX, out var sourceWidth, out var destX,
+				    out var destWidth)) continue;
 			if (!frame.TrySegment(row, true, out var sourceY, out var sourceHeight, out var destY, out var destHeight)) continue;
 
 			parts[count++] = new NineSlicePart(
@@ -197,7 +200,8 @@ public readonly record struct NineSlice(
 
 		public int RowCount => 2 + MiddleRows;
 
-		public bool TrySegment(int index, bool vertical, out int sourceStart, out int sourceLength, out float destStart, out float destLength)
+		public bool TrySegment(int index, bool vertical, out int sourceStart, out int sourceLength, out float destStart,
+			out float destLength)
 		{
 			sourceStart = 0;
 			sourceLength = 0;

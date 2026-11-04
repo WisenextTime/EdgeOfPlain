@@ -5,7 +5,6 @@ using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
 
@@ -23,7 +22,7 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		var goal = pathfinding.Map.WorldToTile(ground.Position);
 
 		foreach (var handle in command.Units.Entities)
-			ComputePath(world, handle, (goal.X, goal.Y), fresh: true);
+			ComputePath(world, handle, (goal.X, goal.Y), true);
 	}
 
 	public void ComputePath(World world, EntityHandle handle)
@@ -32,7 +31,7 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		if (pathfinding is null || !pathfinding.HasPath(handle)) return;
 
 		var (x, y) = FlowField.Unpack(pathfinding.Paths[handle].TargetTile);
-		ComputePath(world, handle, (x, y), fresh: false);
+		ComputePath(world, handle, (x, y), false);
 	}
 
 	private void ComputePath(World world, EntityHandle handle, (int X, int Y) goalTile, bool fresh)
@@ -92,7 +91,7 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 			var directionA = current - previous;
 			var directionB = waypoint - current;
 
-			if (Vector2d.Dot(directionA, directionB) > ((Fixed64)0.999) * directionA.Magnitude * directionB.Magnitude)
+			if (Vector2d.Dot(directionA, directionB) > (Fixed64)0.999 * directionA.Magnitude * directionB.Magnitude)
 				result.RemoveAt(result.Count - 1);
 
 			result.Add(waypoint);

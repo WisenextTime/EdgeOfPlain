@@ -7,12 +7,9 @@ public struct HealthComponent
 	public int MaxHealth;
 	public int Health;
 
-	public static HealthComponent CreateComponent(EntityDef def)
+	public static HealthComponent CreateComponent(EntityDef def) => new()
 	{
-		return new HealthComponent
-		{
-			MaxHealth = def.MaxHealth,
-			Health = (int)(def.MaxHealth * def.InitHealth),
-		};
-	}
+		MaxHealth = def.MaxHealth,
+		Health = (int)(def.MaxHealth * def.InitHealth),
+	};
 }

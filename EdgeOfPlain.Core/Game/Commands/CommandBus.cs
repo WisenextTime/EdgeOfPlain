@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using LiteNetLib.Utils;
 
 namespace EdgeOfPlain.Core.Game.Commands;
 
-public interface ICommand { }
+public interface ICommand : INetSerializable
+{
+
+}
 
 public sealed class CommandBus
 {

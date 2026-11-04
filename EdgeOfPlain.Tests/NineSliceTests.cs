@@ -119,7 +119,7 @@ public sealed class NineSliceTests
 	{
 		var batch = new RecordingBatch();
 
-		var count = batch.DrawNineSlice("ui://panel", Slice(), new RectangleF(10, 20, 100, 60), layer: 7, color: new ColorF(1, 2, 3, 4));
+		var count = batch.DrawNineSlice("ui://panel", Slice(), new RectangleF(10, 20, 100, 60), 7, new ColorF(1, 2, 3, 4));
 
 		Assert.Equal(9, count);
 		Assert.Equal(9, batch.Draws.Count);

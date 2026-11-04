@@ -6,6 +6,7 @@ using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
@@ -47,6 +48,9 @@ public static class ModResourceLoader
 		ArgumentNullException.ThrowIfNull(mods);
 
 		foreach (var mod in mods) LoadMod(mod);
+
+		LogUtils.Logger(typeof(ModResourceLoader)).LogInformation(
+			"Resource loading finished: {ModCount} mod(s) processed.", mods.Count);
 	}
 
 	private static void LoadMod(Mod mod)
@@ -63,9 +67,9 @@ public static class ModResourceLoader
 				}
 				catch(Exception e)
 				{
-					LogUtils.LogMessage(
-						$"Failed to load resources in '{resourceDirectory.Path}': {e.Message}",
-						LogUtils.LogType.Error);
+					LogUtils.Logger(typeof(ModResourceLoader)).LogError(
+						"Failed to load resources in '{ResourceDirectoryPath}': {EMessage}",
+						resourceDirectory.Path, e.Message);
 				}
 			}
 		}
@@ -93,7 +97,7 @@ public static class ModResourceLoader
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage($"Failed to load '{file}': {e.Message}", LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModResourceLoader)).LogError("Failed to load '{File}': {EMessage}", file, e.Message);
 			}
 		}
 	}

@@ -2,8 +2,8 @@ using System;
 using Arch.Core;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
+using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;

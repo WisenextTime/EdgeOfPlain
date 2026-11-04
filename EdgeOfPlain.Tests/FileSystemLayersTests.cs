@@ -166,7 +166,8 @@ public sealed class SubFileSystemPathTests
 		Assert.Equal(
 			new[] { "a.png", "sub/b.png" },
 			sub.EnumerateFiles(string.Empty, "*", SearchOption.AllDirectories).OrderBy(file => file).ToArray());
-		Assert.DoesNotContain(sub.EnumerateFiles(string.Empty, "*", SearchOption.AllDirectories), file => file.StartsWith("other"));
+		Assert.DoesNotContain(sub.EnumerateFiles(string.Empty, "*", SearchOption.AllDirectories),
+			file => file.StartsWith("other"));
 	}
 
 	[Fact]

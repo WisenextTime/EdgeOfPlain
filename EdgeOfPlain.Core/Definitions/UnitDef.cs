@@ -15,5 +15,5 @@ public class UnitDef(string id) : EntityDef(id)
 	[TomlConverter(typeof(Fixed64Converter))]
 	public Fixed64 RotationalVelocity { get; set; } = (Fixed64)5;
 	public bool AlignBeforeTurn { get; set; }
-	
+
 }

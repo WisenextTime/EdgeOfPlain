@@ -2,7 +2,6 @@ using System;
 using Arch.Core;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
 
 namespace EdgeOfPlain.Core.Game;
@@ -10,6 +9,7 @@ namespace EdgeOfPlain.Core.Game;
 public class GameWorld : IDisposable
 {
 	private readonly World _world = World.Create();
+
 
 	public GameWorld(GameMap map)
 	{
@@ -27,9 +27,8 @@ public class GameWorld : IDisposable
 	public CommandDispatcher Dispatcher { get; }
 
 	public WorldPathfinding Pathfinding => WorldPathfinding.TryGet(_world)
-		?? throw new InvalidOperationException("World pathfinding is not registered for this world.");
-
-	public QueueWorld QueueView() => new(_world, Commands);
+	                                       ?? throw new InvalidOperationException(
+		                                       "World pathfinding is not registered for this world.");
 
 	public int RunFrameSystems(Fixed64 delta)
 	{
@@ -41,17 +40,6 @@ public class GameWorld : IDisposable
 		return systems.Count;
 	}
 
-	public int RunQueues()
-	{
-		var queues = CommandRegistry.Queues;
-		if (queues.Count == 0) return 0;
-
-		var view = QueueView();
-		foreach (var queue in queues) queue.Operation(view);
-
-		return Commands.PendingCount;
-	}
-
 	public int ApplyCommands() => Dispatcher.ApplyAll(_world);
 
 	public int CollectEntities(in QueryDescription description, Span<EntityHandle> destination)
@@ -59,11 +47,14 @@ public class GameWorld : IDisposable
 		var count = _world.CountEntities(in description);
 		if (count == 0) return 0;
 
-		Span<Entity> entities = count <= 256 ? stackalloc Entity[count] : new Entity[count];
+		var entities = count <= 256 ? stackalloc Entity[count] : new Entity[count];
 		_world.GetEntities(in description, entities);
 
 		var copy = Math.Min(count, destination.Length);
-		for (var i = 0; i < copy; i++) destination[i] = new EntityHandle(entities[i]);
+		for (var i = 0; i < copy; i++)
+		{
+			destination[i] = new EntityHandle(entities[i]);
+		}
 
 		return count;
 	}
@@ -71,7 +62,6 @@ public class GameWorld : IDisposable
 	public int Step(Fixed64 delta)
 	{
 		RunFrameSystems(delta);
-		RunQueues();
 		return ApplyCommands();
 	}
 

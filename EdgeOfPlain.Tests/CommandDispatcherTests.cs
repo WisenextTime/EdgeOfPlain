@@ -1,13 +1,12 @@
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
-using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems.Applier;
-using EdgeOfPlain.Core.Content.Systems.Queues;
-using EdgeOfPlain.Core.Game;
+using EdgeOfPlain.Core.Content.Systems.Frames;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Systems;
+using LiteNetLib.Utils;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -17,11 +16,15 @@ public sealed class CommandDispatcherTests
 	private readonly struct DamageCommand(int value) : ICommand
 	{
 		public readonly int Value = value;
+		public void Serialize(NetDataWriter writer) { }
+		public void Deserialize(NetDataReader reader) { }
 	}
 
 	private readonly struct HealedCommand(int value) : ICommand
 	{
 		public readonly int Value = value;
+		public void Serialize(NetDataWriter writer) { }
+		public void Deserialize(NetDataReader reader) { }
 	}
 
 	private sealed class Recorder<TCommand>(List<TCommand> sink) : ICommandApplier<TCommand>
@@ -132,7 +135,7 @@ public sealed class CommandDispatcherTests
 		var dispatcher = new CommandDispatcher(bus);
 		dispatcher.Register(new DeleteEntityApplier());
 
-		new DeathQueueSystem().Operation(new QueueWorld(world, bus));
+		new EntityDeathQueueSystem().Operation(new QueueWorld(world, bus));
 
 		Assert.Equal(1, dispatcher.ApplyAll(world));
 		Assert.False(doomed.IsAlive());

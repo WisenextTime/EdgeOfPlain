@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using EdgeOfPlain.Core.Game.Systems;
 
 namespace EdgeOfPlain.Core.Game.PathFinding;
 

@@ -16,7 +16,7 @@ public sealed class Pcg32Tests
 		uint[] expected =
 		[
 			2707161783, 2068313097, 3122475824, 2211639955,
-			3215226955, 3421331566, 3217466285, 2167406445
+			3215226955, 3421331566, 3217466285, 2167406445,
 		];
 
 		foreach (var value in expected)
@@ -65,7 +65,9 @@ public sealed class Pcg32Tests
 		var values = new HashSet<int>();
 
 		for (var i = 0; i < 1000; i++)
+		{
 			values.Add(rng.Range(10, 20));
+		}
 
 		Assert.All(values, value => Assert.InRange(value, 10, 19));
 		Assert.True(values.Count > 1);
@@ -178,7 +180,9 @@ public sealed class Pcg32Tests
 		var rng = new Pcg32(13);
 
 		for (var i = 0; i < 1000; i++)
+		{
 			_ = rng.Gaussian();
+		}
 
 		Assert.Throws<ArgumentOutOfRangeException>(() => rng.Gaussian((Fixed64)0, (Fixed64)(-1)));
 	}

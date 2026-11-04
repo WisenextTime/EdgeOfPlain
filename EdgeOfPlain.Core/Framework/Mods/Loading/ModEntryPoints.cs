@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -35,9 +36,9 @@ internal static class ModEntryPoints
 			}
 			catch(Exception e)
 			{
-				LogUtils.LogMessage(
-					$"Mod '{modId}': failed to load assembly '{Path.GetFileName(assemblyPath)}': {e.Message}",
-					LogUtils.LogType.Error);
+				LogUtils.Logger(typeof(ModEntryPoints)).LogError(
+					"Mod '{ModId}': failed to load assembly '{GetFileName}': {EMessage}",
+					modId, Path.GetFileName(assemblyPath), e.Message);
 				continue;
 			}
 
@@ -52,9 +53,9 @@ internal static class ModEntryPoints
 				}
 				catch(Exception e)
 				{
-					LogUtils.LogMessage(
-						$"Mod '{modId}': failed to create entry point '{type.FullName}': {e.Message}",
-						LogUtils.LogType.Error);
+					LogUtils.Logger(typeof(ModEntryPoints)).LogError(
+						"Mod '{ModId}': failed to create entry point '{TypeFullName}': {EMessage}",
+						modId, type.FullName, e.Message);
 				}
 			}
 		}
@@ -105,9 +106,9 @@ internal static class ModEntryPoints
 		{
 			foreach (var loaderException in e.LoaderExceptions)
 				if (loaderException is not null)
-					LogUtils.LogMessage(
-						$"Mod '{modId}': type load error in '{assembly.GetName().Name}': {loaderException.Message}",
-						LogUtils.LogType.Error);
+					LogUtils.Logger(typeof(ModEntryPoints)).LogError(
+						"Mod '{ModId}': type load error in '{Name}': {LoaderExceptionMessage}",
+						modId, assembly.GetName().Name, loaderException.Message);
 
 			return e.Types.Where(type => type is not null)!;
 		}

@@ -13,14 +13,11 @@ public struct VelocityComponent
 
 	public bool AlignBeforeTurn;
 
-	public static VelocityComponent CreateComponent(UnitDef def)
+	public static VelocityComponent CreateComponent(UnitDef def) => new()
 	{
-		return new VelocityComponent
-		{
-			MaxVelocity = def.MaxVelocity,
-			Acceleration = def.Acceleration,
-			RotationalVelocity = def.RotationalVelocity,
-			AlignBeforeTurn = def.AlignBeforeTurn,
-		};
-	}
+		MaxVelocity = def.MaxVelocity,
+		Acceleration = def.Acceleration,
+		RotationalVelocity = def.RotationalVelocity,
+		AlignBeforeTurn = def.AlignBeforeTurn,
+	};
 }

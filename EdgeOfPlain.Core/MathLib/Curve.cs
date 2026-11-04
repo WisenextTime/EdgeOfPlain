@@ -27,7 +27,9 @@ public static class Curve
 		for (var level = 1; level < work.Length; level++)
 		{
 			for (var i = 0; i < work.Length - level; i++)
+			{
 				work[i] = Vector2d.Lerp(work[i], work[i + 1], t);
+			}
 		}
 
 		return work[0];
@@ -43,7 +45,9 @@ public static class Curve
 		var derivative = new Vector2d[degree];
 
 		for (var i = 0; i < degree; i++)
+		{
 			derivative[i] = (points[i + 1] - points[i]) * (Fixed64)degree;
+		}
 
 		return Bezier(t, derivative);
 	}

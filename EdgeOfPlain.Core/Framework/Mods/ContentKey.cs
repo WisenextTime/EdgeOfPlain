@@ -46,7 +46,7 @@ public readonly record struct ContentKey(string ModId, string Type, string Local
 	}
 
 	public override string ToString()
-		=>  $"{ModId}:{Type}/{LocalId}";
+		=> $"{ModId}:{Type}/{LocalId}";
 
 	public int CompareTo(ContentKey other) => string.CompareOrdinal(ToString(), other.ToString());
 }

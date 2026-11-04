@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Game.Commands;
 
@@ -59,7 +60,8 @@ public sealed class CommandDispatcher(CommandBus bus)
 				}
 				else
 				{
-					LogUtils.LogMessage($"no applier registered for command type '{type.FullName}'", LogUtils.LogType.Warning);
+					LogUtils.Logger<CommandDispatcher>()
+						.LogWarning("no applier registered for command type '{TypeFullName}'", type.FullName);
 					bus.ClearType(type);
 				}
 			}

@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using EdgeOfPlain.Core.Framework.IO;
+using EdgeOfPlain.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -32,7 +34,12 @@ public static class ModExtractor
 			throw new InvalidOperationException(
 				$"'{cacheRoot}' is not backed by a physical file system, so mod assemblies cannot be loaded from it.");
 
-		if (location.FileSystem.FileExists($"{target}/{CompleteMarker}")) return directory;
+		if (location.FileSystem.FileExists($"{target}/{CompleteMarker}"))
+		{
+			LogUtils.Logger(typeof(ModExtractor)).LogInformation(
+				"Reusing cached assemblies of mod '{ModId}' at '{Target}'.", package.ModId, target);
+			return directory;
+		}
 
 		foreach (var file in files)
 		{
@@ -42,10 +49,13 @@ public static class ModExtractor
 		}
 
 		location.FileSystem.WriteAllText($"{target}/{CompleteMarker}", stamp);
+
+		LogUtils.Logger(typeof(ModExtractor)).LogInformation(
+			"Extracted {FileCount} files of mod '{ModId}' to '{Target}'.", files.Length, package.ModId, target);
 		return directory;
 	}
 
-	private static bool ShouldExtract(string path) 
+	private static bool ShouldExtract(string path)
 		=> path.StartsWith("runtimes/", StringComparison.OrdinalIgnoreCase) ||
 		   path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
 		   path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase) ||
@@ -53,5 +63,5 @@ public static class ModExtractor
 		   path.EndsWith(".so", StringComparison.OrdinalIgnoreCase) ||
 		   path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase);
 
-	
+
 }

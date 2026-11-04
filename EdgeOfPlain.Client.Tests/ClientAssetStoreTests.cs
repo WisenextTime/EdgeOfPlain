@@ -6,8 +6,13 @@ namespace EdgeOfPlain.Client.Tests;
 
 public sealed class ClientAssetStoreTests
 {
-	private sealed class First { }
-	private sealed class Second { }
+	private sealed class First
+	{
+	}
+
+	private sealed class Second
+	{
+	}
 
 	[Fact]
 	public void SetAndTryGetKeepTypesSeparate()

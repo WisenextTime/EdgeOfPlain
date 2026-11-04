@@ -5,7 +5,6 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
-using EdgeOfPlain.Core.Game.Systems;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;

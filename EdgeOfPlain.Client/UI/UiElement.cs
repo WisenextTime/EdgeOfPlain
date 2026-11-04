@@ -110,7 +110,8 @@ public class UiElement
 		if (string.Equals(Name, name, StringComparison.Ordinal)) return this;
 
 		foreach (var child in _children)
-			if (child.Find(name) is { } found) return found;
+			if (child.Find(name) is { } found)
+				return found;
 
 		return null;
 	}
@@ -170,7 +171,9 @@ public class UiElement
 		if (!Visible) return false;
 
 		for (var index = _children.Count - 1; index >= 0; index--)
+		{
 			if (_children[index].Dispatch(pointer)) return true;
+		}
 
 		IsHovered = Enabled && Contains(pointer.Position);
 

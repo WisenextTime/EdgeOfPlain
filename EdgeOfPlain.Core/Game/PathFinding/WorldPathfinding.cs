@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using EdgeOfPlain.Core.Definitions.Worlds;
-using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
 using FixedMathSharp.Geometry;
 
