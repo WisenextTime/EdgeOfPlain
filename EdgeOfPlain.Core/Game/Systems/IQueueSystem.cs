@@ -28,6 +28,9 @@ public readonly struct QueueWorld
 	public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand =>
 		_bus.Enqueue(in command);
 
+	public bool TryGetId(in EntityHandle handle, out UnitId id) =>
+		UnitRegistry.GetOrCreate(_world).TryGet(handle.Value, out id);
+
 	public static bool IsAlive(in EntityHandle handle)
 	{
 		var entity = handle.Value;
@@ -76,6 +79,7 @@ public readonly struct QueueWorld
 		return count;
 	}
 }
+
 public delegate void QueryAction<T0>(in EntityHandle entity, in T0 c0) where T0 : struct;
 
 public delegate void QueryAction<T0, T1>(in EntityHandle entity, in T0 c0, in T1 c1)

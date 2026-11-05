@@ -33,6 +33,7 @@ public sealed class ModPipelineTests
 
 		Assert.Null(pipeline.Error);
 		Assert.True(pipeline.IsLoaded);
+		Assert.Matches("^[0-9A-F]{64}$", pipeline.Checksum);
 	}
 
 	[Fact]
@@ -203,6 +204,7 @@ public sealed class ModPipelineTests
 		return new Pipeline(
 			[.. ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id)],
 			ModLoader.IsLoaded,
+			Globals.ModChecksum,
 			error,
 			ContentStore.Get("libsand") is not null,
 			ContentStore.Get("appstone") is not null,
@@ -229,6 +231,7 @@ public sealed class ModPipelineTests
 	private sealed record Pipeline(
 		string[] LoadedIds,
 		bool IsLoaded,
+		string? Checksum,
 		Exception? Error,
 		bool HasLibSand,
 		bool HasAppStone,

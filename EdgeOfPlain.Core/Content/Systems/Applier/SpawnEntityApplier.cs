@@ -17,6 +17,7 @@ public sealed class SpawnEntityApplier : ICommandApplier<SpawnEntityCommand>
 		entity.Set(command.Transform);
 		entity.Set(new TeamComponent(command.Team));
 		entity.Set(MoveTypeComponent.CreateComponent(command.Definition));
+		UnitRegistry.GetOrCreate(world).Register(entity);
 
 		if (command.Definition is not BuildingDef building) return;
 

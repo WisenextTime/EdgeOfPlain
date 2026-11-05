@@ -1,8 +1,11 @@
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Numerics;
 using Arch.Core;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
+using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Definitions;
@@ -15,8 +18,12 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Game;
-using EdgeOfPlain.Core.Game.PathFinding;
+using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Waypoint;
+using EdgeOfPlain.Core.MathLib;
+using EdgeOfPlain.Core.Net;
+using EdgeOfPlain.Core.Net.Client;
+using EdgeOfPlain.Core.Net.Server;
 using FixedMathSharp;
 
 namespace EdgeOfPlain.Client.Scenes;
@@ -38,7 +45,15 @@ public sealed class TestMapScene : Scene
 	private SpriteBatch? _uiSprites;
 	private SpriteBatch? _unitSprites;
 	private UiRoot? _ui;
+	private GameCore? _core;
 	private GameWorld? _gameWorld;
+	private ServerNetNode? _server;
+	private ClientNetNode? _client;
+	private readonly NetworkCommandInput _pendingInput = new();
+	private long _simulationTick;
+	private bool _waitingFrame;
+	private Fixed64 _stepTimer;
+	private static readonly Fixed64 _stepDuration = GameLoop.DefaultFixedStep;
 	private UnitDef? _unitDef;
 	private string _unitTexture = "";
 	private EventSubscription _resizeSubscription;
@@ -51,18 +66,15 @@ public sealed class TestMapScene : Scene
 	public override void Enter(SceneContext context)
 	{
 		Map = AssetsManager.LoadResource<Map>(MapPath);
-		GameMap = GameMap.Build(Map);
-		_pipeline = new MapRenderPipeline(GameMap);
-
-		_gameWorld = new GameWorld(GameMap);
 		_unitDef = FindUnitDefinition();
 		_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture) ?? "";
-
-		var center = new Vector2(
-			GameMap.Bounds.Width / 2f,
-			GameMap.Bounds.Height / 2f);
-
-		GameContext.WorldCamera.Reset(new Camera2D(center));
+		if (Globals.ModChecksum is null || !CommandRegistry.IsSealed)
+			throw new InvalidOperationException("Mods and commands must be loaded before starting the local room.");
+		using var socket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+		var port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
+		socket.Close();
+		_server = new ServerNetNode(port, 1);
+		_client = new ClientNetNode("127.0.0.1", port);
 
 		_uiSprites = new SpriteBatch(GameContext.RenderTarget);
 		_unitSprites = new SpriteBatch(GameContext.RenderTarget);
@@ -94,11 +106,55 @@ public sealed class TestMapScene : Scene
 
 	public override void Update(LogicTime time, IInputState input)
 	{
-		_gameWorld?.Step(time.Delta);
+		if (_server is null || _client is null) return;
+		PollNetwork();
+
+		if (_server.Room.State == BattleRoomState.Lobby && _server.PlayerCount == 1 && _client.PlayerId is not null)
+			_server.StartMatch(Map);
+
+		if (_client.PendingMap is { } receivedMap && _gameWorld is null)
+		{
+			GameMap = GameMap.Build(receivedMap);
+			_pipeline = new MapRenderPipeline(GameMap);
+			_core = new GameCore();
+			_gameWorld = _core.CreateWorld(WorldKey.Primary, GameMap);
+			var center = new Vector2(GameMap.Bounds.Width / 2f, GameMap.Bounds.Height / 2f);
+			GameContext.WorldCamera.Reset(new Camera2D(center));
+			_client.MarkWorldReady(_gameWorld);
+		}
+
+		if (!_client.IsStarted || _gameWorld is null || _core is null) return;
+
+		if (_waitingFrame && _client.TryStepWorld(_simulationTick + 1, _core, time.Delta))
+		{
+			_simulationTick++;
+			_waitingFrame = false;
+			_stepTimer = Fixed64.Zero;
+		}
+
+		if (!_waitingFrame)
+		{
+			_client.Submit(_simulationTick + 1, _pendingInput);
+			_waitingFrame = true;
+
+			PollNetwork();
+
+			if (_client.TryStepWorld(_simulationTick + 1, _core, time.Delta))
+			{
+				_simulationTick++;
+				_waitingFrame = false;
+				_stepTimer = Fixed64.Zero;
+			}
+		}
 	}
 
 	public override void Draw(RenderTime time)
 	{
+		PollNetwork();
+
+		_stepTimer += time.FrameDelta;
+		var alpha = FixedMath.Clamp(_stepTimer / _stepDuration, Fixed64.Zero, Fixed64.One);
+
 		var camera = GameContext.WorldCamera.Evaluate((float)time.Alpha);
 		GameContext.Window.Camera = camera;
 
@@ -108,7 +164,7 @@ public sealed class TestMapScene : Scene
 			_pipeline.End();
 		}
 
-		DrawUnits(camera, time);
+		if (_gameWorld is not null) DrawUnits(camera, alpha);
 
 		if (_ui is null || _uiSprites is null) return;
 
@@ -133,8 +189,13 @@ public sealed class TestMapScene : Scene
 		_unitSprites?.Dispose();
 		_unitSprites = null;
 
-		_gameWorld?.Dispose();
 		_gameWorld = null;
+		_core?.Dispose();
+		_core = null;
+		_client?.Dispose();
+		_client = null;
+		_server?.Dispose();
+		_server = null;
 
 		_pipeline?.Dispose();
 		_pipeline = null;
@@ -160,7 +221,7 @@ public sealed class TestMapScene : Scene
 			PreviousRotation = rotation,
 		};
 
-		_gameWorld.Commands.Enqueue(new SpawnEntityCommand(_unitDef, transform, 0));
+		_pendingInput.Add(new SpawnEntityCommand(_unitDef, transform, 0) { World = _gameWorld.Key });
 	}
 
 	private void QueueDelete(IInputState input)
@@ -186,7 +247,8 @@ public sealed class TestMapScene : Scene
 
 		if (found)
 		{
-			_gameWorld.Commands.Enqueue(new DeleteEntityCommand(target));
+			if (_gameWorld.TryGetId(target, out var id))
+				_pendingInput.Add(new DeleteEntityCommand(id) { World = _gameWorld.Key });
 			return;
 		}
 
@@ -195,12 +257,21 @@ public sealed class TestMapScene : Scene
 
 		for (var i = 0; i < Math.Min(count, handles.Length); i++)
 		{
-			_gameWorld.Commands.Enqueue(new WaypointCommand(new UnitGroup(handles[i]), WaypointType.Move, WaypointAddType.Replace,
-				new GroundTarget(point)));
+			_pendingInput.Add(new WaypointCommand(_gameWorld.Select(handles[i]), WaypointType.Move,
+				WaypointAddType.Replace, new GroundTarget(point))
+			{
+				World = _gameWorld.Key,
+			});
 		}
 	}
 
-	private void DrawUnits(Camera2D camera, RenderTime time)
+	private void PollNetwork()
+	{
+		_server?.PollEvents();
+		_client?.PollEvents();
+	}
+
+	private void DrawUnits(Camera2D camera, Fixed64 alpha)
 	{
 		if (_unitSprites is null || _gameWorld is null || _unitTexture.Length == 0) return;
 
@@ -210,8 +281,8 @@ public sealed class TestMapScene : Scene
 		sprites.Begin(camera);
 		_gameWorld.World.Query(description, (ref EntityHandle handle, ref TransformComponent transform) =>
 		{
-			var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, time.Alpha);
-			var rotation = FixedMath.Lerp(transform.PreviousRotation, transform.Rotation, time.Alpha);
+			var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, alpha);
+			var rotation = AngleExtension.LerpAngle(transform.PreviousRotation, transform.Rotation, alpha);
 			sprites.Draw(
 				new RenderMetadata
 				{

@@ -11,8 +11,6 @@ public readonly struct EntityHandle : IEquatable<EntityHandle>, IComparable<Enti
 
 	public int Id => Value.Id;
 
-	public int Version => Value.Version;
-
 	public bool Equals(EntityHandle other) =>
 		Value.Id == other.Value.Id && Value.Version == other.Value.Version && Value.WorldId == other.Value.WorldId;
 

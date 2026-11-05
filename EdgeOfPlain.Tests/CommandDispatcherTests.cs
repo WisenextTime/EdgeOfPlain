@@ -4,6 +4,7 @@ using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Content.Systems.Applier;
 using EdgeOfPlain.Core.Content.Systems.Frames;
+using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Systems;
 using LiteNetLib.Utils;
@@ -128,8 +129,11 @@ public sealed class CommandDispatcherTests
 	public void EntityDiedApplierDestroysTheEntity()
 	{
 		using var world = World.Create();
+		var units = UnitRegistry.Create(world);
 		var doomed = world.Create(new HealthComponent { Health = 0 });
 		var survivor = world.Create(new HealthComponent { Health = 4 });
+		units.Register(doomed);
+		units.Register(survivor);
 
 		var bus = new CommandBus();
 		var dispatcher = new CommandDispatcher(bus);
