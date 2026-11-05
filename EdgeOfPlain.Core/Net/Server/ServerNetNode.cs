@@ -1,56 +1,79 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net;
 using EdgeOfPlain.Core.Definitions.Worlds;
+using EdgeOfPlain.Core.Game.Commands;
 using LiteNetLib;
 using LiteNetLib.Utils;
-using Tomlyn;
 
 namespace EdgeOfPlain.Core.Net.Server;
 
-public sealed class ServerNetNode : INetNode
+public sealed partial class ServerNetNode : INetNode
 {
 	private readonly EventBasedNetListener _listener;
 	private readonly NetManager _manager;
 	private readonly List<NetPeer> _players = [];
 	private readonly Dictionary<NetPeer, byte[]> _submissions = [];
 	private readonly HashSet<NetPeer> _ready = [];
-	private readonly HashSet<NetPeer> _rejected = [];
-	private readonly int _maxPlayers;
-	private long _nextTick = 1;
+	private readonly Dictionary<NetPeer, long> _pending = [];
+	private readonly NetworkOptions _options;
+	private long _phaseStarted;
 	private bool _isDisposed;
 
-	public ServerNetNode(int port, int maxPlayers = TurnProtocol.MaxPlayers, string? checksum = null)
+	public ServerNetNode(int port, int maxPlayers = BattleRoomOptions.DefaultMaxPlayers, string? checksum = null,
+		NetworkOptions? networkOptions = null)
+		: this(port, new BattleRoomOptions { MaxPlayers = maxPlayers }, checksum, networkOptions) { }
+
+	public ServerNetNode(int port, BattleRoomOptions roomOptions, string? checksum = null,
+		NetworkOptions? networkOptions = null)
 	{
-		if (maxPlayers is < 1 or > TurnProtocol.MaxPlayers)
-			throw new ArgumentOutOfRangeException(nameof(maxPlayers));
+		ArgumentOutOfRangeException.ThrowIfLessThan(port, IPEndPoint.MinPort);
+		ArgumentOutOfRangeException.ThrowIfGreaterThan(port, IPEndPoint.MaxPort);
+		ArgumentNullException.ThrowIfNull(roomOptions);
 
 		Room = new BattleRoom(checksum ?? Globals.ModChecksum
-			?? throw new InvalidOperationException("Load mods before creating a battle room."));
-		_maxPlayers = maxPlayers;
+			?? throw new InvalidOperationException("Load mods before creating a battle room."), roomOptions);
+		_options = networkOptions ?? NetworkOptions.Default;
 		_listener = new EventBasedNetListener();
 		_listener.ConnectionRequestEvent += request =>
 		{
-			if (Room.State != BattleRoomState.Lobby || _players.Count >= _maxPlayers) request.Reject();
-			else request.AcceptIfKey(TurnProtocol.ConnectionKey);
+			if (Room.State != BattleRoomState.Lobby)
+				request.Reject(TurnProtocol.Reject(ConnectionRejection.RoomNotJoinable));
+			else if (_players.Count + _pending.Count >= Room.Options.MaxPlayers ||
+			         _pending.Count >= (_options.MaxPendingConnections ?? Room.Options.MaxPlayers))
+				request.Reject(TurnProtocol.Reject(ConnectionRejection.RoomFull));
+			else if (request.AcceptIfKey(TurnProtocol.ConnectionKey) is { } peer)
+				_pending.TryAdd(peer, _options.TimeProvider.GetTimestamp());
 		};
 		_listener.PeerConnectedEvent += OnConnected;
 		_listener.PeerDisconnectedEvent += OnDisconnected;
 		_listener.NetworkReceiveEvent += OnReceive;
-		_manager = new NetManager(_listener);
-		if (!_manager.Start(port)) throw new InvalidOperationException($"Cannot listen on UDP port {port}.");
+		_manager = _options.CreateManager(_listener);
+		try
+		{
+			if (!_manager.Start(port)) throw new InvalidOperationException($"Cannot listen on UDP port {port}.");
+		}
+		catch
+		{
+			_manager.Stop();
+			throw;
+		}
 	}
 
 	public BattleRoom Room { get; }
+	public int LocalPort => _manager.LocalPort;
 	public int PlayerCount => _players.Count;
+	public int PendingConnectionCount => _pending.Count;
 	public bool IsStarted => Room.State == BattleRoomState.Running;
-	public long NextTick => _nextTick;
+	public long NextTick { get; private set; } = TurnProtocol.FirstTick;
 
 	public void PollEvents()
 	{
 		ThrowIfDisposed();
 		_manager.PollEvents();
+		CheckTimeouts();
+		PollSynchronization();
 	}
 
 	public void StartMatch(Map map)
@@ -59,61 +82,55 @@ public sealed class ServerNetNode : INetNode
 		if (Room.State != BattleRoomState.Lobby || _players.Count == 0)
 			throw new InvalidOperationException("The room cannot start.");
 
-		var bytes = Encoding.UTF8.GetBytes(TomlSerializer.Serialize(map));
-		if (bytes.Length > TurnProtocol.MaxMapBytes) throw new ArgumentOutOfRangeException(nameof(map), "Map is too large.");
+		var writer = TurnProtocol.Map(map, Room.Options);
 		Room.State = BattleRoomState.Loading;
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Map);
-		writer.Put(bytes.Length);
-		writer.Put(bytes);
-		foreach (var player in _players) player.Send(writer, DeliveryMethod.ReliableOrdered);
+		_phaseStarted = _options.TimeProvider.GetTimestamp();
+		Broadcast(writer);
 	}
 
 	private void OnConnected(NetPeer peer)
 	{
-		if (Room.State != BattleRoomState.Lobby || _players.Count >= _maxPlayers)
-		{
-			peer.Disconnect();
-		}
+		if (Room.State != BattleRoomState.Lobby) Reject(peer, ConnectionRejection.RoomNotJoinable);
+		else if (_players.Count >= Room.Options.MaxPlayers) Reject(peer, ConnectionRejection.RoomFull);
 	}
 
 	private void OnDisconnected(NetPeer peer, DisconnectInfo info)
 	{
-		_rejected.Remove(peer);
-		if (!_players.Remove(peer)) return;
-		_submissions.Clear();
-		_ready.Clear();
-
-		// Assigned player IDs cannot change while clients remain connected.
-		_manager.DisconnectAll();
-		_players.Clear();
-		_nextTick = 1;
-		Room.Reset();
+		_pending.Remove(peer);
+		if (!_players.Contains(peer)) return;
+		CloseRoom(ConnectionRejection.RoomClosed, new InvalidOperationException("A player disconnected."));
 	}
 
 	private void OnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod)
 	{
 		try
 		{
-			if (reader.AvailableBytes < 1 || _rejected.Contains(peer)) return;
-			switch (reader.GetByte())
+			if (peer.ConnectionState != ConnectionState.Connected) return;
+			TurnProtocol.Require(channel == TurnProtocol.Channel && deliveryMethod == TurnProtocol.Delivery);
+			TurnProtocol.Require(reader.AvailableBytes >= sizeof(byte));
+			var message = (TurnMessage)reader.GetByte();
+			switch (message)
 			{
-				case TurnProtocol.Join:
+				case TurnMessage.Join:
 					ReceiveJoin(peer, reader);
 					break;
-				case TurnProtocol.Ready when Room.State == BattleRoomState.Loading && _players.Contains(peer) &&
-				                             reader.AvailableBytes == 0:
+				case TurnMessage.Ready when Room.State == BattleRoomState.Loading && _players.Contains(peer):
+					TurnProtocol.RequireEnd(reader);
 					_ready.Add(peer);
 					if (_ready.Count == _players.Count) BeginTurns();
 					break;
-				case TurnProtocol.Submit when IsStarted && _players.Contains(peer):
+				case TurnMessage.Submit when (IsStarted || Room.State == BattleRoomState.Synchronizing) && _players.Contains(peer):
 					ReceiveSubmission(peer, reader);
+					break;
+				default:
+					if (!ReceiveSynchronization(peer, message, reader))
+						Reject(peer, ConnectionRejection.InvalidPacket);
 					break;
 			}
 		}
-		catch(Exception exception) when(exception is IndexOutOfRangeException or ArgumentException or InvalidOperationException)
+		catch(Exception exception) when(TurnProtocol.IsPacketException(exception))
 		{
-			if (!_players.Contains(peer)) Reject(peer, "Invalid join packet");
+			Reject(peer, ConnectionRejection.InvalidPacket);
 		}
 		finally
 		{
@@ -123,106 +140,134 @@ public sealed class ServerNetNode : INetNode
 
 	private void ReceiveJoin(NetPeer peer, NetPacketReader reader)
 	{
-		if (Room.State != BattleRoomState.Lobby || _players.Contains(peer) || reader.AvailableBytes > 256) return;
-		var checksum = reader.GetString();
-		var name = reader.GetString();
-		if (reader.AvailableBytes != 0 || checksum != Room.ModChecksum ||
-		    string.IsNullOrWhiteSpace(name) || name.Length > 32 ||
+		if (Room.State != BattleRoomState.Lobby)
+		{
+			Reject(peer, ConnectionRejection.RoomNotJoinable);
+			return;
+		}
+		TurnProtocol.Require(!_players.Contains(peer));
+		var (checksum, name) = TurnProtocol.ReadJoin(reader, Room.Options);
+		if (checksum != Room.ModChecksum ||
+		    !BattleRoomOptions.IsValidPlayerName(name, Room.Options.MaxPlayerNameLength) ||
 		    Room.Players.Any(player => string.Equals(player.Name, name, StringComparison.Ordinal)))
 		{
-			Reject(peer, checksum != Room.ModChecksum ? "Mod checksum mismatch" : "Invalid or duplicate player name");
+			Reject(peer, checksum != Room.ModChecksum
+				? ConnectionRejection.ModChecksumMismatch : ConnectionRejection.InvalidPlayerName);
 			return;
 		}
 
-		if (_players.Count >= _maxPlayers)
+		if (_players.Count >= Room.Options.MaxPlayers)
 		{
-			Reject(peer, "Room is full");
+			Reject(peer, ConnectionRejection.RoomFull);
 			return;
 		}
 
 		var id = _players.Count;
+		_pending.Remove(peer);
 		_players.Add(peer);
 		Room.AddPlayer(id, name);
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Welcome);
-		writer.Put(id);
-		peer.Send(writer, DeliveryMethod.ReliableOrdered);
-		BroadcastRoster();
+		Room.AdministratorId ??= id;
+		peer.Send(TurnProtocol.Welcome(id, Room.Options), TurnProtocol.Channel, TurnProtocol.Delivery);
+		Broadcast(TurnProtocol.Roster(Room.Players, Room.AdministratorId.Value));
 	}
 
-	private void Reject(NetPeer peer, string reason)
+	private void Reject(NetPeer peer, ConnectionRejection reason)
 	{
-		_rejected.Add(peer);
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Reject);
-		writer.Put(reason);
-		peer.Send(writer, DeliveryMethod.ReliableOrdered);
-	}
-
-	private void BroadcastRoster()
-	{
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Roster);
-		writer.Put(Room.Players.Count);
-		foreach (var player in Room.Players)
+		if (_players.Contains(peer)) CloseRoom(reason, new InvalidOperationException(reason.ToString()));
+		else
 		{
-			writer.Put(player.Id);
-			writer.Put(player.Name);
+			_pending.Remove(peer);
+			peer.Disconnect(TurnProtocol.Reject(reason));
 		}
-		foreach (var peer in _players) peer.Send(writer, DeliveryMethod.ReliableOrdered);
+	}
+
+	public void SetAdministrator(int playerId)
+	{
+		ThrowIfDisposed();
+		if (Room.State != BattleRoomState.Lobby) throw new InvalidOperationException("Change the administrator in the lobby.");
+		ArgumentOutOfRangeException.ThrowIfNegative(playerId);
+		ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(playerId, _players.Count);
+		Room.AdministratorId = playerId;
+		Broadcast(TurnProtocol.Roster(Room.Players, playerId));
+	}
+
+	private void CloseRoom(ConnectionRejection reason, Exception failure)
+	{
+		EndSynchronization(failure);
+		foreach (var peer in _players) peer.Disconnect(TurnProtocol.Reject(reason));
+		foreach (var peer in _pending.Keys) peer.Disconnect(TurnProtocol.Reject(reason));
+		_pending.Clear();
+		_players.Clear();
+		_submissions.Clear();
+		_ready.Clear();
+		NextTick = TurnProtocol.FirstTick;
+		Room.Reset();
+	}
+
+	private void CheckTimeouts()
+	{
+		foreach (var (peer, since) in _pending.ToArray())
+			if (_options.TimeProvider.GetElapsedTime(since) >= _options.JoinTimeout)
+				Reject(peer, ConnectionRejection.JoinTimeout);
+		if (Room.State == BattleRoomState.Loading &&
+		    _options.TimeProvider.GetElapsedTime(_phaseStarted) >= _options.LoadingTimeout)
+			CloseRoom(ConnectionRejection.LoadingTimeout, new TimeoutException("World loading timed out."));
+		else if (IsStarted && _options.TimeProvider.GetElapsedTime(_phaseStarted) >= _options.TurnTimeout)
+			CloseRoom(ConnectionRejection.TurnTimeout, new TimeoutException("Command submission timed out."));
+	}
+
+	private void Broadcast(NetDataWriter writer)
+	{
+		foreach (var peer in _players) peer.Send(writer, TurnProtocol.Channel, TurnProtocol.Delivery);
 	}
 
 	private void BeginTurns()
 	{
 		Room.State = BattleRoomState.Running;
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Start);
-		writer.Put(_players.Count);
-		foreach (var player in _players) player.Send(writer, DeliveryMethod.ReliableOrdered);
+		_phaseStarted = _options.TimeProvider.GetTimestamp();
+		Broadcast(TurnProtocol.Start(_players.Count));
 	}
 
 	private void ReceiveSubmission(NetPeer peer, NetPacketReader reader)
 	{
-		if (reader.AvailableBytes < sizeof(long) + sizeof(int)) return;
-		var tick = reader.GetLong();
-		var length = reader.GetInt();
-		if (tick != _nextTick || _submissions.ContainsKey(peer) || length < 0 ||
-		    length > TurnProtocol.MaxPayloadBytes || reader.AvailableBytes != length) return;
-
-		var payload = new byte[length];
-		reader.GetBytes(payload, 0, length);
+		var (tick, payload) = TurnProtocol.ReadSubmission(reader, Room.Options);
+		TurnProtocol.Require(tick == NextTick && !_submissions.ContainsKey(peer));
+		if (Room.State == BattleRoomState.Synchronizing) TurnProtocol.Require(CanReceivePausedSubmission(peer));
+		NetworkCommands.Validate(payload);
 		_submissions.Add(peer, payload);
-		if (_submissions.Count == _players.Count) BroadcastFrame();
+		if (IsStarted && _submissions.Count == _players.Count) BroadcastFrame();
 	}
 
 	private void BroadcastFrame()
 	{
-		var writer = new NetDataWriter();
-		writer.Put(TurnProtocol.Frame);
-		writer.Put(_nextTick);
-		writer.Put(_players.Count);
+		var commands = new PlayerCommands[_players.Count];
 		for (var i = 0; i < _players.Count; i++)
 		{
-			var payload = _submissions[_players[i]];
-			writer.Put(i);
-			writer.Put(payload.Length);
-			writer.Put(payload);
+			commands[i] = new PlayerCommands(i, _submissions[_players[i]]);
 		}
 
-		foreach (var player in _players) player.Send(writer, DeliveryMethod.ReliableOrdered);
+		Broadcast(TurnProtocol.Frame(new TurnFrame(NextTick, commands)));
 		_submissions.Clear();
-		_nextTick++;
+		NextTick++;
+		_phaseStarted = _options.TimeProvider.GetTimestamp();
 	}
 
 	public void Dispose()
 	{
 		if (_isDisposed) return;
 		_isDisposed = true;
+		EndSynchronization(new ObjectDisposedException(nameof(ServerNetNode)));
 		_manager.Stop();
+		_pending.Clear();
+		_players.Clear();
+		_submissions.Clear();
+		_ready.Clear();
+		NextTick = TurnProtocol.FirstTick;
+		Room.Reset();
 	}
 
 	private void ThrowIfDisposed()
 	{
-		if (_isDisposed) throw new InvalidOperationException("Server is already disposed.");
+		if (_isDisposed) throw new ObjectDisposedException(nameof(ServerNetNode));
 	}
 }

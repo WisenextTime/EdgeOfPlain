@@ -18,7 +18,6 @@ public sealed class GameLoop
 	private Fixed64 _lastSeconds;
 	private Fixed64 _accumulator;
 	private long _tick;
-	private int _pendingSteps;
 	private Fixed64 _frameDelta;
 
 	public GameLoop(ITimeSource time) : this(time, DefaultFixedStep) { }
@@ -42,7 +41,7 @@ public sealed class GameLoop
 
 	public long Tick => _tick;
 
-	public int PendingSteps => _pendingSteps;
+	public int PendingSteps { get; private set; }
 
 	public Fixed64 TotalSeconds => (Fixed64)_tick * FixedStep;
 
@@ -69,18 +68,18 @@ public sealed class GameLoop
 			_accumulator = (Fixed64)steps * FixedStep;
 		}
 
-		_pendingSteps = steps;
+		PendingSteps = steps;
 	}
 
 	public bool TryStep(out LogicTime time)
 	{
-		if (_pendingSteps <= 0)
+		if (PendingSteps <= 0)
 		{
 			time = default;
 			return false;
 		}
 
-		_pendingSteps--;
+		PendingSteps--;
 		_accumulator -= FixedStep;
 		_tick++;
 

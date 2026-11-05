@@ -25,7 +25,6 @@ public static class ComponentManager
 
 	private sealed record EntityBlueprint(Signature Signature, Action<Entity, EntityDef>[] Appliers);
 
-	private static bool _isSealed;
 	private static readonly List<PendingComponent> _pending = [];
 
 	private static ComponentType[] _baseTypes = [];
@@ -33,13 +32,13 @@ public static class ComponentManager
 	private static List<ScopedGroup> _groups = [];
 	private static readonly Dictionary<Type, EntityBlueprint> _blueprints = [];
 
-	public static bool IsSealed => _isSealed;
+	public static bool IsSealed { get; private set; }
 
 	internal static int PendingCount => _pending.Count;
 
 	private static void ThrowIfSealed()
 	{
-		if (_isSealed) throw new InvalidOperationException("Component registry is already sealed.");
+		if (IsSealed) throw new InvalidOperationException("Component registry is already sealed.");
 	}
 
 	internal static void StageComponent<T>(Func<EntityDef, T> factory, string owner) where T : unmanaged
@@ -78,7 +77,7 @@ public static class ComponentManager
 
 	internal static bool TryUnstageComponent(Type componentType)
 	{
-		if (_isSealed) return false;
+		if (IsSealed) return false;
 
 		for (var i = 0; i < _pending.Count; i++)
 		{
@@ -93,7 +92,7 @@ public static class ComponentManager
 
 	public static void Seal()
 	{
-		if (_isSealed) return;
+		if (IsSealed) return;
 
 		var baseTypes = new List<ComponentType>(_pending.Count);
 		var baseAppliers = new List<Action<Entity, EntityDef>>(_pending.Count);
@@ -140,12 +139,12 @@ public static class ComponentManager
 		_groups = groups;
 
 		_pending.Clear();
-		_isSealed = true;
+		IsSealed = true;
 	}
 
 	public static Entity CreateEntity(World world, EntityDef def)
 	{
-		if (!_isSealed) throw new InvalidOperationException("Component registry is not sealed yet.");
+		if (!IsSealed) throw new InvalidOperationException("Component registry is not sealed yet.");
 
 		var defType = def.GetType();
 
@@ -183,7 +182,7 @@ public static class ComponentManager
 
 	internal static void Reset()
 	{
-		_isSealed = false;
+		IsSealed = false;
 		_pending.Clear();
 		_baseTypes = [];
 		_baseAppliers = [];

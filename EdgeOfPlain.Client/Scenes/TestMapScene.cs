@@ -1,7 +1,8 @@
 using System;
 using System.Net;
-using System.Net.Sockets;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using Arch.Core;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
@@ -63,6 +64,9 @@ public sealed class TestMapScene : Scene
 
 	public GameMap? GameMap { get; private set; }
 
+	public Task SynchronizeAsync(CancellationToken cancellationToken = default)
+		=> (_server ?? throw new InvalidOperationException("The scene has no room.")).SynchronizeAsync(cancellationToken);
+
 	public override void Enter(SceneContext context)
 	{
 		Map = AssetsManager.LoadResource<Map>(MapPath);
@@ -70,11 +74,9 @@ public sealed class TestMapScene : Scene
 		_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture) ?? "";
 		if (Globals.ModChecksum is null || !CommandRegistry.IsSealed)
 			throw new InvalidOperationException("Mods and commands must be loaded before starting the local room.");
-		using var socket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-		var port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
-		socket.Close();
-		_server = new ServerNetNode(port, 1);
-		_client = new ClientNetNode("127.0.0.1", port);
+		_server = new ServerNetNode(0, new BattleRoomOptions { MaxPlayers = 1 });
+		_client = new ClientNetNode(IPAddress.Loopback.ToString(), _server.LocalPort);
+		_client.Synchronized += OnSynchronized;
 
 		_uiSprites = new SpriteBatch(GameContext.RenderTarget);
 		_unitSprites = new SpriteBatch(GameContext.RenderTarget);
@@ -94,7 +96,7 @@ public sealed class TestMapScene : Scene
 	{
 		_ui?.Update(input);
 
-		if (_gameWorld is null) return false;
+		if (_gameWorld is null || _client is not { IsStarted: true }) return false;
 
 		var overUi = _ui?.PointerOverUi ?? false;
 
@@ -109,7 +111,8 @@ public sealed class TestMapScene : Scene
 		if (_server is null || _client is null) return;
 		PollNetwork();
 
-		if (_server.Room.State == BattleRoomState.Lobby && _server.PlayerCount == 1 && _client.PlayerId is not null)
+		if (_server.Room.State == BattleRoomState.Lobby &&
+		    _server.PlayerCount == _server.Room.Options.MaxPlayers && _client.PlayerId is not null)
 			_server.StartMatch(Map);
 
 		if (_client.PendingMap is { } receivedMap && _gameWorld is null)
@@ -118,6 +121,7 @@ public sealed class TestMapScene : Scene
 			_pipeline = new MapRenderPipeline(GameMap);
 			_core = new GameCore();
 			_gameWorld = _core.CreateWorld(WorldKey.Primary, GameMap);
+			_client.BindGameCore(_core, time.Delta);
 			var center = new Vector2(GameMap.Bounds.Width / 2f, GameMap.Bounds.Height / 2f);
 			GameContext.WorldCamera.Reset(new Camera2D(center));
 			_client.MarkWorldReady(_gameWorld);
@@ -255,20 +259,31 @@ public sealed class TestMapScene : Scene
 		var handles = new EntityHandle[MaxUnitsPerOrder];
 		var count = _gameWorld.CollectEntities(description, handles);
 
-		for (var i = 0; i < Math.Min(count, handles.Length); i++)
+		var selected = Math.Min(count, handles.Length);
+		if (selected == 0) return;
+		_pendingInput.Add(new WaypointCommand(_gameWorld.Select(handles.AsSpan(0, selected).ToArray()),
+			WaypointType.Move, WaypointAddType.Replace, new GroundTarget(point))
 		{
-			_pendingInput.Add(new WaypointCommand(_gameWorld.Select(handles[i]), WaypointType.Move,
-				WaypointAddType.Replace, new GroundTarget(point))
-			{
-				World = _gameWorld.Key,
-			});
-		}
+			World = _gameWorld.Key,
+		});
 	}
 
 	private void PollNetwork()
 	{
 		_server?.PollEvents();
 		_client?.PollEvents();
+	}
+
+	private void OnSynchronized()
+	{
+		_gameWorld = _core!.PrimaryWorld;
+		GameMap = _gameWorld!.Map;
+		Map = GameMap.Export();
+		_pipeline?.Dispose();
+		_pipeline = new MapRenderPipeline(GameMap);
+		_simulationTick = _client!.AppliedTick;
+		_waitingFrame = _client.HasPendingSubmission;
+		_stepTimer = Fixed64.Zero;
 	}
 
 	private void DrawUnits(Camera2D camera, Fixed64 alpha)

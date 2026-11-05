@@ -22,16 +22,13 @@ public sealed class InputState : IInputState
 	private readonly Lock _gate = new();
 	private readonly Queue<InputEvent> _pending = new();
 
-	private Vector2 _position;
-	private Vector2 _delta;
-	private float _scroll;
 	private bool _hasPointer;
 
-	public Vector2 MousePosition => _position;
+	public Vector2 MousePosition { get; private set; }
 
-	public Vector2 MouseDelta => _delta;
+	public Vector2 MouseDelta { get; private set; }
 
-	public float ScrollDelta => _scroll;
+	public float ScrollDelta { get; private set; }
 
 	public void BeginFrame()
 	{
@@ -40,8 +37,8 @@ public sealed class InputState : IInputState
 		Array.Clear(_buttonPressed);
 		Array.Clear(_buttonReleased);
 
-		_delta = Vector2.Zero;
-		_scroll = 0f;
+		MouseDelta = Vector2.Zero;
+		ScrollDelta = 0f;
 
 		ApplyPending();
 	}
@@ -156,7 +153,7 @@ public sealed class InputState : IInputState
 				break;
 
 			case InputEventKind.Scroll:
-				_scroll += inputEvent.X;
+				ScrollDelta += inputEvent.X;
 				break;
 
 			case InputEventKind.Reset:
@@ -213,9 +210,9 @@ public sealed class InputState : IInputState
 	{
 		var next = new Vector2(x, y);
 
-		if (_hasPointer) _delta += next - _position;
+		if (_hasPointer) MouseDelta += next - MousePosition;
 
-		_position = next;
+		MousePosition = next;
 		_hasPointer = true;
 	}
 
@@ -228,8 +225,8 @@ public sealed class InputState : IInputState
 		Array.Clear(_buttonPressed);
 		Array.Clear(_buttonReleased);
 
-		_delta = Vector2.Zero;
-		_scroll = 0f;
+		MouseDelta = Vector2.Zero;
+		ScrollDelta = 0f;
 		_hasPointer = false;
 	}
 

@@ -19,6 +19,7 @@ public sealed class GameMap
 	private readonly ushort[,] _tiles;
 	private readonly MapTileset[] _tilesets;
 	private readonly TileRendererDef[] _renderers;
+	private Version _mapVersion = Map.DefaultMapVersion;
 
 	private GameMap(
 		ushort[,] tiles,
@@ -56,7 +57,15 @@ public sealed class GameMap
 		ValidateTiles(tiles, tilesets);
 
 		var chunks = BuildChunks(tiles.GetLength(0), tiles.GetLength(1), chunkSize);
-		return new GameMap(tiles, tilesets, renderers, chunks, chunkSize);
+		return new GameMap(tiles, tilesets, renderers, chunks, chunkSize) { _mapVersion = map.MapVersion };
+	}
+
+	public Map Export()
+	{
+		var map = new Map(0, 0) { Tiles = (ushort[,])_tiles.Clone(), MapVersion = _mapVersion };
+		foreach (var tileset in _tilesets)
+			map.Tilesets.Add(new TileSetData { FirstGid = tileset.FirstGid, TileSet = tileset.Definition.FullId });
+		return map;
 	}
 
 	public bool IsInside(int tileX, int tileY)

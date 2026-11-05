@@ -13,6 +13,19 @@ public sealed class GameCore : IDisposable, ICommandSink
 	private WorldKey _primaryKey = WorldKey.Invalid;
 
 	public int Count => _worlds.Count;
+	public bool IsPaused { get; private set; }
+
+	public void Pause()
+	{
+		IsPaused = true;
+		foreach (var world in _worlds) world.IsPaused = true;
+	}
+
+	public void Resume()
+	{
+		foreach (var world in _worlds) world.IsPaused = false;
+		IsPaused = false;
+	}
 
 	public IReadOnlyList<GameWorld> Worlds => _worlds;
 
@@ -25,7 +38,7 @@ public sealed class GameCore : IDisposable, ICommandSink
 		if (!key.IsValid) throw new ArgumentOutOfRangeException(nameof(key), key, "World key must be positive.");
 		if (_byKey.ContainsKey(key)) throw new InvalidOperationException($"World '{key}' already exists.");
 
-		var world = new GameWorld(map, key);
+		var world = new GameWorld(map, key) { IsPaused = IsPaused };
 		_byKey.Add(key, world);
 		_worlds.Add(world);
 		if (!_primaryKey.IsValid) _primaryKey = key;
@@ -55,14 +68,48 @@ public sealed class GameCore : IDisposable, ICommandSink
 		else ResolvePrimary().Commands.Enqueue(in command);
 	}
 
+	internal void ValidateDestination(ICommand command)
+	{
+		if (command is IWorldScopedCommand { WorldKey.IsValid: true } scoped) GetWorld(scoped.WorldKey);
+		else ResolvePrimary();
+	}
+
 	public int Step(Fixed64 delta)
 	{
+		if (IsPaused) return 0;
 		var applied = 0;
 		foreach (var world in _worlds) applied += world.Step(delta);
 		return applied;
 	}
 
 	public int Step() => Step(Fixed64.Zero);
+
+	internal void ReplaceWorlds(IReadOnlyList<GameWorld> states, WorldKey primary)
+	{
+		var replacement = new List<GameWorld>(states.Count);
+		var retained = new HashSet<WorldKey>();
+		foreach (var state in states)
+		{
+			retained.Add(state.Key);
+			if (_byKey.TryGetValue(state.Key, out var existing))
+			{
+				existing.Adopt(state);
+				replacement.Add(existing);
+			}
+			else replacement.Add(state);
+		}
+		foreach (var world in _worlds)
+			if (!retained.Contains(world.Key)) world.Dispose();
+		_worlds.Clear();
+		_byKey.Clear();
+		foreach (var world in replacement)
+		{
+			world.IsPaused = IsPaused;
+			_worlds.Add(world);
+			_byKey.Add(world.Key, world);
+		}
+		_primaryKey = primary;
+	}
 
 	public void Dispose()
 	{

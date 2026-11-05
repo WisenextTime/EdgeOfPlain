@@ -8,8 +8,9 @@ namespace EdgeOfPlain.Core.Game;
 
 public class GameWorld : IDisposable
 {
-	private readonly World _world = World.Create();
-	private readonly UnitRegistry _units;
+	private World _world = World.Create();
+	private UnitRegistry _units;
+	private bool _ownsWorld = true;
 
 	public GameWorld(GameMap map) : this(map, WorldKey.Primary)
 	{
@@ -28,7 +29,8 @@ public class GameWorld : IDisposable
 
 	public WorldKey Key { get; }
 
-	public GameMap Map { get; }
+	public GameMap Map { get; private set; }
+	public bool IsPaused { get; internal set; }
 
 	public World World => _world;
 
@@ -44,6 +46,7 @@ public class GameWorld : IDisposable
 
 	public int RunFrameSystems(Fixed64 delta)
 	{
+		if (IsPaused) return 0;
 		var systems = CommandRegistry.FrameSystems;
 		if (systems.Count == 0) return 0;
 
@@ -52,7 +55,7 @@ public class GameWorld : IDisposable
 		return systems.Count;
 	}
 
-	public int ApplyCommands() => Dispatcher.ApplyAll(_world);
+	public int ApplyCommands() => IsPaused ? 0 : Dispatcher.ApplyAll(_world);
 
 	public UnitId IdOf(EntityHandle handle) => _units.Register(handle.Value);
 
@@ -102,8 +105,21 @@ public class GameWorld : IDisposable
 
 	public int Step() => Step(Fixed64.Zero);
 
+	internal void Adopt(GameWorld state)
+	{
+		Dispose();
+		_world = state._world;
+		_units = state._units;
+		Map = state.Map;
+		Commands.Clear();
+		_ownsWorld = true;
+		state._ownsWorld = false;
+	}
+
 	public void Dispose()
 	{
+		if (!_ownsWorld) return;
+		_ownsWorld = false;
 		WorldPathfinding.Dispose(_world);
 		UnitRegistry.Dispose(_world);
 		_world.Dispose();

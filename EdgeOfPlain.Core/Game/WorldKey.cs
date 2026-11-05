@@ -7,31 +7,29 @@ public struct WorldKey(int value) : INetSerializable, IEquatable<WorldKey>, ICom
 {
 	public const int None = 0;
 
-	private int _value = value;
-
 	public static WorldKey Invalid => default;
 
 	public static WorldKey Primary => new(1);
 
-	public int Value => _value;
+	public int Value { get; private set; } = value;
 
-	public bool IsValid => _value > None;
+	public bool IsValid => Value > None;
 
-	public int CompareTo(WorldKey other) => _value.CompareTo(other._value);
+	public int CompareTo(WorldKey other) => Value.CompareTo(other.Value);
 
-	public bool Equals(WorldKey other) => _value == other._value;
+	public bool Equals(WorldKey other) => Value == other.Value;
 
 	public override bool Equals(object? obj) => obj is WorldKey other && Equals(other);
 
-	public override int GetHashCode() => _value;
+	public override int GetHashCode() => Value;
 
-	public static bool operator ==(WorldKey left, WorldKey right) => left._value == right._value;
+	public static bool operator ==(WorldKey left, WorldKey right) => left.Value == right.Value;
 
-	public static bool operator !=(WorldKey left, WorldKey right) => left._value != right._value;
+	public static bool operator !=(WorldKey left, WorldKey right) => left.Value != right.Value;
 
-	public void Serialize(NetDataWriter writer) => writer.Put(_value);
+	public void Serialize(NetDataWriter writer) => writer.Put(Value);
 
-	public void Deserialize(NetDataReader reader) => _value = reader.GetInt();
+	public void Deserialize(NetDataReader reader) => Value = reader.GetInt();
 
-	public override string ToString() => IsValid ? $"w{_value}" : "<none>";
+	public override string ToString() => IsValid ? $"w{Value}" : "<none>";
 }

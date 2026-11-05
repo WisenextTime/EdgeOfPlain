@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using Arch.Core;
 
 namespace EdgeOfPlain.Core.Game;
@@ -16,6 +17,19 @@ public sealed class UnitRegistry
 	}
 
 	public int Count => _entityById.Count;
+	internal int LastIssuedId => _nextId;
+
+	internal void Restore(IReadOnlyDictionary<UnitId, Entity> units, int lastIssuedId)
+	{
+		if (lastIssuedId < 0) throw new InvalidDataException("Invalid unit sequence.");
+		Clear();
+		foreach (var (id, entity) in units)
+		{
+			_entityById.Add(id, entity);
+			_idByEntity.Add(entity, id);
+		}
+		_nextId = lastIssuedId;
+	}
 
 	public static UnitRegistry Create(World world)
 	{

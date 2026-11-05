@@ -6,7 +6,6 @@ namespace EdgeOfPlain.Client.UI;
 
 public sealed class UiButton : UiElement
 {
-	private bool _pressed;
 
 	public string Text { get; set; } = string.Empty;
 
@@ -28,34 +27,34 @@ public sealed class UiButton : UiElement
 
 	public event Action<UiButton>? Clicked;
 
-	public bool IsPressed => _pressed;
+	public bool IsPressed { get; private set; }
 
-	protected override bool CapturesPointer => _pressed;
+	protected override bool CapturesPointer => IsPressed;
 
 	protected override bool OnPointer(in PointerInput pointer)
 	{
 		if (pointer.Pressed)
 		{
-			_pressed = true;
+			IsPressed = true;
 
 			return true;
 		}
 
-		if (pointer.Released && _pressed)
+		if (pointer.Released && IsPressed)
 		{
-			_pressed = false;
+			IsPressed = false;
 
 			if (IsHovered) Clicked?.Invoke(this);
 
 			return true;
 		}
 
-		return IsHovered || _pressed;
+		return IsHovered || IsPressed;
 	}
 
 	protected override void OnDraw(ISpriteBatch batch)
 	{
-		var fill = _pressed && IsHovered ? PressedFill : IsHovered ? HoverFill : Fill;
+		var fill = IsPressed && IsHovered ? PressedFill : IsHovered ? HoverFill : Fill;
 
 		DrawBackground(batch, fill);
 

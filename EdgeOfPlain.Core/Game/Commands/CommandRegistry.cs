@@ -68,9 +68,7 @@ public static class CommandRegistry
 	private static readonly Dictionary<Type, INetCommandEntry> _networkByType = [];
 	private static readonly List<INetCommandEntry> _networkById = [];
 
-	private static bool _isSealed;
-
-	public static bool IsSealed => _isSealed;
+	public static bool IsSealed { get; private set; }
 
 	public static int ApplierCount => _appliers.Count;
 
@@ -153,7 +151,7 @@ public static class CommandRegistry
 
 	public static void Seal()
 	{
-		if (_isSealed) return;
+		if (IsSealed) return;
 
 		_networkById.AddRange(_networkByType.Values);
 		_networkById.Sort(static (a, b) => string.Compare(a.Signature, b.Signature, StringComparison.Ordinal));
@@ -165,12 +163,12 @@ public static class CommandRegistry
 				throw new InvalidOperationException($"Duplicate network command signature '{_networkById[i].Signature}'.");
 			_networkById[i].Id = (ushort)i;
 		}
-		_isSealed = true;
+		IsSealed = true;
 	}
 
 	internal static INetCommandEntry FindNetwork(Type type)
 	{
-		if (!_isSealed) throw new InvalidOperationException("Command registry is not sealed.");
+		if (!IsSealed) throw new InvalidOperationException("Command registry is not sealed.");
 		return _networkByType.TryGetValue(type, out var entry)
 			? entry
 			: throw new InvalidOperationException($"Command '{type.FullName}' is not registered for networking.");
@@ -178,7 +176,7 @@ public static class CommandRegistry
 
 	internal static INetCommandEntry FindNetwork(ushort id)
 	{
-		if (!_isSealed || id >= _networkById.Count)
+		if (!IsSealed || id >= _networkById.Count)
 			throw new InvalidOperationException($"Unknown network command ID {id}.");
 		return _networkById[id];
 	}
@@ -191,11 +189,11 @@ public static class CommandRegistry
 		_frameSystems.Clear();
 		_networkByType.Clear();
 		_networkById.Clear();
-		_isSealed = false;
+		IsSealed = false;
 	}
 
 	private static void ThrowIfSealed()
 	{
-		if (_isSealed) throw new InvalidOperationException("Command registry is already sealed.");
+		if (IsSealed) throw new InvalidOperationException("Command registry is already sealed.");
 	}
 }

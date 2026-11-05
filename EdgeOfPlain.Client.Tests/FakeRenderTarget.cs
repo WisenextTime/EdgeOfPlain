@@ -6,21 +6,20 @@ namespace EdgeOfPlain.Client.Tests;
 
 internal sealed class FakeRenderTarget : IRenderTarget
 {
-	private View _view = new(new FloatRect(new Vector2f(0, 0), new Vector2f(1280, 720)));
 
 	public Vector2u Size { get; set; } = new(1280, 720);
 
 	public bool IsSrgb => false;
 
-	public View DefaultView => _view;
+	public View DefaultView { get; private set; } = new(new FloatRect(new Vector2f(0, 0), new Vector2f(1280, 720)));
 
 	public List<DrawBatch> VertexBatches { get; } = [];
 
 	public List<IDrawable> Drawables { get; } = [];
 
-	public View GetView() => _view;
+	public View GetView() => DefaultView;
 
-	public void SetView(View view) => _view = view;
+	public void SetView(View view) => DefaultView = view;
 
 	public IntRect GetViewport(View view)
 	{

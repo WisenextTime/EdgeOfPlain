@@ -9,6 +9,24 @@ public sealed class OccupancyGrid
 	private readonly Dictionary<EntityHandle, List<long>> _tilesByBuilding = [];
 
 	public int Version { get; private set; }
+	internal IReadOnlyDictionary<EntityHandle, List<long>> Buildings => _tilesByBuilding;
+
+	internal void Restore(IReadOnlyDictionary<EntityHandle, long[]> buildings, int version)
+	{
+		_buildingsByTile.Clear();
+		_tilesByBuilding.Clear();
+		foreach (var (building, tiles) in buildings)
+		{
+			_tilesByBuilding.Add(building, [.. tiles]);
+			foreach (var tile in tiles)
+			{
+				if (!_buildingsByTile.TryGetValue(tile, out var occupants))
+					_buildingsByTile.Add(tile, occupants = []);
+				if (!occupants.Contains(building)) occupants.Add(building);
+			}
+		}
+		Version = version;
+	}
 
 	public bool IsOccupied(int tileX, int tileY) => _buildingsByTile.ContainsKey(Key(tileX, tileY));
 

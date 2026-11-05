@@ -1,4 +1,5 @@
 using System;
+using EdgeOfPlain.Core.Net;
 
 namespace EdgeOfPlain.Core;
 
@@ -13,8 +14,9 @@ public static class Globals
 		get => _playerName;
 		set
 		{
-			if (string.IsNullOrWhiteSpace(value) || value.Length > 32)
-				throw new ArgumentException("Player name must be 1-32 characters.", nameof(value));
+			var maxLength = TurnProtocol.MaxStringCharacters;
+			if (!BattleRoomOptions.IsValidPlayerName(value, maxLength))
+				throw new ArgumentException($"Player name must be 1-{maxLength} characters.", nameof(value));
 			_playerName = value;
 		}
 	}
