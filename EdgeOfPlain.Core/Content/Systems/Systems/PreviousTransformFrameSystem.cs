@@ -1,6 +1,5 @@
 using Arch.Core;
 using EdgeOfPlain.Core.Content.Components;
-using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Systems;
 using FixedMathSharp;
 

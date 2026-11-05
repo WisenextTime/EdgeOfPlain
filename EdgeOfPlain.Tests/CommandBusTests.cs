@@ -1,5 +1,3 @@
-using System;
-using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using LiteNetLib.Utils;
 using Xunit;

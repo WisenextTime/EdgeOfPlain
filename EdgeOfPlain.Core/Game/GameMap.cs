@@ -8,7 +8,6 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Exceptions;
 using EdgeOfPlain.Core.Framework.Mods;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Game;
 

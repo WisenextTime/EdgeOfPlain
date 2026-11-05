@@ -8,7 +8,6 @@ using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
-using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Waypoint;
 using FixedMathSharp;
 using Xunit;
@@ -36,7 +35,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(goal)));
@@ -70,7 +69,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 
 		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(new EntityHandle(a)),
+			game.Select(new EntityHandle(a)),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(goal)));
@@ -118,7 +117,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
@@ -159,7 +158,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
@@ -196,7 +195,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
@@ -208,7 +207,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		}
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(16f, 7 * 32f + 16f))));
@@ -234,7 +233,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
@@ -274,7 +273,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		game.World.Query(description, (Entity entity, ref TransformComponent _) => handles.Add(new EntityHandle(entity)));
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handles.ToArray()),
+			game.Select(handles.ToArray()),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(goal)));
@@ -303,7 +302,7 @@ public sealed class MovementSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));

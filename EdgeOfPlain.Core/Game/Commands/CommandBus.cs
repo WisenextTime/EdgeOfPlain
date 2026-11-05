@@ -1,15 +1,21 @@
 using System;
 using System.Collections.Generic;
-using LiteNetLib.Utils;
 
 namespace EdgeOfPlain.Core.Game.Commands;
 
-public interface ICommand : INetSerializable
-{
+public interface ICommand;
 
+public interface ICommandSink
+{
+	void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand;
 }
 
-public sealed class CommandBus
+public interface IWorldScopedCommand
+{
+	WorldKey WorldKey { get; }
+}
+
+public sealed class CommandBus : ICommandSink
 {
 	private readonly Dictionary<Type, ICommandQueue> _byType = new();
 	private readonly List<ICommandQueue> _queues = [];

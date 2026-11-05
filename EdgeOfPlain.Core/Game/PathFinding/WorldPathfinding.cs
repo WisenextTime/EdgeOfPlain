@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Arch.Core;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 
 namespace EdgeOfPlain.Core.Game.PathFinding;
 

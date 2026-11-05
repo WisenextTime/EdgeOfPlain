@@ -28,7 +28,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 
 		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(goal)));
@@ -57,7 +57,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 
 		var goal = V(4 * 32f + 16f, 2 * 32f + 16f);
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(goal)));
@@ -83,7 +83,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 		var handle = new EntityHandle(entity);
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
@@ -92,7 +92,7 @@ public sealed class PathfindingSystemTests : PathSystemTestBase
 		var first = game.Pathfinding.Paths[handle];
 
 		game.Commands.Enqueue(new WaypointCommand(
-			new UnitGroup(handle),
+			game.Select(handle),
 			WaypointType.Move,
 			WaypointAddType.Replace,
 			new GroundTarget(V(16f, 7 * 32f + 16f))));

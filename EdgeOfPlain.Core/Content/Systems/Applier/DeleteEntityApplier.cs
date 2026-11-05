@@ -1,4 +1,5 @@
 using Arch.Core;
+using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.PathFinding;
 
@@ -8,11 +9,15 @@ public sealed class DeleteEntityApplier : ICommandApplier<DeleteEntityCommand>
 {
 	public void Apply(World world, in DeleteEntityCommand command)
 	{
-		var pathfinding = WorldPathfinding.TryGet(world);
-		pathfinding?.Occupancy.Remove(command.Target);
-		pathfinding?.ClearPath(command.Target);
+		var units = UnitRegistry.GetOrCreate(world);
+		if (!units.TryResolve(world, command.Target, out var entity)) return;
 
-		var entity = command.Target.Value;
-		if (world.IsAlive(entity)) world.Destroy(entity);
+		var handle = new EntityHandle(entity);
+		var pathfinding = WorldPathfinding.TryGet(world);
+		pathfinding?.Occupancy.Remove(handle);
+		pathfinding?.ClearPath(handle);
+
+		units.Unregister(entity);
+		world.Destroy(entity);
 	}
 }

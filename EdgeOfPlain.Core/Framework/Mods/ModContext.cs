@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Definitions;
-using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;

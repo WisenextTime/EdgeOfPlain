@@ -1,7 +1,5 @@
 using System;
-using System.Drawing;
 using System.Numerics;
-using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 
 namespace EdgeOfPlain.Client.UI;

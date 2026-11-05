@@ -1,4 +1,3 @@
-using Arch.Core;
 using FixedMathSharp;
 
 namespace EdgeOfPlain.Core.Game;

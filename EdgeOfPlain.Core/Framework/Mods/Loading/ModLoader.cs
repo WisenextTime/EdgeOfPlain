@@ -32,6 +32,7 @@ public static class ModLoader
 	public static void Discover()
 	{
 		if (_discoveryStarted) throw new InvalidOperationException("Mod discovery has already run.");
+		Globals.ModChecksum = null;
 		_discoveryStarted = true;
 
 		const string modRoot = $"{Launcher.ModHead}://";
@@ -68,6 +69,7 @@ public static class ModLoader
 	{
 		ArgumentNullException.ThrowIfNull(assets);
 		if (_committed) throw new InvalidOperationException("Mods have already been committed.");
+		Globals.ModChecksum = null;
 		_committed = true;
 
 		var rejected = ModAssetMounter.MountAll(assets, _packages);
@@ -77,6 +79,9 @@ public static class ModLoader
 
 		DropUnloadedAssetLayers(assets);
 		ModAssetMounter.Seal(assets);
+		var activePackages = _packages.Where(package => _discovered.Any(entry =>
+			ReferenceEquals(entry.Package, package) && LoadedMods.Contains(entry.Mod))).ToArray();
+		Globals.ModChecksum = ModChecksum.Compute(assets, LoadedMods, activePackages);
 	}
 
 	internal static void LoadRegistered()
@@ -92,6 +97,9 @@ public static class ModLoader
 		ContentStore.Seal();
 		ComponentManager.Seal();
 		CommandRegistry.Seal();
+		if (FileIO.TryResolve($"{Launcher.AssetsHead}://", out var location) &&
+		    location.FileSystem is ModFileSystem assets)
+			Globals.ModChecksum = ModChecksum.Compute(assets, LoadedMods, []);
 
 		LogUtils.Logger(typeof(ModLoader)).LogInformation(
 			"All mods finished loading: {Loaded} of {Registered} registered mods succeeded; load order: {Order}.",

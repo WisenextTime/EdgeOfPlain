@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using EdgeOfPlain.Core.Game.Systems;
+using LiteNetLib.Utils;
 
 namespace EdgeOfPlain.Core.Game.Commands;
 
@@ -32,12 +33,40 @@ internal sealed class CommandApplierEntry<TCommand>(ICommandApplier<TCommand> ap
 	}
 }
 
+internal interface INetCommandEntry
+{
+	Type CommandType { get; }
+	string Signature { get; }
+	ushort Id { get; set; }
+	void Write(NetDataWriter writer, ICommand command);
+	void Read(NetDataReader reader, ICommandSink sink);
+}
+
+internal sealed class NetCommandEntry<TCommand> : INetCommandEntry where TCommand : struct, ICommand
+{
+	public Type CommandType => typeof(TCommand);
+	public string Signature => $"{typeof(TCommand).Assembly.GetName().Name}:{typeof(TCommand).FullName}";
+	public ushort Id { get; set; }
+
+	public void Write(NetDataWriter writer, ICommand command)
+		=> ((INetSerializable)(TCommand)command).Serialize(writer);
+
+	public void Read(NetDataReader reader, ICommandSink sink)
+	{
+		INetSerializable command = (INetSerializable)(object)default(TCommand);
+		command.Deserialize(reader);
+		sink.Enqueue((TCommand)command);
+	}
+}
+
 public static class CommandRegistry
 {
 	private static readonly List<ICommandApplierEntry> _appliers = [];
 	private static readonly Dictionary<Type, ICommandApplierEntry> _applierByType = [];
 	private static readonly List<IQueueSystem> _queues = [];
 	private static readonly List<IFrameSystem> _frameSystems = [];
+	private static readonly Dictionary<Type, INetCommandEntry> _networkByType = [];
+	private static readonly List<INetCommandEntry> _networkById = [];
 
 	private static bool _isSealed;
 
@@ -48,6 +77,7 @@ public static class CommandRegistry
 	public static int QueueCount => _queues.Count;
 
 	public static int FrameSystemCount => _frameSystems.Count;
+	public static IReadOnlyList<string> NetworkSignatures => _networkById.ConvertAll(entry => entry.Signature);
 
 	internal static IReadOnlyList<ICommandApplierEntry> Appliers => _appliers;
 
@@ -69,6 +99,8 @@ public static class CommandRegistry
 		var entry = new CommandApplierEntry<TCommand>(applier);
 		_applierByType.Add(commandType, entry);
 		_appliers.Add(entry);
+		if (typeof(INetSerializable).IsAssignableFrom(commandType))
+			_networkByType.Add(commandType, new NetCommandEntry<TCommand>());
 	}
 
 	internal static bool TryUnregisterApplier(Type commandType)
@@ -78,6 +110,7 @@ public static class CommandRegistry
 		if (!_applierByType.Remove(commandType, out var entry)) return false;
 
 		_appliers.Remove(entry);
+		_networkByType.Remove(commandType);
 		return true;
 	}
 
@@ -122,7 +155,32 @@ public static class CommandRegistry
 	{
 		if (_isSealed) return;
 
+		_networkById.AddRange(_networkByType.Values);
+		_networkById.Sort(static (a, b) => string.Compare(a.Signature, b.Signature, StringComparison.Ordinal));
+		if (_networkById.Count > ushort.MaxValue)
+			throw new InvalidOperationException("Too many network command types.");
+		for (var i = 0; i < _networkById.Count; i++)
+		{
+			if (i > 0 && _networkById[i].Signature == _networkById[i - 1].Signature)
+				throw new InvalidOperationException($"Duplicate network command signature '{_networkById[i].Signature}'.");
+			_networkById[i].Id = (ushort)i;
+		}
 		_isSealed = true;
+	}
+
+	internal static INetCommandEntry FindNetwork(Type type)
+	{
+		if (!_isSealed) throw new InvalidOperationException("Command registry is not sealed.");
+		return _networkByType.TryGetValue(type, out var entry)
+			? entry
+			: throw new InvalidOperationException($"Command '{type.FullName}' is not registered for networking.");
+	}
+
+	internal static INetCommandEntry FindNetwork(ushort id)
+	{
+		if (!_isSealed || id >= _networkById.Count)
+			throw new InvalidOperationException($"Unknown network command ID {id}.");
+		return _networkById[id];
 	}
 
 	internal static void Reset()
@@ -131,6 +189,8 @@ public static class CommandRegistry
 		_applierByType.Clear();
 		_queues.Clear();
 		_frameSystems.Clear();
+		_networkByType.Clear();
+		_networkById.Clear();
 		_isSealed = false;
 	}
 

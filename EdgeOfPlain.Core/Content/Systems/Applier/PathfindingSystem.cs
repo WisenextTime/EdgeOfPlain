@@ -17,12 +17,35 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		var pathfinding = WorldPathfinding.TryGet(world);
 		if (pathfinding is null) return;
 
-		if (command.Target is not GroundTarget ground) return;
+		var units = UnitRegistry.GetOrCreate(world);
 
-		var goal = pathfinding.Map.WorldToTile(ground.Position);
+		switch (command.Target)
+		{
+			case GroundTarget ground:
+			{
+				var goal = pathfinding.Map.WorldToTile(ground.Position);
 
-		foreach (var handle in command.Units.Entities)
-			ComputePath(world, handle, (goal.X, goal.Y), true);
+				foreach (var id in command.Units.Units)
+				{
+					if (units.TryResolve(world, id, out var entity))
+						ComputePath(world, new EntityHandle(entity), (goal.X, goal.Y), true);
+				}
+
+				break;
+			}
+			case UnitTarget target when units.TryResolve(world, target.Unit, out var targetEntity):
+			{
+				var goal = pathfinding.Map.WorldToTile(targetEntity.Get<TransformComponent>().Position);
+
+				foreach (var id in command.Units.Units)
+				{
+					if (units.TryResolve(world, id, out var entity))
+						ComputePath(world, new EntityHandle(entity), (goal.X, goal.Y), true);
+				}
+
+				break;
+			}
+		}
 	}
 
 	public void ComputePath(World world, EntityHandle handle)

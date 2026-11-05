@@ -1,7 +1,6 @@
 using System;
 using EdgeOfPlain.Core.MathLib;
 using FixedMathSharp;
-using FixedMathSharp.Geometry;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
