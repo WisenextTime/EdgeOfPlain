@@ -55,9 +55,10 @@ public sealed class WorldPathfinding
 
 	public int Count => _paths.Count;
 
-	public (int X, int Y) ClampGoal((int X, int Y) goal, PassageMask mask)
+	public (int X, int Y) ClampGoal((int X, int Y) goal, PassageMask mask, int collisionRadius = 0, bool enableCollision = true)
 	{
-		if (Cost(goal.X, goal.Y, mask) > 0) return goal;
+		ArgumentOutOfRangeException.ThrowIfNegative(collisionRadius);
+		if (Cost(goal.X, goal.Y, mask, collisionRadius, enableCollision) > 0) return goal;
 
 		for (var radius = 1; radius <= Map.Width + Map.Height; radius++)
 		{
@@ -72,7 +73,7 @@ public sealed class WorldPathfinding
 				{
 					if ((uint)y >= (uint)Map.Height) continue;
 
-					if (Cost(x, y, mask) > 0) return (x, y);
+					if (Cost(x, y, mask, collisionRadius, enableCollision) > 0) return (x, y);
 				}
 			}
 		}
@@ -80,7 +81,35 @@ public sealed class WorldPathfinding
 		return goal;
 	}
 
-	public int Cost(int tileX, int tileY, PassageMask mask)
+	public int Cost(int tileX, int tileY, PassageMask mask) => Cost(tileX, tileY, mask, 0, true);
+
+	public int Cost(int tileX, int tileY, PassageMask mask, int radius, bool enableCollision)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegative(radius);
+		var centerCost = PointCost(tileX, tileY, mask, enableCollision);
+		if (centerCost == 0 || !enableCollision || radius == 0) return centerCost;
+		var centerX = (long)tileX * GameMap.TileSize + GameMap.TileSize / 2;
+		var centerY = (long)tileY * GameMap.TileSize + GameMap.TileSize / 2;
+		if (centerX < radius || centerY < radius || centerX + radius > (long)Map.Width * GameMap.TileSize ||
+		    centerY + radius > (long)Map.Height * GameMap.TileSize) return 0;
+
+		var minX = (int)((centerX - radius) / GameMap.TileSize);
+		var minY = (int)((centerY - radius) / GameMap.TileSize);
+		var maxX = (int)Math.Min(Map.Width - 1L, (centerX + radius) / GameMap.TileSize);
+		var maxY = (int)Math.Min(Map.Height - 1L, (centerY + radius) / GameMap.TileSize);
+		var squaredRadius = (long)radius * radius;
+		for (var y = minY; y <= maxY; y++)
+		for (var x = minX; x <= maxX; x++)
+		{
+			var dx = Math.Max(0, Math.Max((long)x * GameMap.TileSize - centerX, centerX - ((long)x + 1) * GameMap.TileSize));
+			var dy = Math.Max(0, Math.Max((long)y * GameMap.TileSize - centerY, centerY - ((long)y + 1) * GameMap.TileSize));
+			if (dx * dx + dy * dy >= squaredRadius) continue;
+			if (PointCost(x, y, mask, true) == 0) return 0;
+		}
+		return centerCost;
+	}
+
+	private int PointCost(int tileX, int tileY, PassageMask mask, bool enableCollision)
 	{
 		var best = 0;
 
@@ -90,7 +119,7 @@ public sealed class WorldPathfinding
 
 			var cost = Map.GetMoveCost(tileX, tileY, (PassageMask)bit);
 
-			if (Occupancy.IsOccupied(tileX, tileY) && (PassageMask)bit != PassageMask.Air)
+			if (enableCollision && Occupancy.IsOccupied(tileX, tileY) && (PassageMask)bit != PassageMask.Air)
 				cost = 0;
 
 			if (cost > 0)

@@ -21,7 +21,7 @@ public sealed class GameSnapshotTests
 		var world = source.CreateWorld(WorldKey.Primary, GameMap.Build(new Map(4, 4)));
 		var position = new Vector2d(Fixed64.FromRaw(123456789), Fixed64.FromRaw(-987654321));
 		var entity = world.World.Create(new TransformComponent { Position = position, Rotation = Fixed64.FromRaw(33) },
-			new VelocityComponent { Velocity = Fixed64.FromRaw(42), AlignBeforeTurn = true });
+			new VelocityComponent { Velocity = Fixed64.FromRaw(42), AlignBeforeTurn = true }, new CollisionComponent(false, 42));
 		var id = world.Units.Register(entity);
 		var deleted = world.World.Create(new SyncValue());
 		var removedId = world.Units.Register(deleted);
@@ -44,6 +44,8 @@ public sealed class GameSnapshotTests
 		Assert.Equal(position, retained.World.Get<TransformComponent>(restored.Value).Position);
 		Assert.Equal(Fixed64.FromRaw(42), retained.World.Get<VelocityComponent>(restored.Value).Velocity);
 		Assert.True(retained.World.Get<VelocityComponent>(restored.Value).AlignBeforeTurn);
+		Assert.False(retained.World.Get<CollisionComponent>(restored.Value).EnableCollision);
+		Assert.Equal(42, retained.World.Get<CollisionComponent>(restored.Value).Radius);
 		var path = retained.Pathfinding.Paths[restored];
 		Assert.Equal(1, path.Index);
 		Assert.Equal(2, path.RepathAttempts);

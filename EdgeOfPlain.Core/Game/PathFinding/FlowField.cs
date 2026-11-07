@@ -73,6 +73,16 @@ public sealed class FlowField
 
 	private void Compute(int goalX, int goalY, Func<int, int, PassageMask, int> cost)
 	{
+		if ((uint)goalX >= (uint)_width || (uint)goalY >= (uint)_height) return;
+		var costs = new int[_distance.Length];
+		Array.Fill(costs, -1);
+		int CostAt(int x, int y)
+		{
+			var index = Index(x, y);
+			if (costs[index] < 0) costs[index] = Math.Max(0, cost(x, y, Mask));
+			return costs[index];
+		}
+		if (CostAt(goalX, goalY) <= 0) return;
 		var start = Index(goalX, goalY);
 		_distance[start] = (Fixed64)0;
 
@@ -99,9 +109,9 @@ public sealed class FlowField
 
 				if (dx != 0 && dy != 0)
 				{
-					var destination = cost(nx, ny, Mask);
-					var sideA = cost(nx, y, Mask);
-					var sideB = cost(x, ny, Mask);
+					var destination = CostAt(nx, ny);
+					var sideA = CostAt(nx, y);
+					var sideB = CostAt(x, ny);
 
 					if (destination <= 0 || sideA <= 0 || sideB <= 0) continue;
 
@@ -109,7 +119,7 @@ public sealed class FlowField
 				}
 				else
 				{
-					moveCost = (Fixed64)cost(nx, ny, Mask);
+					moveCost = (Fixed64)CostAt(nx, ny);
 				}
 
 				if (moveCost <= Fixed64.Zero) continue;

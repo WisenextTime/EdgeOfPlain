@@ -8,19 +8,21 @@ namespace EdgeOfPlain.Core.Game.PathFinding;
 public sealed class FlowFieldCache(
 	GameMap map,
 	OccupancyGrid occupancy,
-	Func<int, int, PassageMask, int> cost)
+	Func<int, int, PassageMask, int, bool, int> cost)
 {
 	private const int MaxFields = 32;
 
-	private readonly Dictionary<(long Goal, PassageMask Mask, int Version), FlowField> _fields = [];
+	private readonly Dictionary<(long Goal, PassageMask Mask, int Radius, bool Collision, int Version), FlowField> _fields = [];
 	private readonly LinkedList<FlowField> _order = new();
 
-	public FlowField GetOrCreate(long goalTile, PassageMask mask)
+	public FlowField GetOrCreate(long goalTile, PassageMask mask, int radius = 0, bool enableCollision = true)
 	{
+		ArgumentOutOfRangeException.ThrowIfNegative(radius);
+		if (!enableCollision) radius = 0;
 		var version = occupancy.Version;
 		CleanStale(version);
 
-		var key = (goalTile, mask, version);
+		var key = (goalTile, mask, radius, enableCollision, version);
 
 		if (_fields.TryGetValue(key, out var field))
 		{
@@ -29,7 +31,7 @@ public sealed class FlowFieldCache(
 			return field;
 		}
 
-		field = new FlowField(map, goalTile, mask, cost);
+		field = new FlowField(map, goalTile, mask, (x, y, passage) => cost(x, y, passage, radius, enableCollision));
 		_fields.Add(key, field);
 		_order.AddFirst(field);
 

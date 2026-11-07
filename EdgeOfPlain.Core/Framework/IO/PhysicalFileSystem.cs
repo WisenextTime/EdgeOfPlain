@@ -38,7 +38,7 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 	{
 		var resolved = Resolve(path);
 		Directory.CreateDirectory(Path.GetDirectoryName(resolved)!);
-		return new FileStream(resolved, FileMode.Create, FileAccess.Write, FileShare.None);
+		return new FileStream(resolved, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 	}
 
 	protected override ValueTask<Stream> OpenWriteCoreAsync(string path, CancellationToken cancellationToken)
@@ -47,7 +47,7 @@ public sealed class PhysicalFileSystem(string root) : FileSystem
 		var resolved = Resolve(path);
 		Directory.CreateDirectory(Path.GetDirectoryName(resolved)!);
 		return new ValueTask<Stream>(new FileStream(
-			resolved, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous));
+			resolved, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous));
 	}
 
 	protected override void DeleteFileCore(string path) => File.Delete(Resolve(path));

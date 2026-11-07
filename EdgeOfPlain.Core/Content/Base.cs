@@ -27,6 +27,7 @@ public class Base : Mod
 		context.AddComponent(TransformComponent.CreateComponent);
 		context.AddComponent(TeamComponent.CreateComponent);
 		context.AddComponent(MoveTypeComponent.CreateComponent);
+		context.AddComponent(CollisionComponent.CreateComponent);
 		context.AddComponent(VelocityComponent.CreateComponent, ComponentScope<UnitDef>.ForDefType());
 
 		context.AddQueue(new EntityDeathQueueSystem());

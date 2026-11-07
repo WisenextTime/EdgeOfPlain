@@ -1,3 +1,4 @@
+using System;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using FixedMathSharp;
 using Tomlyn.Serialization;
@@ -6,6 +7,20 @@ namespace EdgeOfPlain.Core.Definitions;
 
 public abstract class EntityDef(string id) : ContentDef(id)
 {
+	public const int DefaultCollisionRadius = 16;
+	private int _radius = DefaultCollisionRadius;
+
+	public bool EnableCollision { get; set; } = true;
+	public int Radius
+	{
+		get => _radius;
+		set
+		{
+			ArgumentOutOfRangeException.ThrowIfNegative(value);
+			_radius = value;
+		}
+	}
+
 	[TomlRequired]
 	public int MaxHealth { get; set; }
 	[TomlConverter(typeof(Fixed64Converter))]

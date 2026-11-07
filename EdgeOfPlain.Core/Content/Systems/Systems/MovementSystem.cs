@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -16,9 +17,6 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 	private static readonly Fixed64 _turnThreshold = (Fixed64)0.05;
 	private static readonly Fixed64 _arriveRadius = (Fixed64)24;
 	private static readonly Fixed64 _congestionArriveRadius = (Fixed64)48;
-	private static readonly Fixed64 _avoidRadius = (Fixed64)64;
-	private static readonly Fixed64 _avoidWidth = (Fixed64)28;
-	private static readonly Fixed64 _separationRadius = (Fixed64)32;
 	private const int StuckFrameLimit = 90;
 	private const int MaxRepathAttempts = 3;
 
@@ -173,22 +171,36 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 		Vector2d position,
 		Vector2d desired)
 	{
+		if (!self.TryGet<CollisionComponent>(out var collision) || !collision.EnableCollision)
+			return (Vector2d.Zero, Fixed64.Zero);
 		var avoidance = Vector2d.Zero;
 		var strength = Fixed64.Zero;
-		var description = new QueryDescription().WithAll<TransformComponent, VelocityComponent>();
+		var description = new QueryDescription().WithAll<TransformComponent, CollisionComponent>();
 
-		world.Query(description, (Entity other, ref TransformComponent otherTransform, ref VelocityComponent otherVelocity) =>
+		world.Query(description, (Entity other, ref TransformComponent otherTransform, ref CollisionComponent otherCollision) =>
 		{
-			if (other.Id == self.Id) return;
+			if (other.Id == self.Id || !otherCollision.EnableCollision) return;
+			var combinedRadius = (long)Math.Max(0, collision.Radius) + Math.Max(0, otherCollision.Radius);
+			if (combinedRadius == 0) return;
+			var separationRadius = (Fixed64)Math.Min(combinedRadius, int.MaxValue);
+			var avoidRadius = (Fixed64)Math.Min(combinedRadius * 2, int.MaxValue);
 
 			var offset = otherTransform.Position - position;
 			var squared = offset.MagnitudeSquared;
 
-			if (squared < (Fixed64)1 || squared > _avoidRadius * _avoidRadius) return;
+			if (squared < (Fixed64)1)
+			{
+				var separationDirection = desired.MagnitudeSquared > Fixed64.Zero
+					? new Vector2d(-desired.Y, desired.X) : new Vector2d(Fixed64.Zero, Fixed64.One);
+				avoidance += (self.Id < other.Id ? separationDirection : -separationDirection) * (Fixed64)2;
+				strength = Fixed64.One;
+				return;
+			}
 
 			var distance = FixedMath.Sqrt(squared);
+			if (distance > avoidRadius) return;
 
-			var radialStrength = Fixed64.One - distance / _separationRadius;
+			var radialStrength = Fixed64.One - distance / separationRadius;
 
 			if (radialStrength > Fixed64.Zero)
 			{
@@ -200,9 +212,9 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (ahead <= Fixed64.Zero) return;
 
 			var lateral = offset - desired * ahead;
-			if (lateral.Magnitude >= _avoidWidth) return;
+			if (lateral.Magnitude >= separationRadius) return;
 
-			if (otherVelocity.Velocity > (Fixed64)1)
+			if (other.TryGet<VelocityComponent>(out var otherVelocity) && otherVelocity.Velocity > (Fixed64)1)
 			{
 				var otherHeading = new Vector2d(
 					FixedMath.Cos(otherTransform.Rotation),
@@ -218,7 +230,7 @@ public sealed class MovementSystem(PathfindingSystem pathfinding) : IFrameSystem
 			if (cross > Fixed64.Zero) side = -side;
 
 			var away = lateralLength < (Fixed64)1 ? side : (-lateral).Normalized;
-			var lateralStrength = (Fixed64.One - distance / _avoidRadius) * (Fixed64.One - lateralLength / _avoidWidth);
+			var lateralStrength = (Fixed64.One - distance / avoidRadius) * (Fixed64.One - lateralLength / separationRadius);
 
 			avoidance += away * lateralStrength;
 			strength = FixedMath.Max(strength, lateralStrength);

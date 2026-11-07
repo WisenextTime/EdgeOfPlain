@@ -30,6 +30,7 @@ public abstract class PathSystemTestBase : IDisposable
 		ComponentManager.StageComponent(TransformComponent.CreateComponent, "test");
 		ComponentManager.StageComponent(TeamComponent.CreateComponent, "test");
 		ComponentManager.StageComponent(MoveTypeComponent.CreateComponent, "test");
+		ComponentManager.StageComponent(CollisionComponent.CreateComponent, "test");
 		ComponentManager.StageComponent(
 			VelocityComponent.CreateComponent,
 			ComponentScope<UnitDef>.ForDefType(),

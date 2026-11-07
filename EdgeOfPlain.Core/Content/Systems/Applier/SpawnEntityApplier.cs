@@ -19,17 +19,16 @@ public sealed class SpawnEntityApplier : ICommandApplier<SpawnEntityCommand>
 		entity.Set(MoveTypeComponent.CreateComponent(command.Definition));
 		UnitRegistry.GetOrCreate(world).Register(entity);
 
-		if (command.Definition is not BuildingDef building) return;
+		if (command.Definition is not BuildingDef { EnableCollision: true } building) return;
 
 		var pathfinding = WorldPathfinding.TryGet(world);
 		if (pathfinding is null) return;
 
-		var tile = pathfinding.Map.WorldToTile(command.Transform.Position);
 		pathfinding.Occupancy.Add(
 			new EntityHandle(entity),
 			building.Collision,
-			tile.X,
-			tile.Y,
+			command.Transform.Position,
+			building.Radius,
 			pathfinding.Map);
 	}
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -66,9 +67,16 @@ public sealed class PathfindingSystem : ICommandApplier<WaypointCommand>
 		if (!entity.IsAlive()) return;
 
 		var move = entity.Get<MoveTypeComponent>();
-		var clamped = pathfinding.ClampGoal(goalTile, move.Type);
+		var hasCollision = entity.TryGet<CollisionComponent>(out var collision) && collision.EnableCollision;
+		var radius = hasCollision ? Math.Max(0, collision.Radius) : 0;
+		var clamped = pathfinding.ClampGoal(goalTile, move.Type, radius, hasCollision);
+		if (pathfinding.Cost(clamped.X, clamped.Y, move.Type, radius, hasCollision) <= 0)
+		{
+			pathfinding.ClearPath(handle);
+			return;
+		}
 		var packed = FlowField.Pack(clamped.X, clamped.Y);
-		var field = pathfinding.Fields.GetOrCreate(packed, move.Type);
+		var field = pathfinding.Fields.GetOrCreate(packed, move.Type, radius, hasCollision);
 
 		var tile = pathfinding.Map.WorldToTile(entity.Get<TransformComponent>().Position);
 		var waypoints = BuildPath(field, pathfinding.Map, tile.X, tile.Y);

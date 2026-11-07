@@ -39,6 +39,7 @@ public abstract class Launcher
 		_initialized = true;
 
 		InitFileSystems();
+		LogUtils.InitFileSystem();
 		InitResourceOperators();
 
 		LogUtils.Logger<Launcher>().LogInformation(

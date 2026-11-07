@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Arch.Core;
+using Arch.Core.Extensions;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
 using EdgeOfPlain.Core;
@@ -26,6 +27,9 @@ using EdgeOfPlain.Core.Net;
 using EdgeOfPlain.Core.Net.Client;
 using EdgeOfPlain.Core.Net.Server;
 using FixedMathSharp;
+using SFML.Graphics;
+using SFML.System;
+using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Scenes;
 
@@ -41,6 +45,13 @@ public sealed class TestMapScene : Scene
 	private const int MaxUnitsPerOrder = 512;
 
 	private static readonly Vector2 _unitOrigin = new(UnitVisualSize / 2f, UnitVisualSize / 2f);
+	private static readonly Vector2[] _radiusCircle = CreateRadiusCircle();
+	private static readonly SfColor _collisionColor = new(80, 230, 120, 220);
+	private static readonly SfColor _disabledCollisionColor = new(150, 150, 150, 170);
+	private static readonly SfColor _pathColor = new(80, 205, 255, 220);
+	private static readonly SfColor _goalColor = new(255, 210, 70, 255);
+	private Vertex[] _debugVertices = new Vertex[1024];
+	private int _debugVertexCount;
 
 	private MapRenderPipeline? _pipeline;
 	private SpriteBatch? _uiSprites;
@@ -192,6 +203,8 @@ public sealed class TestMapScene : Scene
 
 		_unitSprites?.Dispose();
 		_unitSprites = null;
+		_debugVertices = [];
+		_debugVertexCount = 0;
 
 		_gameWorld = null;
 		_core?.Dispose();
@@ -235,24 +248,23 @@ public sealed class TestMapScene : Scene
 		var point = ToWorld(input.MousePosition);
 		var description = new QueryDescription().WithAll<TransformComponent>();
 
-		EntityHandle target = default;
+		UnitId target = default;
 		var found = false;
 		var best = (Fixed64)(DeleteRadius * DeleteRadius);
 
-		_gameWorld.World.Query(description, (ref EntityHandle handle, ref TransformComponent transform) =>
+		_gameWorld.World.Query(description, (Entity entity, ref TransformComponent transform) =>
 		{
 			var distance = (transform.Position - point).MagnitudeSquared;
-			if (distance > best) return;
+			if (distance > best || !_gameWorld.Units.TryGet(entity, out var id)) return;
 
 			best = distance;
-			target = handle;
+			target = id;
 			found = true;
 		});
 
 		if (found)
 		{
-			if (_gameWorld.TryGetId(target, out var id))
-				_pendingInput.Add(new DeleteEntityCommand(id) { World = _gameWorld.Key });
+			_pendingInput.Add(new DeleteEntityCommand(target) { World = _gameWorld.Key });
 			return;
 		}
 
@@ -288,29 +300,99 @@ public sealed class TestMapScene : Scene
 
 	private void DrawUnits(Camera2D camera, Fixed64 alpha)
 	{
-		if (_unitSprites is null || _gameWorld is null || _unitTexture.Length == 0) return;
+		if (_unitSprites is null || _gameWorld is null) return;
 
 		var description = new QueryDescription().WithAll<TransformComponent>();
 		var sprites = _unitSprites;
 
 		sprites.Begin(camera);
-		_gameWorld.World.Query(description, (ref EntityHandle handle, ref TransformComponent transform) =>
+		if (_unitTexture.Length != 0)
 		{
-			var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, alpha);
-			var rotation = AngleExtension.LerpAngle(transform.PreviousRotation, transform.Rotation, alpha);
-			sprites.Draw(
-				new RenderMetadata
-				{
-					Texture = _unitTexture,
-					Layer = UnitLayer,
-					Size = new Vector2(UnitVisualSize),
-					Origin = _unitOrigin,
-					Rotation = (float)rotation,
-				},
-				(float)position.X,
-				(float)position.Y);
-		});
+			_gameWorld.World.Query(description, (ref TransformComponent transform) =>
+			{
+				var position = Vector2d.Lerp(transform.PreviousPosition, transform.Position, alpha);
+				var rotation = AngleExtension.LerpAngle(transform.PreviousRotation, transform.Rotation, alpha);
+				sprites.Draw(
+					new RenderMetadata
+					{
+						Texture = _unitTexture,
+						Layer = UnitLayer,
+						Size = new Vector2(UnitVisualSize),
+						Origin = _unitOrigin,
+						Rotation = (float)rotation,
+					},
+					(float)position.X,
+					(float)position.Y);
+			});
+		}
 		sprites.End();
+		DrawUnitDebug(camera, alpha);
+	}
+
+	private void DrawUnitDebug(Camera2D camera, Fixed64 alpha)
+	{
+		_debugVertexCount = 0;
+		var size = GameContext.RenderTarget.Size;
+		var bounds = camera.CullingBounds(new Vector2(size.X, size.Y));
+		var description = new QueryDescription().WithAll<TransformComponent, CollisionComponent>();
+		_gameWorld!.World.Query(description, (ref TransformComponent transform, ref CollisionComponent collision) =>
+		{
+			if (collision.Radius <= 0) return;
+			var interpolated = Vector2d.Lerp(transform.PreviousPosition, transform.Position, alpha);
+			var center = new Vector2((float)interpolated.X, (float)interpolated.Y);
+			var radius = (float)collision.Radius;
+			if (center.X + radius < bounds.Left || center.X - radius > bounds.Right ||
+			    center.Y + radius < bounds.Top || center.Y - radius > bounds.Bottom) return;
+			var color = collision.EnableCollision ? _collisionColor : _disabledCollisionColor;
+			for (var i = 0; i < _radiusCircle.Length; i++)
+				AppendDebugLine(center + _radiusCircle[i] * radius,
+					center + _radiusCircle[(i + 1) % _radiusCircle.Length] * radius, color);
+		});
+
+		foreach (var (handle, path) in _gameWorld.Pathfinding.Paths)
+		{
+			var entity = handle.Value;
+			if (!entity.IsAlive() || !entity.TryGet<TransformComponent>(out var transform) ||
+			    path.Index < 0 || path.Index >= path.Waypoints.Count) continue;
+			var interpolated = Vector2d.Lerp(transform.PreviousPosition, transform.Position, alpha);
+			var previous = new Vector2((float)interpolated.X, (float)interpolated.Y);
+			for (var i = path.Index; i < path.Waypoints.Count; i++)
+			{
+				var waypoint = path.Waypoints[i];
+				var next = new Vector2((float)waypoint.X, (float)waypoint.Y);
+				AppendDebugLine(previous, next, _pathColor);
+				var last = i == path.Waypoints.Count - 1;
+				AppendDebugMarker(next, (last ? 5f : 3f) / camera.Zoom, last ? _goalColor : _pathColor);
+				previous = next;
+			}
+		}
+		if (_debugVertexCount > 0)
+			GameContext.RenderTarget.Draw(_debugVertices, 0, (uint)_debugVertexCount, PrimitiveType.Lines, RenderStates.Default);
+	}
+
+	private void AppendDebugLine(Vector2 from, Vector2 to, SfColor color)
+	{
+		if (_debugVertexCount + 2 > _debugVertices.Length)
+			Array.Resize(ref _debugVertices, Math.Max(256, _debugVertices.Length * 2));
+		_debugVertices[_debugVertexCount++] = new Vertex(new Vector2f(from.X, from.Y), color);
+		_debugVertices[_debugVertexCount++] = new Vertex(new Vector2f(to.X, to.Y), color);
+	}
+
+	private void AppendDebugMarker(Vector2 position, float size, SfColor color)
+	{
+		AppendDebugLine(position - new Vector2(size, 0), position + new Vector2(size, 0), color);
+		AppendDebugLine(position - new Vector2(0, size), position + new Vector2(0, size), color);
+	}
+
+	private static Vector2[] CreateRadiusCircle()
+	{
+		var points = new Vector2[64];
+		for (var i = 0; i < points.Length; i++)
+		{
+			var angle = MathF.Tau * i / points.Length;
+			points[i] = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+		}
+		return points;
 	}
 
 	private Vector2d ToWorld(Vector2 screen)
