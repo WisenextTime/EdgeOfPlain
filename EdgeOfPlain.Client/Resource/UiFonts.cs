@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using SFML.Graphics;
+using Zio;
 
 namespace EdgeOfPlain.Client.Resource;
 
@@ -12,8 +14,8 @@ public sealed class UiFonts : IDisposable
 
 	public UiFonts()
 	{
-		Light = Load("Light", "Misc/Fonts/SourceHanSans-Light.otf");
-		Bold = Load("Bold", "Misc/Fonts/SourceHanSansSC-Bold.otf");
+		Light = Load("Light", new UPath("/Misc/Fonts/SourceHanSans-Light.otf"));
+		Bold = Load("Bold", new UPath("/Misc/Fonts/SourceHanSansSC-Bold.otf"));
 	}
 
 	public Font Light { get; }
@@ -28,9 +30,9 @@ public sealed class UiFonts : IDisposable
 		_fonts.Clear();
 	}
 
-	private Font Load(string name, string path)
+	private Font Load(string name, UPath path)
 	{
-		using var stream = CoreAssets.Bootstrap.OpenRead(path);
+		using var stream = CoreAssets.Bootstrap.OpenReadShared(path);
 		using var buffer = new MemoryStream();
 		stream.CopyTo(buffer);
 

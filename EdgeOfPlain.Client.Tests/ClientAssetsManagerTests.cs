@@ -6,13 +6,13 @@ using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Client.Tests;
 
 public sealed class ClientAssetsManagerTests : IDisposable
 {
-	private const string Head = "client-asset-tests";
-
 	private readonly TempDirectory _root = new();
 	private int _loadCount;
 
@@ -31,15 +31,16 @@ public sealed class ClientAssetsManagerTests : IDisposable
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.Clear();
-		FileIO.RegisterFileSystem(Head, new PhysicalFileSystem(_root.Path));
+		FileIO.Reset();
+		FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
+		FileIO.Mount(FileIO.Assets, Mount(_root.Path));
 	}
 
 	public void Dispose()
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.UnregisterFileSystem(Head);
+		FileIO.Reset();
 		_root.Dispose();
 	}
 
@@ -54,8 +55,8 @@ public sealed class ClientAssetsManagerTests : IDisposable
 			return new ProbeAsset(reader.ReadToEnd());
 		}));
 
-		var first = ClientAssetsManager.Get<ProbeAsset>($"{Head}://probe.txt");
-		var second = ClientAssetsManager.Get<ProbeAsset>($"{Head}://probe.txt");
+		var first = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
+		var second = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
 
 		Assert.Same(first, second);
 		Assert.Equal("hello", first.Text);
@@ -69,11 +70,11 @@ public sealed class ClientAssetsManagerTests : IDisposable
 		AssetsManager.RegisterResourceOperator(
 			new ResourceOperator<ProbeAsset>(stream => new ProbeAsset(new StreamReader(stream).ReadToEnd())));
 
-		Assert.False(ClientAssetsManager.TryGet<ProbeAsset>($"{Head}://probe.txt", out _));
+		Assert.False(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out _));
 
-		ClientAssetsManager.Get<ProbeAsset>($"{Head}://probe.txt");
+		ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
 
-		Assert.True(ClientAssetsManager.TryGet<ProbeAsset>($"{Head}://probe.txt", out var asset));
+		Assert.True(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out var asset));
 		Assert.Equal("hello", asset.Text);
 	}
 
@@ -84,8 +85,8 @@ public sealed class ClientAssetsManagerTests : IDisposable
 		_root.Write("a.txt", "a");
 		_root.Write("b.txt", "b");
 
-		ClientAssetsManager.Get<ProbeAsset>($"{Head}://a.txt");
-		ClientAssetsManager.Get<ProbeAsset>($"{Head}://b.txt");
+		ClientAssetsManager.Get<ProbeAsset>("/assets/a.txt");
+		ClientAssetsManager.Get<ProbeAsset>("/assets/b.txt");
 
 		Assert.Equal(2, ClientAssetsManager.GetAll<ProbeAsset>().Count);
 	}
@@ -93,7 +94,7 @@ public sealed class ClientAssetsManagerTests : IDisposable
 	[Fact]
 	public void GetThrowsWhenNoOperatorIsRegistered()
 	{
-		Assert.Throws<KeyNotFoundException>(() => ClientAssetsManager.Get<TextureData>("assets://missing#main"));
+		Assert.Throws<KeyNotFoundException>(() => ClientAssetsManager.Get<TextureData>("/assets/missing#main"));
 	}
 
 	[Fact]
@@ -109,7 +110,7 @@ public sealed class ClientAssetsManagerTests : IDisposable
 		_root.Write("null.txt", "x");
 		AssetsManager.RegisterResourceOperator(new ResourceOperator<NullAsset>(_ => null!));
 
-		Assert.Throws<InvalidOperationException>(() => ClientAssetsManager.Get<NullAsset>($"{Head}://null.txt"));
+		Assert.Throws<InvalidOperationException>(() => ClientAssetsManager.Get<NullAsset>("/assets/null.txt"));
 	}
 
 	[Fact]
@@ -118,11 +119,17 @@ public sealed class ClientAssetsManagerTests : IDisposable
 		_root.Write("disposable.txt", "x");
 		AssetsManager.RegisterResourceOperator(new ResourceOperator<DisposableAsset>(_ => new DisposableAsset()));
 
-		var asset = ClientAssetsManager.Get<DisposableAsset>($"{Head}://disposable.txt");
+		var asset = ClientAssetsManager.Get<DisposableAsset>("/assets/disposable.txt");
 
 		ClientAssetsManager.Dispose();
 
 		Assert.True(asset.IsDisposed);
 		Assert.Empty(ClientAssetsManager.GetAll<DisposableAsset>());
+	}
+
+	private static IFileSystem Mount(string directory)
+	{
+		var physical = new PhysicalFileSystem();
+		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
 	}
 }

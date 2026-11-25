@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Numerics;
 using EdgeOfPlain.Core.Framework.Graphics;
+using Zio;
 using Xunit;
 
 namespace EdgeOfPlain.Tests;
@@ -119,13 +120,13 @@ public sealed class NineSliceTests
 	{
 		var batch = new RecordingBatch();
 
-		var count = batch.DrawNineSlice("ui://panel", Slice(), new RectangleF(10, 20, 100, 60), 7, new ColorF(1, 2, 3, 4));
+		var count = batch.DrawNineSlice("/ui/panel", Slice(), new RectangleF(10, 20, 100, 60), 7, new ColorF(1, 2, 3, 4));
 
 		Assert.Equal(9, count);
 		Assert.Equal(9, batch.Draws.Count);
 
 		var first = batch.Draws[0];
-		Assert.Equal("ui://panel", first.Texture);
+		Assert.Equal(new UPath("/ui/panel"), first.Texture);
 		Assert.Equal(7u, first.Layer);
 		Assert.Equal(new ColorF(1, 2, 3, 4), first.Color);
 		Assert.Equal(new Rectangle(0, 0, 16, 16), first.Source);
@@ -191,7 +192,7 @@ public sealed class NineSliceTests
 		var slice = Slice() with { Mode = NineSliceMode.Tile };
 		var batch = new RecordingBatch();
 
-		var count = batch.DrawNineSlice("ui://panel", slice, new RectangleF(0, 0, 100000, 100000));
+		var count = batch.DrawNineSlice("/ui/panel", slice, new RectangleF(0, 0, 100000, 100000));
 
 		Assert.Equal(9, count);
 		Assert.Equal(9, batch.Draws.Count);
@@ -203,7 +204,7 @@ public sealed class NineSliceTests
 		var slice = Slice() with { Mode = NineSliceMode.Tile };
 		var batch = new RecordingBatch();
 
-		var count = batch.DrawNineSlice("ui://panel", slice, new RectangleF(0, 0, 200, 100));
+		var count = batch.DrawNineSlice("/ui/panel", slice, new RectangleF(0, 0, 200, 100));
 
 		Assert.Equal(91, count);
 		Assert.Equal(new Vector2(16, 16), batch.Draws[1].Size);
@@ -213,7 +214,7 @@ public sealed class NineSliceTests
 	public void RenderMetadataCarriesNineSlice()
 	{
 		var slice = Slice() with { Mode = NineSliceMode.Tile };
-		var metadata = new RenderMetadata { Texture = "ui://panel", NineSlice = slice, Size = new Vector2(120, 80) };
+		var metadata = new RenderMetadata { Texture = "/ui/panel", NineSlice = slice, Size = new Vector2(120, 80) };
 
 		Assert.Equal(slice, metadata.NineSlice);
 		Assert.Equal(new Vector2(120, 80), metadata.Size);
@@ -253,8 +254,8 @@ public sealed class NineSliceTests
 	}
 
 	private readonly record struct RecordedDraw(
-		string? Texture,
-		string? Shader,
+		UPath? Texture,
+		UPath? Shader,
 		uint Layer,
 		ColorF Color,
 		Rectangle? Source,

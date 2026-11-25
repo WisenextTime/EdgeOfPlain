@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using Xunit;
+using Zio;
 
 namespace EdgeOfPlain.Tests;
 
@@ -79,7 +79,8 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public void LoadResource_UsesRegisteredLoader()
 	{
-		using var scope = new HeadScope(new MemoryFileSystem().Add("probe.txt", "payload"));
+		using var scope = new GameIoScope();
+		scope.Assets.AddText("/probe.txt", "payload");
 		AssetsManager.Clear();
 		try
 		{
@@ -98,7 +99,7 @@ public sealed class AssetsManagerTests
 	{
 		AssetsManager.Clear();
 
-		var exception = Assert.Throws<InvalidOperationException>(() => AssetsManager.LoadResource<TextProbe>("unused://a.txt"));
+		var exception = Assert.Throws<InvalidOperationException>(() => AssetsManager.LoadResource<TextProbe>("/assets/a.txt"));
 
 		Assert.Contains("no resource operator", exception.Message);
 	}
@@ -106,13 +107,13 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public void LoadResource_MissingFile_ThrowsFileNotFound()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
 			AssetsManager.RegisterResourceOperator(new ResourceOperator<TextProbe>(stream => new TextProbe(Read(stream))));
 
-			Assert.Throws<FileNotFoundException>(() => AssetsManager.LoadResource<TextProbe>(scope["missing.txt"]));
+			Assert.ThrowsAny<IOException>(() => AssetsManager.LoadResource<TextProbe>(scope["missing.txt"]));
 		}
 		finally
 		{
@@ -123,7 +124,8 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public async Task LoadResourceAsync_PrefersAsyncLoader()
 	{
-		using var scope = new HeadScope(new MemoryFileSystem().Add("probe.txt", "payload"));
+		using var scope = new GameIoScope();
+		scope.Assets.AddText("/probe.txt", "payload");
 		AssetsManager.Clear();
 		try
 		{
@@ -143,7 +145,8 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public async Task LoadResourceAsync_FallsBackToSynchronousLoader()
 	{
-		using var scope = new HeadScope(new MemoryFileSystem().Add("probe.txt", "payload"));
+		using var scope = new GameIoScope();
+		scope.Assets.AddText("/probe.txt", "payload");
 		AssetsManager.Clear();
 		try
 		{
@@ -161,7 +164,7 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public void SaveResource_UsesRegisteredSaver()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
@@ -171,7 +174,7 @@ public sealed class AssetsManagerTests
 
 			AssetsManager.SaveResource(new TextProbe("saved"), scope["out.txt"]);
 
-			Assert.Equal("saved", FileIO.ReadAllText(scope["out.txt"]));
+			Assert.Equal("saved", TestPath.ReadAllText(scope.Root, scope["out.txt"]));
 		}
 		finally
 		{
@@ -182,7 +185,7 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public void SaveResource_WithoutSaver_ThrowsNotSupported()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
@@ -192,7 +195,7 @@ public sealed class AssetsManagerTests
 				Assert.Throws<NotSupportedException>(() => AssetsManager.SaveResource(new TextProbe("x"), scope["out.txt"]));
 
 			Assert.Contains("does not support saving", exception.Message);
-			Assert.False(FileIO.FileExists(scope["out.txt"]));
+			Assert.False(scope.Root.FileExists(scope["out.txt"]));
 		}
 		finally
 		{
@@ -203,7 +206,7 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public async Task SaveResourceAsync_UsesAsyncSaver()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
@@ -218,7 +221,7 @@ public sealed class AssetsManagerTests
 			await AssetsManager.SaveResourceAsync(
 				new TextProbe("async"), scope["out.txt"], TestContext.Current.CancellationToken);
 
-			Assert.Equal("async!", await FileIO.ReadAllTextAsync(scope["out.txt"]));
+			Assert.Equal("async!", TestPath.ReadAllText(scope.Root, scope["out.txt"]));
 		}
 		finally
 		{
@@ -229,7 +232,7 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public async Task SaveResourceAsync_FallsBackToSynchronousSaver()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
@@ -240,7 +243,7 @@ public sealed class AssetsManagerTests
 			await AssetsManager.SaveResourceAsync(
 				new TextProbe("sync-save"), scope["out.txt"], TestContext.Current.CancellationToken);
 
-			Assert.Equal("sync-save", await FileIO.ReadAllTextAsync(scope["out.txt"], TestContext.Current.CancellationToken));
+			Assert.Equal("sync-save", TestPath.ReadAllText(scope.Root, scope["out.txt"]));
 		}
 		finally
 		{
@@ -251,7 +254,7 @@ public sealed class AssetsManagerTests
 	[Fact]
 	public async Task SaveResourceAsync_WithoutAnySaver_ThrowsNotSupported()
 	{
-		using var scope = new HeadScope();
+		using var scope = new GameIoScope();
 		AssetsManager.Clear();
 		try
 		{
@@ -259,7 +262,7 @@ public sealed class AssetsManagerTests
 
 			await Assert.ThrowsAsync<NotSupportedException>(async () => await AssetsManager.SaveResourceAsync(
 				new TextProbe("x"), scope["out.txt"], TestContext.Current.CancellationToken));
-			Assert.False(FileIO.FileExists(scope["out.txt"]));
+			Assert.False(scope.Root.FileExists(scope["out.txt"]));
 		}
 		finally
 		{

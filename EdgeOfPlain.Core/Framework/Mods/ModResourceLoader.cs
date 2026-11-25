@@ -7,23 +7,24 @@ using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Mods;
 
 public sealed class ModResourceDirectory
 {
-	internal ModResourceDirectory(string path, ModInfo sourceMod, IReadOnlyList<string> files)
+	internal ModResourceDirectory(UPath path, ModInfo sourceMod, IReadOnlyList<UPath> files)
 	{
 		Path = path;
 		SourceMod = sourceMod;
 		Files = files;
 	}
 
-	public string Path { get; }
+	public UPath Path { get; }
 
 	public ModInfo SourceMod { get; }
 
-	public IReadOnlyList<string> Files { get; }
+	public IReadOnlyList<UPath> Files { get; }
 }
 
 public static class ModResourceLoader
@@ -57,7 +58,7 @@ public static class ModResourceLoader
 	{
 		foreach (var (directory, loader) in _loaders)
 		{
-			var root = $"{Launcher.AssetsHead}://{mod.ModInfo.Id}/{directory}/";
+			var root = FileIO.Assets / mod.ModInfo.Id / directory;
 
 			foreach (var resourceDirectory in EnumerateDirectories(mod, root))
 			{
@@ -75,14 +76,19 @@ public static class ModResourceLoader
 		}
 	}
 
-	private static IEnumerable<ModResourceDirectory> EnumerateDirectories(Mod mod, string root)
-		=> FileIO.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-			.GroupBy(Parent, StringComparer.Ordinal)
+	private static IEnumerable<ModResourceDirectory> EnumerateDirectories(Mod mod, UPath root)
+	{
+		var fileSystem = FileIO.Root;
+		if (!fileSystem.DirectoryExists(root)) return [];
+
+		return fileSystem.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+			.GroupBy(path => path.GetDirectory().FullName, StringComparer.Ordinal)
 			.OrderBy(group => group.Key, StringComparer.Ordinal)
 			.Select(group => new ModResourceDirectory(
-				$"{group.Key}/",
+				new UPath(group.Key),
 				mod.ModInfo,
-				[.. group.OrderBy(file => file, StringComparer.Ordinal)]));
+				[.. group.OrderBy(file => file.FullName, StringComparer.Ordinal)]));
+	}
 
 	private static void LoadTomlContent(ModResourceDirectory directory)
 	{
@@ -100,11 +106,5 @@ public static class ModResourceLoader
 				LogUtils.Logger(typeof(ModResourceLoader)).LogError("Failed to load '{File}': {EMessage}", file, e.Message);
 			}
 		}
-	}
-
-	private static string Parent(string path)
-	{
-		var separator = path.LastIndexOf('/');
-		return separator < 0 ? string.Empty : path[..separator];
 	}
 }

@@ -1,8 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using EdgeOfPlain.Core.Framework.IO;
+using Xunit;
+using Zio;
+using Zio.FileSystems;
+
+[assembly: Xunit.v3.Parallelization(Mode = Xunit.Sdk.ParallelMode.None)]
 
 namespace EdgeOfPlain.Tests;
 
@@ -35,114 +39,75 @@ internal sealed class TempDirectory : IDisposable
 	}
 }
 
-internal sealed class MemoryFileSystem(bool caseSensitive = true) : FileSystem
+/// <summary>
+/// Boots the global <see cref="FileIO"/> with throw-away directories and a memory backed
+/// <c>/assets</c> mount. Tests are serialized, so the global mount table can be reset freely.
+/// </summary>
+internal sealed class GameIoScope : IDisposable
 {
-	private readonly Dictionary<string, byte[]> _files =
-		new(caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
-	private readonly HashSet<string> _directories = new(StringComparer.Ordinal) { string.Empty };
-
-	public override bool IsCaseSensitive { get; } = caseSensitive;
-
-	public override bool IsReadOnly => false;
-
-	public IReadOnlyDictionary<string, byte[]> Files => _files;
-
-	public MemoryFileSystem Add(string path, string content) => Add(path, Encoding.UTF8.GetBytes(content));
-
-	public MemoryFileSystem Add(string path, byte[] content)
+	public GameIoScope(bool mountAssets = true)
 	{
-		var normalized = NormalizePath(path);
-		_files[normalized] = content;
-		AddParentDirectories(normalized);
-		return this;
+		FileIO.Reset();
+		FileIO.Initialize(Data.Path, Mods.Path);
+		if (mountAssets) FileIO.Mount(FileIO.Assets, Assets);
 	}
 
-	protected override bool FileExistsCore(string path) => path.Length != 0 && _files.ContainsKey(path);
+	public TempDirectory Data { get; } = new();
 
-	protected override bool DirectoryExistsCore(string path) => _directories.Contains(path);
+	public TempDirectory Mods { get; } = new();
 
-	protected override Stream OpenReadCore(string path)
-		=> _files.TryGetValue(path, out var content)
-			? new MemoryStream(content, false)
-			: throw new FileNotFoundException($"'{path}' does not exist", path);
+	public MemoryFileSystem Assets { get; } = new();
 
-	protected override Stream OpenWriteCore(string path)
-		=> new CollectingStream(content =>
-		{
-			_files[path] = content;
-			AddParentDirectories(path);
-		});
+	public IFileSystem Root => FileIO.Root;
 
-	protected override void DeleteFileCore(string path)
+	public UPath this[string assetPath] => FileIO.Assets / assetPath.TrimStart('/');
+
+	public void Dispose()
 	{
-		if (!_files.Remove(path)) throw new FileNotFoundException($"'{path}' does not exist", path);
+		FileIO.Reset();
+		Assets.Dispose();
+		Data.Dispose();
+		Mods.Dispose();
+	}
+}
+
+internal static class ZioTestExtensions
+{
+	/// <summary>Writes <paramref name="text"/> and creates the parent directory when it is missing.</summary>
+	public static IFileSystem AddText(this IFileSystem fileSystem, UPath path, string text)
+	{
+		fileSystem.CreateParentDirectory(path);
+		fileSystem.WriteAllText(path, text);
+		return fileSystem;
 	}
 
-	protected override void CreateDirectoryCore(string path)
+	public static IFileSystem AddText(this IFileSystem fileSystem, string relativePath, string text)
+		=> fileSystem.AddText(TestPath.Of(relativePath), text);
+
+	public static IFileSystem AddBytes(this IFileSystem fileSystem, string relativePath, byte[] content)
 	{
-		if (path.Length != 0) _directories.Add(path);
-		AddParentDirectories(path);
+		var path = TestPath.Of(relativePath);
+		fileSystem.CreateParentDirectory(path);
+		fileSystem.WriteAllBytes(path, content);
+		return fileSystem;
 	}
 
-	protected override void DeleteDirectoryCore(string path, bool recursive)
+	/// <summary>Mounts a host directory as a standalone file system rooted at that directory.</summary>
+	public static IFileSystem MountDirectory(string directory)
 	{
-		if (!recursive)
-		{
-			foreach (var file in _files.Keys)
-				if (Parent(file) == path)
-					throw new IOException($"directory '{path}' is not empty");
-
-			_directories.Remove(path);
-			return;
-		}
-
-		var prefix = path.Length == 0 ? string.Empty : path + "/";
-		foreach (var file in new List<string>(_files.Keys))
-			if (file.StartsWith(prefix, StringComparison.Ordinal))
-				_files.Remove(file);
-
-		_directories.RemoveWhere(directory => directory.StartsWith(prefix, StringComparison.Ordinal) || directory == path);
+		var physical = new PhysicalFileSystem();
+		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
 	}
+}
 
-	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
+internal static class TestPath
+{
+	public static UPath Of(string relativePath) => new("/" + relativePath.Replace('\\', '/').TrimStart('/'));
+
+	public static string ReadAllText(IFileSystem fileSystem, UPath path)
 	{
-		var entries = new List<FileSystemEntry>();
-
-		foreach (var file in _files.Keys)
-			if (Parent(file) == path)
-				entries.Add(new FileSystemEntry(file, false));
-
-		foreach (var directory in _directories)
-			if (directory.Length != 0 && Parent(directory) == path)
-				entries.Add(new FileSystemEntry(directory, true));
-
-		entries.Sort(static (left, right) => string.CompareOrdinal(left.Path, right.Path));
-		return entries;
-	}
-
-	private void AddParentDirectories(string path)
-	{
-		var index = path.LastIndexOf('/');
-		while (index > 0)
-		{
-			var parent = path[..index];
-			if (!_directories.Add(parent)) return;
-			index = parent.LastIndexOf('/');
-		}
-	}
-
-	private static string Parent(string path)
-	{
-		var index = path.LastIndexOf('/');
-		return index < 0 ? string.Empty : path[..index];
-	}
-
-	private sealed class CollectingStream(Action<byte[]> collect) : MemoryStream
-	{
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing) collect(ToArray());
-			base.Dispose(disposing);
-		}
+		using var stream = fileSystem.OpenFile(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+		using var reader = new StreamReader(stream, Encoding.UTF8, true);
+		return reader.ReadToEnd();
 	}
 }

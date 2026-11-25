@@ -5,6 +5,7 @@ using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
+using Zio;
 
 namespace EdgeOfPlain.Client.Scenes;
 
@@ -19,7 +20,7 @@ public sealed class TestScene : Scene
 
 	private readonly RenderMetadata _block = new()
 	{
-		Texture = "assets://base/Textures/Tiles/testTile#main",
+		Texture = new UPath("/assets/base/Textures/Tiles/testTile#main"),
 		Layer = 3,
 		Color = new ColorF(120, 70, 40, 255),
 	};

@@ -4,12 +4,13 @@ using System.Text;
 using System.Threading;
 using EdgeOfPlain.Core.Framework.IO;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Core.Utils;
 
 public static class LogUtils
 {
-	public const string CacheFile = "data://logs/latest.log";
+	public static readonly UPath CacheFile = FileIO.Data / "logs" / "latest.log";
 	private static ILoggerFactory _factory = LoggerFactory.Create(builder => builder.AddConsole());
 	public static ILogger<T> Logger<T>() => _factory.CreateLogger<T>();
 	public static ILogger Logger(Type type) => _factory.CreateLogger(type);
@@ -27,7 +28,7 @@ public static class LogUtils
 	}
 }
 
-public class FileLoggerProvider(string logPath) : ILoggerProvider
+public class FileLoggerProvider(UPath logPath) : ILoggerProvider
 {
 	private Stream? _fileStream;
 	private StreamWriter? _writer;
@@ -94,7 +95,9 @@ public class FileLoggerProvider(string logPath) : ILoggerProvider
 
 		try
 		{
-			_fileStream ??= FileIO.OpenWrite(logPath);
+			var fileSystem = FileIO.Root;
+			fileSystem.CreateParentDirectory(logPath);
+			_fileStream ??= fileSystem.OpenFile(logPath, FileMode.Create, FileAccess.Write, FileShare.Read);
 			_writer = new StreamWriter(_fileStream, leaveOpen: true);
 		}
 		catch

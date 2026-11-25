@@ -2,15 +2,16 @@ using System;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Client.Resource;
 
 public static class ClientAssetLoader
 {
-	public static bool Register<T>(string directory, Func<string, bool>? filter = null) where T : class
+	public static bool Register<T>(string directory, Func<UPath, bool>? filter = null) where T : class
 		=> ModResourceLoader.TryRegister(directory, resources => LoadFolder<T>(resources, filter));
 
-	public static void LoadFolder<T>(ModResourceDirectory directory, Func<string, bool>? filter = null) where T : class
+	public static void LoadFolder<T>(ModResourceDirectory directory, Func<UPath, bool>? filter = null) where T : class
 	{
 		foreach (var file in directory.Files)
 		{

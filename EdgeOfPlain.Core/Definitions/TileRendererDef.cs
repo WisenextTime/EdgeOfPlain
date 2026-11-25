@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Tomlyn.Serialization;
+using Zio;
 
 namespace EdgeOfPlain.Core.Definitions;
 
@@ -10,7 +11,7 @@ public class TileRendererDef(string id) : ContentDef(id)
 	public string ShaderPath { get; set; } = "";
 
 	[TomlIgnore]
-	public string ShaderKey => ResolveResourcePath(ShaderPath);
+	public UPath ShaderKey => ResolveResourcePath(ShaderPath);
 
 	public Dictionary<string, ShaderUniform> Uniforms = [];
 }

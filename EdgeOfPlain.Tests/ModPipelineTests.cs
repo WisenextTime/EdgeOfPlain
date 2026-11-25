@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,7 +10,9 @@ using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Mods.Loading;
 using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Game.Commands;
+using EdgeOfPlain.Core.Game.Components;
 using Xunit;
+using Zio;
 
 namespace EdgeOfPlain.Tests;
 
@@ -17,6 +20,7 @@ public sealed class ModPipelineTests
 {
 	private static readonly Lock _gate = new();
 	private static Pipeline? _pipeline;
+	private static TempDirectory? _retained;
 
 	private static Pipeline Run()
 	{
@@ -111,7 +115,7 @@ public sealed class ModPipelineTests
 		var pipeline = Run();
 
 		Assert.Equal(1, pipeline.ProbeCalls);
-		Assert.EndsWith("base/Probe/Tiles/", pipeline.ProbePath);
+		Assert.EndsWith("/base/Probe/Tiles", pipeline.ProbePath?.FullName);
 		Assert.Equal(2, pipeline.ProbeFiles.Length);
 		Assert.All(pipeline.ProbeFiles, file => Assert.Contains("base/Probe/Tiles/", file));
 	}
@@ -127,6 +131,7 @@ public sealed class ModPipelineTests
 	private static Pipeline Execute()
 	{
 		var root = new TempDirectory();
+		_retained = root;
 		var baseDirectory = Path.Combine(root.Path, "base");
 		var libDirectory = Path.Combine(root.Path, "lib");
 		var appDirectory = Path.Combine(root.Path, "app");
@@ -143,19 +148,25 @@ public sealed class ModPipelineTests
 		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "a.txt"), "a");
 		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "b.txt"), "b");
 
-		FileIO.Clear();
 		ContentStore.Reset();
 		ContentTypeRegistry.Reset();
 		ContentSerializer.ResetOptions();
 		CommandRegistry.Reset();
+		ComponentManager.Reset();
 		AssetsManager.Clear();
 		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
 
+		FileIO.Reset();
+		FileIO.Initialize(Path.Combine(root.Path, "data"), Path.Combine(root.Path, "mods"));
+
 		var assets = new ModFileSystem();
-		assets.RegisterNamespace("base", new PhysicalFileSystem(baseDirectory));
-		assets.RegisterNamespace("lib", new PhysicalFileSystem(libDirectory));
-		assets.RegisterNamespace("app", new PhysicalFileSystem(appDirectory));
-		FileIO.RegisterFileSystem(Launcher.AssetsHead, assets);
+		assets.RegisterNamespace("base", ZioTestExtensions.MountDirectory(baseDirectory));
+		assets.RegisterNamespace("lib", ZioTestExtensions.MountDirectory(libDirectory));
+		assets.RegisterNamespace("app", ZioTestExtensions.MountDirectory(appDirectory));
+		FileIO.Mount(FileIO.Assets, assets);
+
+		var leftover = new List<Mod>(ModRegistry.RegisteredMods);
+		foreach (var registered in leftover) ModRegistry.Unregister(registered);
 
 		Register(new TestMod(Info("lib"), init: context => context.AddContent(new TerrainDef("libsand"))));
 		Register(new TestMod(Info("app", ("lib", "1.0.0")),
@@ -172,13 +183,13 @@ public sealed class ModPipelineTests
 		Register(new TestMod(Info("cyc2", ("cyc1", "1.0.0"))));
 
 		var probeCalls = 0;
-		string? probePath = null;
+		UPath? probePath = null;
 		string[] probeFiles = [];
 		ModResourceLoader.TryRegister("Probe", directory =>
 		{
 			probeCalls++;
 			probePath = directory.Path;
-			probeFiles = [.. directory.Files];
+			probeFiles = [.. directory.Files.Select(file => file.FullName)];
 		});
 
 		Exception? error = null;
@@ -240,7 +251,7 @@ public sealed class ModPipelineTests
 		bool RejectsLateRegistration,
 		bool HasBuiltInContentTypes,
 		int ProbeCalls,
-		string? ProbePath,
+		UPath? ProbePath,
 		string[] ProbeFiles);
 
 	private sealed class TestMod(ModInfo info, Type[]? types = null, Action<ModContext>? init = null) : Mod

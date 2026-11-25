@@ -1,19 +1,21 @@
 using System;
 using System.Drawing;
+using System.IO;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Resource.Textures;
-using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Resource;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Client.Tests;
 
 public sealed class TextureLoaderTests : IDisposable
 {
-	private const string Head = Launcher.AssetsHead;
 	private const string Namespace = "probe";
+	private static readonly UPath Directory = new($"/assets/{Namespace}/Textures/Tiles");
 
 	private readonly TempDirectory _root = new();
 
@@ -21,7 +23,8 @@ public sealed class TextureLoaderTests : IDisposable
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.Clear();
+		FileIO.Reset();
+		FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
 
 		_root.Write("Textures/Tiles/Test.png", TestAssets.OnePixelPng());
 		_root.Write("Textures/Tiles/Test.atlas", TestAssets.OnePixelAtlas);
@@ -30,15 +33,15 @@ public sealed class TextureLoaderTests : IDisposable
 		AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
 
 		var assets = new ModFileSystem();
-		assets.RegisterNamespace(Namespace, new PhysicalFileSystem(_root.Path));
-		FileIO.RegisterFileSystem(Head, assets);
+		assets.RegisterNamespace(Namespace, Mount(_root.Path));
+		FileIO.Mount(FileIO.Assets, assets);
 	}
 
 	public void Dispose()
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.Clear();
+		FileIO.Reset();
 		_root.Dispose();
 	}
 
@@ -47,7 +50,7 @@ public sealed class TextureLoaderTests : IDisposable
 	{
 		TextureLoader.Load(CreateDirectory());
 
-		var key = TextureData.MakeKey($"assets://{Namespace}/Textures/Tiles/Test", "main");
+		var key = TextureData.MakeKey($"{Directory}/Test", "main");
 
 		Assert.True(ClientAssetsManager.TryGet<TextureData>(key, out var data));
 		Assert.Equal("main", data.SpriteId);
@@ -61,18 +64,24 @@ public sealed class TextureLoaderTests : IDisposable
 	{
 		TextureLoader.Load(CreateDirectory());
 
-		var path = $"assets://{Namespace}/Textures/Tiles/Test.png";
+		var path = $"{Directory}/Test.png";
 		Assert.True(ClientAssetsManager.TryGet<SFML.Graphics.Image>(path, out var image));
 		Assert.Equal(1u, image.Size.X);
 		Assert.Equal(1u, image.Size.Y);
 	}
 
+	private static IFileSystem Mount(string directory)
+	{
+		var physical = new PhysicalFileSystem();
+		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
+	}
+
 	private static ModResourceDirectory CreateDirectory()
 		=> new(
-			$"assets://{Namespace}/Textures/Tiles/",
+			Directory,
 			new ModInfo(Namespace, new Version(1, 0, 0)),
 			[
-				$"assets://{Namespace}/Textures/Tiles/Test.png",
-				$"assets://{Namespace}/Textures/Tiles/Test.atlas",
+				$"{Directory}/Test.png",
+				$"{Directory}/Test.atlas",
 			]);
 }

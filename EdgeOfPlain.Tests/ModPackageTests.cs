@@ -1,9 +1,10 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods.Loading;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Tests;
 
@@ -47,7 +48,7 @@ public sealed class ModPackageTests
 
 		Assert.Equal("coolmod", package.ModId);
 		Assert.True(package.HasAssets);
-		Assert.Equal("asset", package.Assets.ReadAllText("a.txt"));
+		Assert.Equal("asset", package.Assets.ReadAllText(new UPath("/a.txt")));
 		Assert.NotNull(package.Info);
 		Assert.Equal("1.2.3", package.Info!.Value.Version.ToString());
 	}
@@ -90,7 +91,7 @@ public sealed class ModPackageTests
 		using var package = ModPackage.Open(zip);
 
 		Assert.False(package.HasAssets);
-		Assert.Empty(package.Assets.EnumerateFiles(string.Empty));
+		Assert.Empty(package.Assets.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories));
 	}
 
 	[Fact]
@@ -104,7 +105,7 @@ public sealed class ModPackageTests
 		using var package = ModPackage.Open(zip);
 
 		Assert.True(package.Overriders.ContainsKey("base"));
-		Assert.Equal("override", package.Overriders["base"].ReadAllText("a.txt"));
+		Assert.Equal("override", package.Overriders["base"].ReadAllText(new UPath("/a.txt")));
 	}
 
 	[Fact]
@@ -121,7 +122,7 @@ public sealed class ModPackageTests
 
 public sealed class ModExtractorTests
 {
-	private const string Head = "eop-extract";
+	private static readonly UPath CacheRoot = new("/cache");
 
 	[Fact]
 	public void Extract_CopiesManagedFilesAndWritesMarker()
@@ -131,23 +132,15 @@ public sealed class ModExtractorTests
 			("mod.toml", ZipFactory.Manifest),
 			("lib/a.dll", "fake"),
 			("Asset/a.txt", "asset"));
-		var path = directory.Path;
-		FileIO.RegisterFileSystem(Head, () => new PhysicalFileSystem(Path.Combine(path, "cache")));
-		try
-		{
-			using var package = ModPackage.Open(zip);
+		using var cache = ZioTestExtensions.MountDirectory(directory.Path);
+		using var package = ModPackage.Open(zip);
 
-			var extracted = ModExtractor.Extract(package, $"{Head}://cache");
+		var extracted = ModExtractor.Extract(package, cache, CacheRoot);
 
-			Assert.NotNull(extracted);
-			Assert.True(File.Exists(Path.Combine(extracted, "lib", "a.dll")));
-			Assert.False(File.Exists(Path.Combine(extracted, "Asset", "a.txt")));
-			Assert.Equal(extracted, ModExtractor.Extract(package, $"{Head}://cache"));
-		}
-		finally
-		{
-			FileIO.UnregisterFileSystem(Head);
-		}
+		Assert.NotNull(extracted);
+		Assert.True(File.Exists(Path.Combine(extracted, "lib", "a.dll")));
+		Assert.False(File.Exists(Path.Combine(extracted, "Asset", "a.txt")));
+		Assert.Equal(extracted, ModExtractor.Extract(package, cache, CacheRoot));
 	}
 
 	[Fact]
@@ -157,18 +150,10 @@ public sealed class ModExtractorTests
 		var zip = ZipFactory.Create(directory, "a.zip",
 			("mod.toml", ZipFactory.Manifest),
 			("Asset/a.txt", "asset"));
-		var path = directory.Path;
-		FileIO.RegisterFileSystem(Head + "2", () => new PhysicalFileSystem(Path.Combine(path, "cache")));
-		try
-		{
-			using var package = ModPackage.Open(zip);
+		using var cache = ZioTestExtensions.MountDirectory(directory.Path);
+		using var package = ModPackage.Open(zip);
 
-			Assert.Null(ModExtractor.Extract(package, $"{Head}2://cache"));
-		}
-		finally
-		{
-			FileIO.UnregisterFileSystem(Head + "2");
-		}
+		Assert.Null(ModExtractor.Extract(package, cache, CacheRoot));
 	}
 
 	[Fact]
@@ -178,17 +163,9 @@ public sealed class ModExtractorTests
 		var zip = ZipFactory.Create(directory, "a.zip",
 			("mod.toml", ZipFactory.Manifest),
 			("a.dll", "fake"));
+		using var cache = new MemoryFileSystem();
+		using var package = ModPackage.Open(zip);
 
-		FileIO.RegisterFileSystem(Head + "3", () => new MemoryFileSystem());
-		try
-		{
-			using var package = ModPackage.Open(zip);
-
-			Assert.Throws<InvalidOperationException>(() => ModExtractor.Extract(package, $"{Head}3://cache"));
-		}
-		finally
-		{
-			FileIO.UnregisterFileSystem(Head + "3");
-		}
+		Assert.Throws<InvalidOperationException>(() => ModExtractor.Extract(package, cache, CacheRoot));
 	}
 }

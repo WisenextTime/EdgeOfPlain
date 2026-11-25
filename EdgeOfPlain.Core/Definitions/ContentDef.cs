@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
+using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using Tomlyn;
 using Tomlyn.Serialization;
+using Zio;
 
 namespace EdgeOfPlain.Core.Definitions;
 
@@ -33,15 +35,19 @@ public abstract class ContentDef(string id) : IComparable<ContentDef>
 
 	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
 
-	public string ResolveResourcePath(string path)
+	public UPath ResolveResourcePath(string path)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-		var normalized = path.Replace('\\', '/');
-		var prefix = $"{Launcher.AssetsHead}://";
-		return normalized.StartsWith(prefix, StringComparison.Ordinal)
-			? normalized
-			: $"{prefix}{SourceMod.Id}/{normalized.TrimStart('/')}";
+		var normalized = path.Replace('\\', '/').Trim();
+
+		if (normalized.Contains(":/", StringComparison.Ordinal))
+			throw new ArgumentException(
+				$"'{path}' uses a file system scheme; resource paths are absolute UPaths.", nameof(path));
+
+		return normalized.StartsWith(FileIO.Assets.FullName + "/", StringComparison.Ordinal)
+			? new UPath(normalized)
+			: new UPath($"{FileIO.Assets.FullName}/{SourceMod.Id}/{normalized.TrimStart('/')}");
 	}
 
 	public override string ToString() => FullId;

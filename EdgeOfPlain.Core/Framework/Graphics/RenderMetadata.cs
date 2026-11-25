@@ -1,12 +1,13 @@
 using System.Drawing;
 using System.Numerics;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Graphics;
 
 public sealed record RenderMetadata
 {
-	public string? Texture { get; set; }
-	public string? Shader { get; set; }
+	public UPath? Texture { get; set; }
+	public UPath? Shader { get; set; }
 	public uint Layer { get; set; }
 	public ColorF Color { get; set; } = ColorF.White;
 	public Rectangle? Source { get; set; }

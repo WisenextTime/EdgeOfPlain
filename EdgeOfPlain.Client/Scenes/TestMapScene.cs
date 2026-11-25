@@ -29,13 +29,14 @@ using EdgeOfPlain.Core.Net.Server;
 using FixedMathSharp;
 using SFML.Graphics;
 using SFML.System;
+using Zio;
 using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Scenes;
 
 public sealed class TestMapScene : Scene
 {
-	public const string MapPath = "assets://base/Map/testMap.toml";
+	public const string MapPath = "/assets/base/Map/testMap.toml";
 
 	private const int UiLayer = 1000;
 	private const int UnitLayer = 10;
@@ -67,7 +68,7 @@ public sealed class TestMapScene : Scene
 	private Fixed64 _stepTimer;
 	private static readonly Fixed64 _stepDuration = GameLoop.DefaultFixedStep;
 	private UnitDef? _unitDef;
-	private string _unitTexture = "";
+	private UPath? _unitTexture;
 	private EventSubscription _resizeSubscription;
 	private Vector2 _viewport;
 
@@ -82,7 +83,7 @@ public sealed class TestMapScene : Scene
 	{
 		Map = AssetsManager.LoadResource<Map>(MapPath);
 		_unitDef = FindUnitDefinition();
-		_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture) ?? "";
+		_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture);
 		if (Globals.ModChecksum is null || !CommandRegistry.IsSealed)
 			throw new InvalidOperationException("Mods and commands must be loaded before starting the local room.");
 		_server = new ServerNetNode(0, new BattleRoomOptions { MaxPlayers = 1 });
@@ -306,7 +307,7 @@ public sealed class TestMapScene : Scene
 		var sprites = _unitSprites;
 
 		sprites.Begin(camera);
-		if (_unitTexture.Length != 0)
+		if (_unitTexture is not null)
 		{
 			_gameWorld.World.Query(description, (ref TransformComponent transform) =>
 			{

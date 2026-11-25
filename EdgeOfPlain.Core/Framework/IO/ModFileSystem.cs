@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Core.Framework.IO;
-
-public sealed class ModFileSystem : FileSystem
+public sealed class ModFileSystem() : ComposeFileSystem(new MountFileSystem(), owned: true)
 {
 	public const string BaseNamespace = "base";
 
@@ -18,9 +18,7 @@ public sealed class ModFileSystem : FileSystem
 
 	public IReadOnlyDictionary<string, OverlayFileSystem> Namespaces => _namespaces;
 
-	public override bool IsCaseSensitive => false;
-
-	public override bool IsReadOnly => true;
+	public string Description => "Mods";
 
 	public static string NormalizeNamespace(string name)
 	{
@@ -34,7 +32,7 @@ public sealed class ModFileSystem : FileSystem
 			: normalized;
 	}
 
-	public OverlayFileSystem RegisterNamespace(string name, FileSystem content)
+	public OverlayFileSystem RegisterNamespace(string name, IFileSystem content)
 	{
 		ArgumentNullException.ThrowIfNull(content);
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -42,10 +40,11 @@ public sealed class ModFileSystem : FileSystem
 
 		var normalized = NormalizeNamespace(name);
 		var overlay = new OverlayFileSystem(content, normalized);
-		return !_namespaces.TryAdd(normalized, overlay)
-			? throw new InvalidOperationException($"Namespace '{normalized}' has already been registered")
-			: overlay;
+		if (!_namespaces.TryAdd(normalized, overlay))
+			throw new InvalidOperationException($"Namespace '{normalized}' has already been registered");
 
+		Mounts.Mount(ToMountPath(normalized), overlay);
+		return overlay;
 	}
 
 	public bool UnregisterNamespace(string name)
@@ -55,11 +54,12 @@ public sealed class ModFileSystem : FileSystem
 
 		if (!_namespaces.Remove(NormalizeNamespace(name), out var overlay)) return false;
 
+		Mounts.Unmount(ToMountPath(name));
 		overlay.Dispose();
 		return true;
 	}
 
-	public bool AddOverrideLayer(string targetNamespace, FileSystem layer, string layerName)
+	public bool AddOverrideLayer(string targetNamespace, IFileSystem layer, string layerName)
 	{
 		ArgumentNullException.ThrowIfNull(layer);
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -78,12 +78,7 @@ public sealed class ModFileSystem : FileSystem
 		ObjectDisposedException.ThrowIf(IsDisposed, this);
 		if (IsSealed) throw new InvalidOperationException("ResourceSystem has sealed");
 
-		var changed = 0;
-		foreach (var overlay in _namespaces.Values)
-			if (overlay.RemoveOverrideLayers(layerName))
-				changed++;
-
-		return changed;
+		return _namespaces.Values.Count(overlay => overlay.RemoveOverrideLayers(layerName));
 	}
 
 	public void Seal()
@@ -94,47 +89,26 @@ public sealed class ModFileSystem : FileSystem
 		foreach (var overlay in _namespaces.Values) overlay.Seal();
 	}
 
-	protected override bool FileExistsCore(string path)
-		=> TryResolve(path, out var overlay, out var innerPath) && overlay.FileExists(innerPath);
-
-	protected override bool DirectoryExistsCore(string path)
-		=> TryResolve(path, out var overlay, out var innerPath) && overlay.DirectoryExists(innerPath);
-
-	protected override Stream OpenReadCore(string path)
-		=> Resolve(path, out var innerPath).OpenRead(innerPath);
-
-	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
+	protected override UPath ConvertPathToDelegate(UPath path)
 	{
-		var overlay = Resolve(path, out var innerPath);
-		var separator = path.IndexOf('/');
-		var name = separator < 0 ? path : path[..separator];
+		var fullPath = path.FullName;
+		if (fullPath.Length <= 1) return path;
 
-		return overlay.EnumerateEntries(innerPath)
-			.Select(entry => entry with { Path = $"{name}/{entry.Path}" });
+		var separator = fullPath.IndexOf('/', 1);
+		var name = separator < 0 ? fullPath[1..] : fullPath[1..separator];
+		if (name.Length == 0) return path;
+
+		var normalized = name.ToLowerInvariant();
+		if (string.Equals(normalized, name, StringComparison.Ordinal)) return path;
+
+		return separator < 0
+			? new UPath("/" + normalized)
+			: new UPath("/" + normalized + fullPath[separator..]);
 	}
 
-	private OverlayFileSystem Resolve(string path, out string innerPath)
-	{
-		if (TryResolve(path, out var overlay, out innerPath)) return overlay;
+	protected override UPath ConvertPathFromDelegate(UPath path) => path;
 
-		var separator = path.IndexOf('/');
-		var name = separator < 0 ? path : path[..separator];
-		throw name.Length == 0
-			? new ArgumentException($"Path '{path}' do not contain a namespace", nameof(path))
-			: new FileNotFoundException($"Namespace '{name}' is not found", path);
-	}
+	private static UPath ToMountPath(string name) => new("/" + NormalizeNamespace(name));
 
-	private bool TryResolve(string path, out OverlayFileSystem overlay, out string innerPath)
-	{
-		overlay = null!;
-		innerPath = string.Empty;
-
-		var separator = path.IndexOf('/');
-		var name = separator < 0 ? path : path[..separator];
-		if (name.Length == 0 || !_namespaces.TryGetValue(name, out var found)) return false;
-
-		overlay = found;
-		innerPath = separator < 0 ? string.Empty : path[(separator + 1)..];
-		return true;
-	}
+	private MountFileSystem Mounts => (MountFileSystem)Fallback!;
 }

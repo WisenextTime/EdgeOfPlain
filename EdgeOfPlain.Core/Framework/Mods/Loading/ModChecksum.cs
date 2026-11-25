@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Game.Commands;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -28,30 +29,30 @@ public static class ModChecksum
 		}
 		foreach (var signature in CommandRegistry.NetworkSignatures) AddString(hash, signature);
 
-		// Include the original package files as well as the effective mounted assets:
-		// assemblies and resources hidden by overrides must also match.
 		foreach (var package in loadedPackages.OrderBy(package => package.ModId, StringComparer.Ordinal))
 		{
 			AddString(hash, package.ModId);
-			AddFiles(hash, package.Root, "");
+			AddFiles(hash, package.Root, UPath.Root);
 		}
 
 		foreach (var (name, overlay) in assets.Namespaces.OrderBy(pair => pair.Key, StringComparer.Ordinal))
 		{
 			AddString(hash, name);
-			AddFiles(hash, overlay, "");
+			AddFiles(hash, overlay, UPath.Root);
 		}
 
 		return Convert.ToHexString(hash.GetHashAndReset());
 	}
 
-	private static void AddFiles(IncrementalHash hash, FileSystem system, string root)
+	private static void AddFiles(IncrementalHash hash, IFileSystem system, UPath root)
 	{
+		if (!system.DirectoryExists(root)) return;
+
 		foreach (var path in system.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-			         .OrderBy(path => path, StringComparer.Ordinal))
+			         .OrderBy(path => path.FullName, StringComparer.Ordinal))
 		{
-			AddString(hash, path.Replace('\\', '/'));
-			using var stream = system.OpenRead(path);
+			AddString(hash, path.FullName);
+			using var stream = system.OpenReadShared(path);
 			hash.AppendData(SHA256.HashData(stream));
 		}
 	}

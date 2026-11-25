@@ -7,23 +7,24 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Arch" Version="2.1.0"/>
-		<PackageReference Include="FixedMathSharp" Version="7.1.0"/>
-		<PackageReference Include="LiteNetLib" Version="2.1.5"/>
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.14"/>
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.14"/>
-		<PackageReference Include="Tomlyn" Version="2.10.1"/>
+		<PackageReference Include="Arch" Version="2.1.0" />
+		<PackageReference Include="FixedMathSharp" Version="7.1.0" />
+		<PackageReference Include="LiteNetLib" Version="2.1.5" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.14" />
+		<PackageReference Include="Tomlyn" Version="2.10.1" />
+		<PackageReference Include="Zio" Version="0.25.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<InternalsVisibleTo Include="EdgeOfPlain.Tests"/>
-		<InternalsVisibleTo Include="EdgeOfPlain.Client.Tests"/>
+		<InternalsVisibleTo Include="EdgeOfPlain.Tests" />
+		<InternalsVisibleTo Include="EdgeOfPlain.Client.Tests" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Remove="Assets\**"/>
-		<EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))"/>
+		<None Remove="Assets\**" />
+		<EmbeddedResource Include="Assets\**" Exclude="Assets\**\*.import" LogicalName="$([System.String]::Copy('$(RootNamespace).Assets/%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Net\Server\"/>
+		<Folder Include="Net\Server\" />
 	</ItemGroup>
 
 </Project>

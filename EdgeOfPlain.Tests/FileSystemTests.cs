@@ -1,257 +1,131 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using EdgeOfPlain.Core.Framework.IO;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Tests;
 
-public sealed class FileSystemTests
+public sealed class FileSystemContractTests
 {
 	[Fact]
-	public void Normalize_CollapsesDotSegments()
-	{
-		var fileSystem = new MemoryFileSystem().Add("a/./b/../c.txt", "x");
-
-		Assert.True(fileSystem.FileExists("a/c.txt"));
-		Assert.True(fileSystem.FileExists("/a//c.txt"));
-	}
-
-	[Fact]
-	public void Normalize_RejectsEscapingRoot()
+	public void RelativePathsAreRejected()
 	{
 		var fileSystem = new MemoryFileSystem();
 
-		Assert.Throws<ArgumentException>(() => fileSystem.FileExists("../secret.txt"));
-		Assert.Throws<ArgumentException>(() => fileSystem.FileExists("a/../../secret.txt"));
+		Assert.ThrowsAny<ArgumentException>(() => fileSystem.FileExists(new UPath("a.txt")));
 	}
 
 	[Fact]
-	public void Normalize_RejectsDriveLetters()
+	public void DotSegmentsAreCollapsed()
 	{
-		var fileSystem = new MemoryFileSystem();
+		var fileSystem = new MemoryFileSystem().AddText("/a/c.txt", "x");
 
-		Assert.Throws<ArgumentException>(() => fileSystem.FileExists("C:/windows/system32"));
+		Assert.True(fileSystem.FileExists(new UPath("/a/./c.txt")));
+		Assert.True(fileSystem.FileExists(new UPath("/a/b/../c.txt")));
 	}
 
 	[Fact]
-	public void EnumerateFiles_ExtensionPatternNeedsWildcard()
+	public void SubFileSystemStripsItsPrefix()
 	{
-		var fileSystem = new MemoryFileSystem().Add("x.toml", "a").Add("y.txt", "b");
+		var inner = new MemoryFileSystem().AddText("/mod/assets/a.png", "a").AddText("/other/b.png", "b");
+		var sub = new SubFileSystem(inner, new UPath("/mod/assets"), owned: false);
 
-		Assert.Equal(new[] { "x.toml" }, fileSystem.EnumerateFiles(string.Empty, "*.toml").ToArray());
-		Assert.Empty(fileSystem.EnumerateFiles(string.Empty, "toml"));
+		Assert.True(sub.FileExists(new UPath("/a.png")));
+		Assert.Equal("a", TestPath.ReadAllText(sub, new UPath("/a.png")));
+		Assert.Equal(["/a.png"], sub.EnumerateFiles(UPath.Root, "*", SearchOption.TopDirectoryOnly).Select(path => path.FullName));
+		Assert.False(sub.FileExists(new UPath("/b.png")));
 	}
 
 	[Fact]
-	public void EnumerateFiles_AllDirectories_WalksNestedFolders()
+	public void SubFileSystemForwardsWritesToTheInnerFileSystem()
 	{
-		var fileSystem = new MemoryFileSystem()
-			.Add("a.toml", "1")
-			.Add("nested/b.toml", "2")
-			.Add("nested/deeper/c.toml", "3");
+		using var inner = new MemoryFileSystem();
+		var sub = new SubFileSystem(inner, UPath.Root, owned: false);
 
-		var top = fileSystem.EnumerateFiles(string.Empty, "*.toml").ToArray();
-		var all = fileSystem.EnumerateFiles(string.Empty, "*.toml", SearchOption.AllDirectories).ToArray();
+		sub.WriteAllText(new UPath("/a.txt"), "value");
 
-		Assert.Equal(new[] { "a.toml" }, top);
-		Assert.Equal(3, all.Length);
+		Assert.Equal("value", TestPath.ReadAllText(inner, new UPath("/a.txt")));
 	}
 
 	[Fact]
-	public void EnumerateDirectories_ReportsOnlyDirectories()
+	public void PhysicalEnumerationOfAMissingDirectoryThrows()
 	{
-		var fileSystem = new MemoryFileSystem().Add("nested/b.toml", "2").Add("root.txt", "1");
+		using var directory = new TempDirectory();
+		using var fileSystem = ZioTestExtensions.MountDirectory(directory.Path);
 
-		Assert.Equal(new[] { "nested" }, fileSystem.EnumerateDirectories(string.Empty).ToArray());
-		Assert.Empty(fileSystem.EnumerateDirectories(string.Empty, "root*"));
+		Assert.ThrowsAny<IOException>(() => fileSystem.EnumerateFiles(new UPath("/missing"), "*", SearchOption.TopDirectoryOnly).ToArray());
 	}
 
 	[Fact]
-	public void ReadAllText_HandlesUtf8Bom()
-	{
-		var fileSystem = new MemoryFileSystem();
-		var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("héllo")).ToArray();
-		fileSystem.Add("bom.txt", bytes);
-
-		Assert.Equal("héllo", fileSystem.ReadAllText("bom.txt"));
-	}
-
-	[Fact]
-	public void WriteAllText_DoesNotEmitBom()
-	{
-		var fileSystem = new MemoryFileSystem();
-		fileSystem.WriteAllText("a.txt", "abc");
-
-		Assert.Equal("abc"u8.ToArray(), fileSystem.Files["a.txt"]);
-	}
-
-	[Fact]
-	public async Task WriteAllTextAsync_PersistsContent()
-	{
-		var fileSystem = new MemoryFileSystem();
-
-		await fileSystem.WriteAllTextAsync("a.txt", "hello", TestContext.Current.CancellationToken);
-		var text = await fileSystem.ReadAllTextAsync("a.txt", TestContext.Current.CancellationToken);
-
-		Assert.Equal("hello", text);
-		Assert.Equal("hello", await fileSystem.ReadAllTextAsync("a.txt", TestContext.Current.CancellationToken));
-	}
-
-	[Fact]
-	public void CopyFile_RefusesExistingTargetWithoutOverwrite()
-	{
-		var fileSystem = new MemoryFileSystem().Add("a.txt", "a").Add("b.txt", "b");
-
-		Assert.Throws<IOException>(() => fileSystem.CopyFile("a.txt", "b.txt"));
-		fileSystem.CopyFile("a.txt", "b.txt", true);
-
-		Assert.Equal("a", fileSystem.ReadAllText("b.txt"));
-	}
-
-	[Fact]
-	public void MoveFile_DeletesSource()
-	{
-		var fileSystem = new MemoryFileSystem().Add("a.txt", "a");
-
-		fileSystem.MoveFile("a.txt", "b.txt");
-
-		Assert.False(fileSystem.FileExists("a.txt"));
-		Assert.Equal("a", fileSystem.ReadAllText("b.txt"));
-	}
-
-	[Fact]
-	public void GetFileLength_ReturnsByteCount()
-	{
-		var fileSystem = new MemoryFileSystem().Add("a.txt", "hello");
-
-		Assert.Equal(5L, fileSystem.GetFileLength("a.txt"));
-	}
-
-	[Fact]
-	public void DisposedFileSystem_ThrowsOnUse()
-	{
-		var fileSystem = new MemoryFileSystem();
-		fileSystem.Dispose();
-
-		Assert.True(fileSystem.IsDisposed);
-		Assert.Throws<ObjectDisposedException>(() => fileSystem.FileExists("a.txt"));
-	}
-
-	[Fact]
-	public void SubFileSystem_MapsPrefixAndStripsIt()
-	{
-		var inner = new MemoryFileSystem()
-			.Add("mod/assets/a.png", "a")
-			.Add("other/b.png", "b");
-		var sub = new SubFileSystem(inner, "mod/assets");
-
-		Assert.True(sub.FileExists("a.png"));
-		Assert.Equal("a", sub.ReadAllText("a.png"));
-		Assert.Equal(new[] { "a.png" }, sub.EnumerateFiles(string.Empty).ToArray());
-		Assert.False(sub.FileExists("b.png"));
-	}
-
-	[Fact]
-	public void SubFileSystem_IsNotWritableThroughTheWrapper()
-	{
-		var inner = new MemoryFileSystem();
-		var sub = new SubFileSystem(inner);
-
-		Assert.False(sub.IsReadOnly);
-		Assert.Throws<NotSupportedException>(() => sub.OpenWrite("a.txt"));
-	}
-
-	[Fact]
-	public void PhysicalFileSystem_ReadsAndEnumerates()
+	public void PhysicalMountReadsAndEnumerates()
 	{
 		using var directory = new TempDirectory();
 		directory.Write("nested/a.txt", "hello");
 		directory.Write("b.txt", "world");
+		using var fileSystem = ZioTestExtensions.MountDirectory(directory.Path);
 
-		using var fileSystem = new PhysicalFileSystem(directory.Path);
-
-		Assert.True(fileSystem.FileExists("nested/a.txt"));
-		Assert.Equal("hello", fileSystem.ReadAllText("nested/a.txt"));
-		Assert.Equal(2, fileSystem.EnumerateFiles(string.Empty, "*", SearchOption.AllDirectories).Count());
-	}
-
-	[Fact]
-	public void PhysicalFileSystem_EnumerateMissingDirectory_ReturnsEmpty()
-	{
-		using var directory = new TempDirectory();
-		using var fileSystem = new PhysicalFileSystem(directory.Path);
-
-		Assert.Empty(fileSystem.EnumerateEntries("missing"));
-	}
-
-	[Fact]
-	public void TryGetPhysicalPath_ReportsAbsoluteLocation()
-	{
-		using var directory = new TempDirectory();
-		using var fileSystem = new PhysicalFileSystem(directory.Path);
-
-		Assert.True(fileSystem.TryGetPhysicalPath("a/b.txt", out var path));
-		Assert.Equal(Path.Combine(directory.Path, "a", "b.txt"), path);
+		Assert.Equal("hello", TestPath.ReadAllText(fileSystem, new UPath("/nested/a.txt")));
+		Assert.Equal(2, fileSystem.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories).Count());
 	}
 }
 
 public sealed class OverlayFileSystemTests
 {
 	[Fact]
-	public void OverrideLayer_ShadowsBaseFile()
+	public void OverrideLayerShadowsBaseFile()
 	{
-		var baseLayer = new MemoryFileSystem().Add("a.txt", "base").Add("b.txt", "base");
-		var overlay = new OverlayFileSystem(baseLayer);
-		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().Add("a.txt", "mod"), "mod"));
+		var baseLayer = new MemoryFileSystem().AddText("/a.txt", "base").AddText("/b.txt", "base");
+		using var overlay = new OverlayFileSystem(baseLayer);
+		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().AddText("/a.txt", "mod"), "mod"));
 
-		Assert.Equal("mod", overlay.ReadAllText("a.txt"));
-		Assert.Equal("base", overlay.ReadAllText("b.txt"));
+		Assert.Equal("mod", TestPath.ReadAllText(overlay, new UPath("/a.txt")));
+		Assert.Equal("base", TestPath.ReadAllText(overlay, new UPath("/b.txt")));
 		Assert.Single(overlay.Shadows);
 	}
 
 	[Fact]
-	public void OverrideLayer_CanOnlyShadowExistingFiles()
+	public void OverrideLayerCanOnlyShadowExistingFiles()
 	{
-		var overlay = new OverlayFileSystem(new MemoryFileSystem().Add("a.txt", "base"));
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem().AddText("/a.txt", "base"));
 		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(
-			new MemoryFileSystem().Add("a.txt", "mod").Add("new.txt", "mod"), "mod"));
+			new MemoryFileSystem().AddText("/a.txt", "mod").AddText("/new.txt", "mod"), "mod"));
 
-		Assert.False(overlay.FileExists("new.txt"));
+		Assert.False(overlay.FileExists(new UPath("/new.txt")));
 		Assert.Single(overlay.Diagnostics);
 		Assert.Contains("is not found in low layers", overlay.Diagnostics[0]);
 	}
 
 	[Fact]
-	public void TwoLayersShadingTheSameFile_ProduceConflictDiagnostic()
+	public void TwoLayersShadingTheSameFileProduceConflictDiagnostic()
 	{
-		var overlay = new OverlayFileSystem(new MemoryFileSystem().Add("a.txt", "base"));
-		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().Add("a.txt", "one"), "one"));
-		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().Add("a.txt", "two"), "two"));
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem().AddText("/a.txt", "base"));
+		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().AddText("/a.txt", "one"), "one"));
+		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().AddText("/a.txt", "two"), "two"));
 
-		Assert.Equal("two", overlay.ReadAllText("a.txt"));
+		Assert.Equal("two", TestPath.ReadAllText(overlay, new UPath("/a.txt")));
 		Assert.Contains(overlay.Diagnostics, message => message.Contains("simultaneously covered"));
 	}
 
 	[Fact]
-	public void RemoveOverrideLayers_RestoresBaseContent()
+	public void RemoveOverrideLayersRestoresBaseContent()
 	{
-		var overlay = new OverlayFileSystem(new MemoryFileSystem().Add("a.txt", "base"));
-		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().Add("a.txt", "mod"), "mod"));
-		Assert.Equal("mod", overlay.ReadAllText("a.txt"));
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem().AddText("/a.txt", "base"));
+		overlay.AddOverrideLayer(new OverlayFileSystem.Layer(new MemoryFileSystem().AddText("/a.txt", "mod"), "mod"));
+		Assert.Equal("mod", TestPath.ReadAllText(overlay, new UPath("/a.txt")));
 
 		Assert.True(overlay.RemoveOverrideLayers("mod"));
 
-		Assert.Equal("base", overlay.ReadAllText("a.txt"));
+		Assert.Equal("base", TestPath.ReadAllText(overlay, new UPath("/a.txt")));
 		Assert.Empty(overlay.Shadows);
 	}
 
 	[Fact]
-	public void SealedOverlay_RejectsNewLayers()
+	public void SealedOverlayRejectsNewLayers()
 	{
-		var overlay = new OverlayFileSystem(new MemoryFileSystem());
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem());
 		overlay.Seal();
 
 		Assert.Throws<InvalidOperationException>(()
@@ -259,40 +133,58 @@ public sealed class OverlayFileSystemTests
 	}
 
 	[Fact]
-	public void MissingFile_ThrowsFileNotFound()
+	public void OverlayIsReadOnly()
 	{
-		var overlay = new OverlayFileSystem(new MemoryFileSystem());
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem());
 
-		Assert.Throws<FileNotFoundException>(() => overlay.OpenRead("missing.txt"));
+		Assert.Throws<IOException>(() => overlay.OpenFile(new UPath("/a.txt"), FileMode.Create, FileAccess.Write));
+	}
+
+	[Fact]
+	public void MissingFileThrowsFileNotFound()
+	{
+		using var overlay = new OverlayFileSystem(new MemoryFileSystem());
+
+		Assert.Throws<FileNotFoundException>(() => overlay.OpenFile(new UPath("/missing.txt"), FileMode.Open, FileAccess.Read, FileShare.Read));
 	}
 }
 
 public sealed class ModFileSystemTests
 {
 	[Fact]
-	public void Resolve_UsesNamespaceAsFirstSegment()
+	public void ResolveUsesNamespaceAsFirstSegment()
 	{
-		var modFileSystem = new ModFileSystem();
-		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().Add("a.txt", "a"));
+		using var modFileSystem = new ModFileSystem();
+		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().AddText("/a.txt", "a"));
 
-		Assert.True(modFileSystem.FileExists("core/a.txt"));
-		Assert.Equal("a", modFileSystem.ReadAllText("core/a.txt"));
-		Assert.True(modFileSystem.DirectoryExists("core"));
+		Assert.True(modFileSystem.FileExists(new UPath("/core/a.txt")));
+		Assert.Equal("a", TestPath.ReadAllText(modFileSystem, new UPath("/core/a.txt")));
+		Assert.True(modFileSystem.DirectoryExists(new UPath("/core")));
 	}
 
 	[Fact]
-	public void Resolve_UnknownNamespace_Throws()
+	public void NamespacesAreMatchedCaseInsensitively()
 	{
-		var modFileSystem = new ModFileSystem();
+		using var modFileSystem = new ModFileSystem();
+		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().AddText("/a.txt", "a"));
 
-		Assert.False(modFileSystem.FileExists("missing/a.txt"));
-		Assert.Throws<FileNotFoundException>(() => modFileSystem.OpenRead("missing/a.txt"));
-		Assert.Throws<FileNotFoundException>(() => modFileSystem.OpenRead("no-namespace"));
-		Assert.Throws<ArgumentException>(() => modFileSystem.OpenRead(string.Empty));
+		Assert.True(modFileSystem.FileExists(new UPath("/CORE/a.txt")));
+		Assert.NotNull(modFileSystem.GetNamespace("CORE"));
+		Assert.Equal(["core"], modFileSystem.Namespaces.Keys.ToArray());
 	}
 
 	[Fact]
-	public void NormalizeNamespace_LowercasesAndRejectsSeparators()
+	public void UnknownNamespaceIsNotVisible()
+	{
+		using var modFileSystem = new ModFileSystem();
+
+		Assert.False(modFileSystem.FileExists(new UPath("/missing/a.txt")));
+		Assert.False(modFileSystem.DirectoryExists(new UPath("/missing")));
+		Assert.ThrowsAny<IOException>(() => modFileSystem.OpenFile(new UPath("/missing/a.txt"), FileMode.Open, FileAccess.Read, FileShare.Read).Dispose());
+	}
+
+	[Fact]
+	public void NormalizeNamespaceLowercasesAndRejectsSeparators()
 	{
 		Assert.Equal("my-mod", ModFileSystem.NormalizeNamespace("My-Mod"));
 		Assert.Throws<ArgumentException>(() => ModFileSystem.NormalizeNamespace("a b"));
@@ -301,9 +193,9 @@ public sealed class ModFileSystemTests
 	}
 
 	[Fact]
-	public void RegisterNamespace_IsCaseInsensitiveAndUnique()
+	public void RegisterNamespaceIsCaseInsensitiveAndUnique()
 	{
-		var modFileSystem = new ModFileSystem();
+		using var modFileSystem = new ModFileSystem();
 		modFileSystem.RegisterNamespace("Core", new MemoryFileSystem());
 
 		Assert.Throws<InvalidOperationException>(() => modFileSystem.RegisterNamespace("core", new MemoryFileSystem()));
@@ -311,20 +203,20 @@ public sealed class ModFileSystemTests
 	}
 
 	[Fact]
-	public void AddOverrideLayer_RequiresKnownTargetNamespace()
+	public void AddOverrideLayerRequiresKnownTargetNamespace()
 	{
-		var modFileSystem = new ModFileSystem();
-		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().Add("a.txt", "base"));
+		using var modFileSystem = new ModFileSystem();
+		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().AddText("/a.txt", "base"));
 
-		Assert.True(modFileSystem.AddOverrideLayer("core", new MemoryFileSystem().Add("a.txt", "mod"), "mod"));
-		Assert.Equal("mod", modFileSystem.ReadAllText("core/a.txt"));
+		Assert.True(modFileSystem.AddOverrideLayer("core", new MemoryFileSystem().AddText("/a.txt", "mod"), "mod"));
+		Assert.Equal("mod", TestPath.ReadAllText(modFileSystem, new UPath("/core/a.txt")));
 		Assert.False(modFileSystem.AddOverrideLayer("missing", new MemoryFileSystem(), "mod"));
 	}
 
 	[Fact]
-	public void Seal_PreventsFurtherRegistration()
+	public void SealPreventsFurtherRegistration()
 	{
-		var modFileSystem = new ModFileSystem();
+		using var modFileSystem = new ModFileSystem();
 		modFileSystem.Seal();
 
 		Assert.Throws<InvalidOperationException>(() => modFileSystem.RegisterNamespace("core", new MemoryFileSystem()));
@@ -332,24 +224,24 @@ public sealed class ModFileSystemTests
 	}
 
 	[Fact]
-	public void UnregisterNamespace_RemovesContent()
+	public void UnregisterNamespaceRemovesContent()
 	{
-		var modFileSystem = new ModFileSystem();
-		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().Add("a.txt", "a"));
+		using var modFileSystem = new ModFileSystem();
+		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().AddText("/a.txt", "a"));
 
 		Assert.True(modFileSystem.UnregisterNamespace("CORE"));
-		Assert.False(modFileSystem.FileExists("core/a.txt"));
+		Assert.False(modFileSystem.FileExists(new UPath("/core/a.txt")));
 		Assert.False(modFileSystem.UnregisterNamespace("core"));
 	}
 
 	[Fact]
-	public void RemoveOverrideLayers_AppliesToAllNamespaces()
+	public void RemoveOverrideLayersAppliesToAllNamespaces()
 	{
-		var modFileSystem = new ModFileSystem();
-		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().Add("a.txt", "base"));
-		modFileSystem.AddOverrideLayer("core", new MemoryFileSystem().Add("a.txt", "mod"), "mod");
+		using var modFileSystem = new ModFileSystem();
+		modFileSystem.RegisterNamespace("core", new MemoryFileSystem().AddText("/a.txt", "base"));
+		modFileSystem.AddOverrideLayer("core", new MemoryFileSystem().AddText("/a.txt", "mod"), "mod");
 
 		Assert.Equal(1, modFileSystem.RemoveOverrideLayers("MOD"));
-		Assert.Equal("base", modFileSystem.ReadAllText("core/a.txt"));
+		Assert.Equal("base", TestPath.ReadAllText(modFileSystem, new UPath("/core/a.txt")));
 	}
 }

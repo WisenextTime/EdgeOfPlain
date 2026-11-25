@@ -7,6 +7,7 @@ using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.Graphics;
 using SFML.Graphics;
 using SFML.System;
+using Zio;
 using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
@@ -66,8 +67,9 @@ public sealed class SpriteBatch(IRenderTarget target)
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
-		var texture = string.IsNullOrEmpty(metadata.Texture) ? null : ResolveTexture(metadata.Texture);
-		var shader = string.IsNullOrEmpty(metadata.Shader) ? null : metadata.Shader;
+		var texturePath = metadata.Texture is { IsEmpty: false } declaredTexture ? declaredTexture : (UPath?)null;
+		var texture = texturePath is { } resolvedTexture ? ResolveTexture(resolvedTexture) : null;
+		var shader = metadata.Shader is { IsEmpty: false } declaredShader ? declaredShader : (UPath?)null;
 		var bucket = ResolveBucket(new GroupKey(metadata.Layer, texture?.TexturePath, shader));
 
 		if (metadata.NineSlice is { } slice)
@@ -306,8 +308,8 @@ public sealed class SpriteBatch(IRenderTarget target)
 		if (bucket.Count == 0) return;
 
 		var states = RenderStates.Default;
-		states.Texture = key.Texture is null ? null : ClientAssetsManager.Get<Texture>(key.Texture);
-		states.Shader = key.Shader is null ? null : ResolveShader(key.Shader);
+		states.Texture = key.Texture is { } texturePath ? ClientAssetsManager.Get<Texture>(texturePath) : null;
+		states.Shader = key.Shader is { } shaderPath ? ResolveShader(shaderPath) : null;
 
 		_target.Draw(bucket.Vertices, 0, (uint)bucket.Count, PrimitiveType.Triangles, states);
 
@@ -345,9 +347,9 @@ public sealed class SpriteBatch(IRenderTarget target)
 		return text;
 	}
 
-	private static TextureData ResolveTexture(string key) => ClientAssetsManager.Get<TextureData>(key);
+	private static TextureData ResolveTexture(UPath key) => ClientAssetsManager.Get<TextureData>(key);
 
-	private static Shader ResolveShader(string path) => ClientAssetsManager.Get<Shader>(path);
+	private static Shader ResolveShader(UPath path) => ClientAssetsManager.Get<Shader>(path);
 
 	private static Vector2 ResolveScale(RenderMetadata metadata, Vector2 natural)
 	{
@@ -363,10 +365,10 @@ public sealed class SpriteBatch(IRenderTarget target)
 		var result = left.Layer.CompareTo(right.Layer);
 		if (result != 0) return result;
 
-		result = string.CompareOrdinal(left.Texture, right.Texture);
+		result = string.CompareOrdinal(left.Texture?.FullName, right.Texture?.FullName);
 		if (result != 0) return result;
 
-		return string.CompareOrdinal(left.Shader, right.Shader);
+		return string.CompareOrdinal(left.Shader?.FullName, right.Shader?.FullName);
 	}
 
 	private static int CompareText(in TextEntry left, in TextEntry right)
@@ -428,5 +430,5 @@ public sealed class SpriteBatch(IRenderTarget target)
 		uint Layer,
 		int Sequence);
 
-	private readonly record struct GroupKey(uint Layer, string? Texture, string? Shader);
+	private readonly record struct GroupKey(uint Layer, UPath? Texture, UPath? Shader);
 }

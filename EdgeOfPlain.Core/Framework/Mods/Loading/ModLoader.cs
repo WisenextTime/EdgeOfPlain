@@ -8,6 +8,7 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -19,7 +20,7 @@ public static class ModLoader
 	private static bool _discoveryStarted;
 	private static bool _committed;
 
-	private static string CacheRoot => $"{Launcher.DataHead}://Cache";
+	private static UPath CacheRoot => FileIO.Data / "Cache";
 
 	public static IReadOnlyList<ModPackage> Packages => _packages;
 
@@ -35,29 +36,28 @@ public static class ModLoader
 		Globals.ModChecksum = null;
 		_discoveryStarted = true;
 
-		const string modRoot = $"{Launcher.ModHead}://";
-		if (!FileIO.DirectoryExists(modRoot))
+		var fileSystem = FileIO.Root;
+		if (!fileSystem.DirectoryExists(FileIO.Mods))
 		{
 			LogUtils.Logger(typeof(ModLoader)).LogWarning("Mod directory does not exist, no mod was loaded.");
 			return;
 		}
 
-		var archives = FileIO.EnumerateEntries(modRoot)
-			.Where(entry => !entry.IsDirectory)
-			.Where(entry => string.Equals(Path.GetExtension(entry.Path), ".zip", StringComparison.OrdinalIgnoreCase))
-			.OrderBy(entry => entry.Path, StringComparer.Ordinal)
+		var archives = fileSystem.EnumerateFiles(FileIO.Mods, "*", SearchOption.TopDirectoryOnly)
+			.Where(path => string.Equals(path.GetExtensionWithDot(), ".zip", StringComparison.OrdinalIgnoreCase))
+			.OrderBy(path => path.FullName, StringComparer.Ordinal)
 			.ToArray();
 
 		foreach (var archive in archives)
 		{
 			try
 			{
-				LoadPackage(archive.Path);
+				LoadPackage(archive);
 			}
 			catch(Exception e)
 			{
 				LogUtils.Logger(typeof(ModLoader)).LogError("Failed to load mod package '{ArchivePath}': {EMessage}",
-					archive.Path, e.Message);
+					archive.FullName, e.Message);
 			}
 		}
 
@@ -97,8 +97,7 @@ public static class ModLoader
 		ContentStore.Seal();
 		ComponentManager.Seal();
 		CommandRegistry.Seal();
-		if (FileIO.TryResolve($"{Launcher.AssetsHead}://", out var location) &&
-		    location.FileSystem is ModFileSystem assets)
+		if (FileIO.TryGetMounted(FileIO.Assets, out var mounted) && mounted is ModFileSystem assets)
 			Globals.ModChecksum = ModChecksum.Compute(assets, LoadedMods, []);
 
 		LogUtils.Logger(typeof(ModLoader)).LogInformation(
@@ -107,12 +106,11 @@ public static class ModLoader
 			string.Join(" → ", order.Select(mod => mod.ModInfo.Id)));
 	}
 
-	private static void LoadPackage(string sourcePath)
+	private static void LoadPackage(UPath sourcePath)
 	{
-		var location = FileIO.Resolve(sourcePath);
-		if (!location.FileSystem.TryGetPhysicalPath(location.Path, out var zipPath))
+		if (!FileIO.Root.TryGetPhysicalPath(sourcePath, out var zipPath))
 			throw new InvalidOperationException(
-				$"'{Launcher.ModHead}://' is not backed by a physical file system, so mod packages cannot be opened from it.");
+				$"`{sourcePath}` is not backed by a physical file system, so mod packages cannot be opened from it.");
 
 		var package = ModPackage.Open(zipPath);
 		var contextCount = _contexts.Count;
@@ -137,7 +135,7 @@ public static class ModLoader
 
 	private static IReadOnlyList<Mod> CreateEntryPoints(ModPackage package)
 	{
-		var directory = ModExtractor.Extract(package, CacheRoot);
+		var directory = ModExtractor.Extract(package, FileIO.Root, CacheRoot);
 		if (directory is null) return [new Mod()];
 
 		var mods = ModEntryPoints.Create(package.ModId, directory, _contexts, out var hasManagedAssemblies);

@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using EdgeOfPlain.Core.Framework.Graphics;
+using Zio;
 
 namespace EdgeOfPlain.Client.UI;
 
@@ -21,7 +22,7 @@ public sealed class UiButton : UiElement
 
 	public float BorderThickness { get; set; } = 1f;
 
-	public string? BackgroundTexture { get; set; }
+	public UPath? BackgroundTexture { get; set; }
 
 	public NineSlice? Background { get; set; }
 
@@ -72,9 +73,9 @@ public sealed class UiButton : UiElement
 
 	private void DrawBackground(ISpriteBatch batch, ColorF fill)
 	{
-		if (Background is { } slice && !string.IsNullOrEmpty(BackgroundTexture))
+		if (Background is { } slice && BackgroundTexture is { IsEmpty: false } texture)
 		{
-			batch.DrawNineSlice(BackgroundTexture, slice, Bounds, (uint)Layer, fill);
+			batch.DrawNineSlice(texture, slice, Bounds, (uint)Layer, fill);
 
 			return;
 		}

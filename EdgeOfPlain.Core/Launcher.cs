@@ -10,20 +10,17 @@ using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Core;
 
 public abstract class Launcher
 {
-	public const string AssetsHead = "assets";
-	public const string DataHead = "data";
-	public const string ModHead = "mod";
-
 	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
 	private bool _initialized;
 	private bool _contentLoaded;
 
-	protected abstract FileSystem BaseAssetsSystem { get; }
+	protected abstract IFileSystem BaseAssetsSystem { get; }
 	protected abstract string DataDirectory { get; }
 	protected abstract string ModDirectory { get; }
 
@@ -67,10 +64,9 @@ public abstract class Launcher
 
 	protected virtual void InitFileSystems()
 	{
+		FileIO.Initialize(DataDirectory, ModDirectory);
 		AssetFileSystem.RegisterNamespace(ModFileSystem.BaseNamespace, BaseAssetsSystem);
-		FileIO.RegisterFileSystem(AssetsHead, AssetFileSystem);
-		FileIO.RegisterFileSystem(DataHead, new PhysicalFileSystem(DataDirectory));
-		FileIO.RegisterFileSystem(ModHead, new PhysicalFileSystem(ModDirectory));
+		FileIO.Mount(FileIO.Assets, AssetFileSystem);
 	}
 
 	protected virtual void InitResourceOperators()

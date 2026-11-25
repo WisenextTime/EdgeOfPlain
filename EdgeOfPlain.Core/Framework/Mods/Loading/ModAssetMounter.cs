@@ -73,7 +73,7 @@ public static class ModAssetMounter
 				name, overlay.Shadows.Count);
 
 			var listed = 0;
-			foreach (var (path, index) in overlay.Shadows.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+			foreach (var (path, index) in overlay.Shadows.OrderBy(pair => pair.Key.FullName, StringComparer.Ordinal))
 			{
 				if (listed++ >= MaxListedShadows)
 				{

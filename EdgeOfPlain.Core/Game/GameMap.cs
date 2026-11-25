@@ -8,6 +8,7 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Exceptions;
 using EdgeOfPlain.Core.Framework.Mods;
 using FixedMathSharp;
+using Zio;
 
 namespace EdgeOfPlain.Core.Game;
 
@@ -383,7 +384,7 @@ public sealed class MapTileset
 	public int TileCount => Columns * Rows;
 	public IEnumerable<TileData> TileDataValues => _tileData.Values;
 
-	public string TextureKey => Definition.ResolveResourcePath(Definition.Texture);
+	public UPath TextureKey => Definition.ResolveResourcePath(Definition.Texture);
 
 	public bool Contains(ushort id)
 		=> id != Map.EmptyGid && id >= FirstGid && id - FirstGid < TileCount;

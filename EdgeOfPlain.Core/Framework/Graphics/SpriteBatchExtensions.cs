@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Drawing;
 using System.Numerics;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Graphics;
 
@@ -11,15 +12,17 @@ public static class SpriteBatchExtensions
 
 	public static int DrawNineSlice(
 		this ISpriteBatch batch,
-		string texture,
+		UPath texture,
 		NineSlice slice,
 		RectangleF destination,
 		uint layer = 0,
 		ColorF? color = null,
-		string? shader = null)
+		UPath? shader = null)
 	{
 		ArgumentNullException.ThrowIfNull(batch);
-		ArgumentException.ThrowIfNullOrEmpty(texture);
+
+		if (texture.IsNull || texture.IsEmpty)
+			throw new ArgumentException("A texture path is required.", nameof(texture));
 
 		var metadata = new RenderMetadata
 		{

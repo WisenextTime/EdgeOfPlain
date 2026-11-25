@@ -9,6 +9,7 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
 using SFML.Graphics;
+using Zio;
 
 namespace EdgeOfPlain.Client.Resource.Textures;
 
@@ -26,7 +27,7 @@ public static class TextureLoader
 
 	private static void LoadAtlases(ModResourceDirectory directory)
 	{
-		var images = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var images = new Dictionary<UPath, UPath>(UPathComparer.OrdinalIgnoreCase);
 		foreach (var file in directory.Files)
 			if (HasExtension(file, ".png"))
 				images[WithoutExtension(file)] = file;
@@ -56,7 +57,7 @@ public static class TextureLoader
 		}
 	}
 
-	private static void LoadAtlas(string atlasPath, string texturePath)
+	private static void LoadAtlas(UPath atlasPath, UPath texturePath)
 	{
 		var atlas = AssetsManager.LoadResource<TextureAtlas>(atlasPath);
 		var (width, height) = ReadPngSize(texturePath);
@@ -78,9 +79,9 @@ public static class TextureLoader
 		}
 	}
 
-	private static (int Width, int Height) ReadPngSize(string texturePath)
+	private static (int Width, int Height) ReadPngSize(UPath texturePath)
 	{
-		using var stream = FileIO.OpenRead(texturePath);
+		using var stream = FileIO.Root.OpenReadShared(texturePath);
 
 		Span<byte> header = stackalloc byte[24];
 		stream.ReadExactly(header);
@@ -93,16 +94,13 @@ public static class TextureLoader
 			BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
 	}
 
-	private static bool HasImageExtension(string path) => HasExtension(path, ".png");
+	private static bool HasImageExtension(UPath path) => HasExtension(path, ".png");
 
-	private static bool HasExtension(string path, string extension)
-		=> path.EndsWith(extension, StringComparison.OrdinalIgnoreCase);
+	private static bool HasExtension(UPath path, string extension)
+		=> string.Equals(path.GetExtensionWithDot(), extension, StringComparison.OrdinalIgnoreCase);
 
-	private static string WithoutExtension(string path)
-	{
-		var dot = path.LastIndexOf('.');
-		var separator = path.LastIndexOf('/');
-
-		return dot > separator ? path[..dot] : path;
-	}
+	private static UPath WithoutExtension(UPath path)
+		=> path.GetExtensionWithDot() is { Length: > 0 } extension
+			? new UPath(path.FullName[..^extension.Length])
+			: path;
 }

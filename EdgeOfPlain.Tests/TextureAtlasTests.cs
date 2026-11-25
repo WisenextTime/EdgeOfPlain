@@ -1,6 +1,7 @@
 using EdgeOfPlain.Core.Framework.Resource;
 using Tomlyn;
 using Xunit;
+using Zio;
 
 namespace EdgeOfPlain.Tests;
 
@@ -9,7 +10,7 @@ public sealed class TextureAtlasTests
 	[Fact]
 	public void ParsesSpritesFromSampleAsset()
 	{
-		var atlas = TextureAtlas.Parse(CoreAssets.Content.ReadAllText("Textures/Tiles/testTile.atlas"));
+		var atlas = TextureAtlas.Parse(CoreAssets.Content.ReadAllText(new UPath("/Textures/Tiles/testTile.atlas")));
 
 		var sprite = Assert.Single(atlas.Sprites);
 		Assert.Equal("main", sprite.Id);

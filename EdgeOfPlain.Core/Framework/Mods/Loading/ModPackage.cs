@@ -1,10 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using EdgeOfPlain.Core.Framework.IO;
 using Tomlyn;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Core.Framework.Mods.Loading;
 
@@ -20,42 +23,48 @@ public sealed class ModPackage : IDisposable
 		PropertyNameCaseInsensitive = true,
 	};
 
+	private static readonly UPath ManifestPath = new("/" + ManifestName);
+	private static readonly UPath AssetPath = new("/" + AssetDirectoryName);
+	private static readonly UPath OverriderPath = new("/" + OverriderDirectoryName);
+
 	private readonly ZipFileSystem _zip;
 
-	private ModPackage(string modId, string zipPath, ZipFileSystem zip, FileSystem assets,
-		IReadOnlyDictionary<string, FileSystem> overriders, ModInfo? info)
+	private ModPackage(string modId, string zipPath, ZipFileSystem zip, IFileSystem assets, bool hasAssets,
+		IReadOnlyDictionary<string, IFileSystem> overriders, ModInfo? info)
 	{
 		ModId = modId;
 		ZipPath = zipPath;
 		_zip = zip;
 		Assets = assets;
+		HasAssets = hasAssets;
 		Overriders = overriders;
 		Info = info;
 	}
 
 	public string ModId { get; }
 	public string ZipPath { get; }
-	public FileSystem Root => _zip;
+	public IFileSystem Root => _zip;
 
-	public FileSystem Assets { get; }
-	public IReadOnlyDictionary<string, FileSystem> Overriders { get; }
+	public IFileSystem Assets { get; }
+	public IReadOnlyDictionary<string, IFileSystem> Overriders { get; }
 
 	public ModInfo? Info { get; }
 
-	public bool HasAssets => Assets.DirectoryExists(string.Empty);
+	public bool HasAssets { get; }
+
 	public static ModPackage Open(string zipPath) => Open(zipPath, null);
 
 	public static ModPackage Open(string zipPath, string? modId)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
 
-		var zip = new ZipFileSystem(zipPath);
+		var zip = new ZipFileSystem(zipPath, isCaseSensitive: false);
 		try
 		{
 			ModInfo? info = null;
-			if (zip.FileExists(ManifestName))
+			if (zip.FileExists(ManifestPath))
 			{
-				var parsed = TomlSerializer.Deserialize<ModInfo>(zip.ReadAllText(ManifestName), ManifestOptions);
+				var parsed = TomlSerializer.Deserialize<ModInfo>(zip.ReadAllText(ManifestPath), ManifestOptions);
 				if (string.IsNullOrEmpty(parsed.Id))
 					throw new InvalidDataException($"{ManifestName} in '{zipPath}' has a invalid id");
 				info = Normalize(parsed);
@@ -67,16 +76,23 @@ public sealed class ModPackage : IDisposable
 			if (ModFileSystem.ReservedNamespaces.Contains(id))
 				throw new InvalidDataException($"mod '{id}' use a invalid namespace");
 
-			var overriders = new Dictionary<string, FileSystem>(StringComparer.OrdinalIgnoreCase);
-			foreach (var directory in zip.EnumerateDirectories(OverriderDirectoryName))
+			var overriders = new Dictionary<string, IFileSystem>(StringComparer.OrdinalIgnoreCase);
+			if (zip.DirectoryExists(OverriderPath))
 			{
-				var separator = directory.LastIndexOf('/');
-				var target = directory[(separator + 1)..];
-				overriders[ModFileSystem.NormalizeNamespace(target)] = new SubFileSystem(zip, directory);
+				foreach (var directory in zip.EnumerateDirectories(OverriderPath, "*", SearchOption.TopDirectoryOnly))
+				{
+					var target = directory.GetName();
+					overriders[ModFileSystem.NormalizeNamespace(target)] =
+						new SubFileSystem(zip, directory, owned: false, isCaseSensitive: false);
+				}
 			}
 
-			return new ModPackage(id, Path.GetFullPath(zipPath), zip, new SubFileSystem(zip, AssetDirectoryName), overriders,
-				info);
+			var hasAssets = zip.DirectoryExists(AssetPath);
+			IFileSystem assets = hasAssets
+				? new SubFileSystem(zip, AssetPath, owned: false, isCaseSensitive: false)
+				: new MemoryFileSystem();
+
+			return new ModPackage(id, Path.GetFullPath(zipPath), zip, assets, hasAssets, overriders, info);
 		}
 		catch
 		{

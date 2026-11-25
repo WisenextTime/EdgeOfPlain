@@ -39,6 +39,7 @@ public sealed class CommandRegistryTests : IDisposable
 
 		if (ComponentManager.IsSealed) return;
 
+		ComponentManager.Reset();
 		ComponentManager.StageComponent(HealthComponent.CreateComponent, "test");
 		ComponentManager.StageComponent(TransformComponent.CreateComponent, "test");
 		ComponentManager.Seal();

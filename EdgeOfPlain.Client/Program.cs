@@ -12,6 +12,7 @@ using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
+using Zio;
 
 namespace EdgeOfPlain.Client;
 
@@ -64,7 +65,7 @@ public class Program : Launcher
 			GameContext.RenderTarget,
 			TimeSpan.FromSeconds(1));
 
-	protected override FileSystem BaseAssetsSystem => CoreAssets.Content;
+	protected override IFileSystem BaseAssetsSystem => CoreAssets.Content;
 	protected override string DataDirectory
 		=> Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "EdgeOfPlain");
 	protected override string ModDirectory => Path.Combine(AppContext.BaseDirectory, "Mods");

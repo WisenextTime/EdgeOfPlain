@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using EdgeOfPlain.Core.Framework.IO;
+using Zio;
 
 namespace EdgeOfPlain.Core.Framework.Resource;
 
@@ -59,33 +60,33 @@ public static class AssetsManager
 		}
 	}
 
-	public static T LoadResource<T>(string sourcePath)
+	public static T LoadResource<T>(UPath sourcePath)
 	{
 		var resourceOperator = Operator<T>();
-		using var stream = FileIO.OpenRead(sourcePath);
+		using var stream = FileIO.Root.OpenReadShared(sourcePath);
 		return resourceOperator.Loader(stream);
 	}
 
-	public static async ValueTask<T> LoadResourceAsync<T>(string sourcePath, CancellationToken cancellationToken = default)
+	public static async ValueTask<T> LoadResourceAsync<T>(UPath sourcePath, CancellationToken cancellationToken = default)
 	{
 		var resourceOperator = Operator<T>();
-		await using var stream = await FileIO.OpenReadAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+		using var stream = FileIO.Root.OpenReadShared(sourcePath);
 
 		return resourceOperator.AsyncLoader is { } asyncLoader
 			? await asyncLoader(stream, cancellationToken).ConfigureAwait(false)
 			: resourceOperator.Loader(stream);
 	}
 
-	public static void SaveResource<T>(T resource, string sourcePath)
+	public static void SaveResource<T>(T resource, UPath sourcePath)
 	{
 		var resourceOperator = Operator<T>();
 		var saver = resourceOperator.Saver ?? throw UnsupportedSave<T>();
 
-		using var stream = FileIO.OpenWrite(sourcePath);
+		using var stream = OpenWrite(sourcePath);
 		saver(stream, resource);
 	}
 
-	public static async ValueTask SaveResourceAsync<T>(T resource, string sourcePath,
+	public static async ValueTask SaveResourceAsync<T>(T resource, UPath sourcePath,
 		CancellationToken cancellationToken = default)
 	{
 		var resourceOperator = Operator<T>();
@@ -94,7 +95,7 @@ public static class AssetsManager
 
 		if (asyncSaver is null && saver is null) throw UnsupportedSave<T>();
 
-		await using var stream = await FileIO.OpenWriteAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+		using var stream = OpenWrite(sourcePath);
 
 		if (asyncSaver is not null)
 		{
@@ -103,6 +104,14 @@ public static class AssetsManager
 		}
 
 		saver?.Invoke(stream, resource);
+	}
+
+	private static Stream OpenWrite(UPath sourcePath)
+	{
+		var fileSystem = FileIO.Root;
+		fileSystem.CreateParentDirectory(sourcePath);
+
+		return fileSystem.OpenFile(sourcePath, FileMode.Create, FileAccess.Write, FileShare.None);
 	}
 
 	private static ResourceOperator<T> Operator<T>()

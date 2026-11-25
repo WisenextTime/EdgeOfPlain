@@ -1,11 +1,13 @@
 using System;
+using System.IO;
 using EdgeOfPlain.Client.Resource;
 using EdgeOfPlain.Client.Resource.Shaders;
-using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Framework.IO;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Framework.Resource;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Client.Tests;
 
@@ -17,7 +19,8 @@ public sealed class ShaderLoaderTests : IDisposable
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.Clear();
+		FileIO.Reset();
+		FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
 
 		_root.Write("Shaders/probe.shader", "#FRAG\nvoid main() { }");
 	}
@@ -26,7 +29,7 @@ public sealed class ShaderLoaderTests : IDisposable
 	{
 		ClientAssetsManager.Dispose();
 		AssetsManager.Clear();
-		FileIO.Clear();
+		FileIO.Reset();
 		_root.Dispose();
 	}
 
@@ -34,8 +37,8 @@ public sealed class ShaderLoaderTests : IDisposable
 	public void LoadAllCollectsShaderFilesWithoutCompilingThem()
 	{
 		var assets = new ModFileSystem();
-		assets.RegisterNamespace("probe", new PhysicalFileSystem(_root.Path));
-		FileIO.RegisterFileSystem(Launcher.AssetsHead, assets);
+		assets.RegisterNamespace("probe", Mount(_root.Path));
+		FileIO.Mount(FileIO.Assets, assets);
 
 		Assert.True(ShaderLoader.Register());
 
@@ -43,6 +46,12 @@ public sealed class ShaderLoaderTests : IDisposable
 		ModResourceLoader.LoadAll([mod]);
 
 		Assert.Equal(1, ShaderLoader.PendingCount);
+	}
+
+	private static IFileSystem Mount(string directory)
+	{
+		var physical = new PhysicalFileSystem();
+		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
 	}
 
 	private sealed class ProbeMod(ModInfo info) : Mod

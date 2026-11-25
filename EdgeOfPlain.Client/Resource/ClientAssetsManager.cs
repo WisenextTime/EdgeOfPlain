@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.Resource;
+using Zio;
 
 namespace EdgeOfPlain.Client.Resource;
 
@@ -9,11 +10,12 @@ public static class ClientAssetsManager
 {
 	private static readonly ClientAssetStore _store = new();
 
-	public static IReadOnlyDictionary<string, TextureData> Textures => _store.All<TextureData>();
+	public static IReadOnlyDictionary<UPath, TextureData> Textures => _store.All<TextureData>();
 
-	public static T Get<T>(string key) where T : class
+	public static T Get<T>(UPath key) where T : class
 	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(key);
+		if (key.IsNull || key.IsEmpty)
+			throw new ArgumentException("An asset key is required.", nameof(key));
 
 		if (_store.TryGet<T>(key, out var value)) return value;
 
@@ -29,16 +31,17 @@ public static class ClientAssetsManager
 		return value;
 	}
 
-	public static bool TryGet<T>(string key, out T value) where T : class
+	public static bool TryGet<T>(UPath key, out T value) where T : class
 	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(key);
+		if (key.IsNull || key.IsEmpty)
+			throw new ArgumentException("An asset key is required.", nameof(key));
 
 		return _store.TryGet(key, out value);
 	}
 
-	public static IReadOnlyDictionary<string, T> GetAll<T>() where T : class => _store.All<T>();
+	public static IReadOnlyDictionary<UPath, T> GetAll<T>() where T : class => _store.All<T>();
 
-	internal static void Add<T>(string key, T value) where T : class => _store.Set(key, value);
+	internal static void Add<T>(UPath key, T value) where T : class => _store.Set(key, value);
 
 	public static void Dispose()
 	{

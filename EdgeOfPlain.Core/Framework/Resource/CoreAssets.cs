@@ -7,10 +7,10 @@ public static class CoreAssets
 {
 	public const string BootstrapFolder = "Misc";
 
-	public static AssemblyResourceSystem Content { get; } = new(
+	public static AssemblyResourceFileSystem Content { get; } = new(
 		typeof(CoreAssets).Assembly, include: path => !IsBootstrapPath(path));
 
-	public static AssemblyResourceSystem Bootstrap { get; } = new(
+	public static AssemblyResourceFileSystem Bootstrap { get; } = new(
 		typeof(CoreAssets).Assembly, include: IsBootstrapPath);
 
 	public static bool IsBootstrapPath(string path)

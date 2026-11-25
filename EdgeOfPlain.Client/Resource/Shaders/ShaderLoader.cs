@@ -4,6 +4,7 @@ using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
 using SFML.Graphics;
+using Zio;
 
 namespace EdgeOfPlain.Client.Resource.Shaders;
 
@@ -11,8 +12,8 @@ public static class ShaderLoader
 {
 	public const string DirectoryName = "Shaders";
 
-	private static readonly List<string> _pending = [];
-	private static readonly HashSet<string> _seen = new(StringComparer.Ordinal);
+	private static readonly List<UPath> _pending = [];
+	private static readonly HashSet<UPath> _seen = new(UPathComparer.Ordinal);
 	private static int _next;
 
 	public static int PendingCount => _pending.Count;

@@ -82,8 +82,8 @@ public sealed class RenderMetadataTests
 		var original = new RenderMetadata { Texture = "a", Layer = 3 };
 		var changed = original with { Texture = "b", Rotation = 1.5f, Source = new Rectangle(1, 2, 3, 4) };
 
-		Assert.Equal("a", original.Texture);
-		Assert.Equal("b", changed.Texture);
+		Assert.Equal("a", original.Texture?.FullName);
+		Assert.Equal("b", changed.Texture?.FullName);
 		Assert.Equal(3u, changed.Layer);
 		Assert.Equal(1.5f, changed.Rotation);
 		Assert.Equal(new Rectangle(1, 2, 3, 4), changed.Source);

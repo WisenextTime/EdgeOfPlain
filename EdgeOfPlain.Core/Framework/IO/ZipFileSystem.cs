@@ -1,120 +1,176 @@
 using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading;
+using System.IO.Enumeration;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Core.Framework.IO;
 
-public sealed class ZipFileSystem : FileSystem
+/// <summary>
+/// <see cref="ZipArchiveFileSystem"/> keeps only the entries the archive explicitly stores,
+/// so archives written without folder records would look flat; mod packages rely on folder enumeration.
+/// </summary>
+public sealed class ZipFileSystem : ReadOnlyFileSystem
 {
-	public const long MaxEntryLength = 512L * 1024 * 1024;
+	private readonly ZipArchiveFileSystem _zip;
+	private readonly bool _caseSensitive;
+	private readonly UPathComparer _comparer;
+	private readonly HashSet<UPath> _files;
+	private readonly HashSet<UPath> _directories = [UPath.Root];
+	private readonly Dictionary<UPath, List<UPath>> _children = [];
 
-	private readonly ZipArchive _archive;
-	private readonly FrozenDictionary<string, ZipArchiveEntry> _files;
-	private readonly FrozenSet<string> _directories;
-	private readonly FrozenDictionary<string, FileSystemEntry[]> _children;
-	private readonly Lock _gate = new();
-
-	public ZipFileSystem(string zipPath)
-		: this(new ZipArchive(File.OpenRead(zipPath), ZipArchiveMode.Read, false))
+	public ZipFileSystem(string path, bool isCaseSensitive = false)
+		: base(null, false)
 	{
-	}
+		ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-	public ZipFileSystem(Stream source, bool leaveOpen = false)
-		: this(new ZipArchive(source, ZipArchiveMode.Read, leaveOpen))
-	{
-	}
+		_caseSensitive = isCaseSensitive;
+		_comparer = isCaseSensitive ? UPathComparer.Ordinal : UPathComparer.OrdinalIgnoreCase;
+		_files = new HashSet<UPath>(_comparer);
+		_zip = new ZipArchiveFileSystem(path, ZipArchiveMode.Read, leaveOpen: false, isCaseSensitive);
 
-	private ZipFileSystem(ZipArchive archive)
-	{
-		_archive = archive;
-
-		var files = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
-		var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-		foreach (var entry in _archive.Entries.OrderBy(entry => entry.FullName, StringComparer.Ordinal))
+		try
 		{
-			if (!TryNormalize(entry.FullName, out var path) || path.Length == 0) continue;
-
-			if (entry.FullName.EndsWith('/') || entry.Name.Length == 0) directories.Add(path);
-			else files.TryAdd(path, entry);
+			foreach (var file in _zip.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories)) AddFile(file);
 		}
-
-		foreach (var path in files.Keys.ToArray()) ResourcePathTree.AddDirectoryChain(directories, path);
-		directories.Add(string.Empty);
-
-		var children = new Dictionary<string, List<FileSystemEntry>>(StringComparer.OrdinalIgnoreCase);
-		foreach (var path in directories)
-			if (path.Length != 0)
-				ResourcePathTree.AddChild(children, path, true);
-
-		foreach (var path in files.Keys) ResourcePathTree.AddChild(children, path, false);
-
-		_files = files.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
-		_directories = directories.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-		_children = children.ToFrozenDictionary(
-			pair => pair.Key,
-			pair => pair.Value.OrderBy(entry => entry.Path, StringComparer.Ordinal).ToArray(),
-			StringComparer.OrdinalIgnoreCase);
+		catch
+		{
+			_zip.Dispose();
+			throw;
+		}
 	}
 
-	public override bool IsReadOnly => true;
+	public bool IsCaseSensitive => _caseSensitive;
 
-	public override bool IsCaseSensitive => false;
+	public string Description => "Zip";
 
-	protected override bool FileExistsCore(string path) => path.Length != 0 && _files.ContainsKey(path);
+	public IReadOnlyCollection<UPath> Files => _files;
 
-	protected override bool DirectoryExistsCore(string path) => _directories.Contains(path);
+	protected override bool FileExistsImpl(UPath path) => _files.Contains(path);
 
-	protected override Stream OpenReadCore(string path)
+	protected override bool DirectoryExistsImpl(UPath path) => _directories.Contains(path);
+
+	protected override Stream OpenFileImpl(UPath path, FileMode mode, FileAccess access, FileShare share = FileShare.None)
 	{
-		if (!_files.TryGetValue(path, out var entry))
-			throw new FileNotFoundException($"ZIP with no entry '{path}'", path);
+		if (mode != FileMode.Open || (access & FileAccess.Write) != 0) throw new IOException(FileSystemIsReadOnly);
 
-		lock (_gate)
+		return !_files.Contains(path)
+			? throw new FileNotFoundException($"`{path}` do not exist in the archive", path.FullName)
+			: _zip.OpenFile(path, FileMode.Open, FileAccess.Read, share);
+	}
+
+	protected override long GetFileLengthImpl(UPath path) => _zip.GetFileLength(path);
+
+	protected override FileAttributes GetAttributesImpl(UPath path)
+	{
+		if (_files.Contains(path)) return FileAttributes.ReadOnly | FileAttributes.Normal;
+		if (_directories.Contains(path)) return FileAttributes.ReadOnly | FileAttributes.Directory;
+		throw new FileNotFoundException($"`{path}` do not exist in the archive", path.FullName);
+	}
+
+	protected override DateTime GetCreationTimeImpl(UPath path) => DefaultFileTime;
+
+	protected override DateTime GetLastAccessTimeImpl(UPath path) => DefaultFileTime;
+
+	protected override DateTime GetLastWriteTimeImpl(UPath path) => DefaultFileTime;
+
+	protected override bool TryResolveLinkTargetImpl(UPath path, out UPath linkTarget)
+	{
+		linkTarget = UPath.Empty;
+		return false;
+	}
+
+	protected override (IFileSystem FileSystem, UPath Path) ResolvePathImpl(UPath path) => (this, path);
+
+	protected override IEnumerable<UPath> EnumeratePathsImpl(UPath path, string searchPattern, SearchOption searchOption,
+		SearchTarget searchTarget)
+	{
+		if (!_directories.Contains(path)) throw new DirectoryNotFoundException($"Could not find a part of the path `{path}`.");
+
+		var includeFiles = searchTarget is SearchTarget.File or SearchTarget.Both;
+		var includeDirectories = searchTarget is SearchTarget.Directory or SearchTarget.Both;
+
+		foreach (var child in EnumerateChildren(path, searchOption))
 		{
-			using var source = entry.Open();
-			var buffer = new MemoryStream(entry.Length is > 0 and <= int.MaxValue ? (int)entry.Length : 0);
-			var chunk = new byte[81920];
-			long copied = 0;
+			var isFile = _files.Contains(child);
+			if (isFile ? !includeFiles : !includeDirectories) continue;
+			if (!FileSystemName.MatchesSimpleExpression(searchPattern, child.GetName(), ignoreCase: !_caseSensitive)) continue;
 
-			int read;
-			while ((read = source.Read(chunk, 0, chunk.Length)) > 0)
+			yield return child;
+		}
+	}
+
+	protected override IEnumerable<FileSystemItem> EnumerateItemsImpl(UPath path, SearchOption searchOption,
+		SearchPredicate? searchFilter)
+	{
+		if (!_directories.Contains(path)) throw new DirectoryNotFoundException($"Could not find a part of the path `{path}`.");
+
+		foreach (var child in EnumerateChildren(path, searchOption))
+		{
+			var isFile = _files.Contains(child);
+			var item = new FileSystemItem
 			{
-				copied += read;
-				if (copied > MaxEntryLength)
-					throw new InvalidDataException($"ZIP entry '{path}' size exceeds {MaxEntryLength} byte");
+				FileSystem = this,
+				Path = child,
+				AbsolutePath = child,
+				Attributes = isFile
+					? FileAttributes.ReadOnly | FileAttributes.Normal
+					: FileAttributes.ReadOnly | FileAttributes.Directory,
+				CreationTime = DefaultFileTime,
+				LastAccessTime = DefaultFileTime,
+				LastWriteTime = DefaultFileTime,
+				Length = isFile ? _zip.GetFileLength(child) : 0,
+			};
 
-				buffer.Write(chunk, 0, read);
-			}
+			if (searchFilter is not null && !searchFilter(ref item)) continue;
 
-			buffer.Position = 0;
-			return buffer;
+			yield return item;
 		}
 	}
-
-	protected override IEnumerable<FileSystemEntry> EnumerateEntriesCore(string path)
-		=> _children.TryGetValue(path, out var children) ? children : [];
 
 	protected override void Dispose(bool disposing)
 	{
-		if (disposing) _archive.Dispose();
+		if (disposing) _zip.Dispose();
+		base.Dispose(disposing);
 	}
 
-	private static bool TryNormalize(string entryName, out string path)
+	private IEnumerable<UPath> EnumerateChildren(UPath path, SearchOption searchOption)
 	{
-		path = string.Empty;
-		try
+		if (!_children.TryGetValue(path, out var children)) yield break;
+
+		foreach (var child in children) yield return child;
+		if (searchOption != SearchOption.AllDirectories) yield break;
+
+		foreach (var child in children)
 		{
-			path = NormalizePath(entryName.Replace('\\', '/'));
-			return true;
+			if (_files.Contains(child)) continue;
+
+			foreach (var descendant in EnumerateChildren(child, searchOption)) yield return descendant;
 		}
-		catch(ArgumentException)
+	}
+
+	private void AddFile(UPath file)
+	{
+		if (!_files.Add(file)) return;
+
+		var directory = file.GetDirectory();
+		AddChild(directory, file);
+
+		while (_directories.Add(directory))
 		{
-			return false;
+			if (directory == UPath.Root) break;
+
+			var parent = directory.GetDirectory();
+			AddChild(parent, directory);
+			directory = parent;
 		}
+	}
+
+	private void AddChild(UPath directory, UPath child)
+	{
+		if (!_children.TryGetValue(directory, out var children)) _children[directory] = children = [];
+		if (!children.Contains(child)) children.Add(child);
 	}
 }

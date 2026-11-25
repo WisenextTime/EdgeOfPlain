@@ -10,6 +10,7 @@ using EdgeOfPlain.Core.Game;
 using SFML.Graphics;
 using SFML.Graphics.Glsl;
 using SFML.System;
+using Zio;
 using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Rendering;
@@ -225,7 +226,7 @@ public sealed class TileRenderer : IDisposable
 {
 	private readonly IRenderTarget _target;
 	private readonly List<TileMaterial> _materials = [];
-	private readonly Dictionary<string, TileMaterial> _materialsByTexture = [];
+	private readonly Dictionary<UPath, TileMaterial> _materialsByTexture = [];
 	private Vector2 _chunkPosition;
 	private RectangleF _chunkBounds;
 	private RectangleF? _cameraBounds;
@@ -238,7 +239,7 @@ public sealed class TileRenderer : IDisposable
 
 		if (definition is null)
 		{
-			Shader = ClientAssetsManager.Get<Shader>("assets://base/Shaders/defaultTile.glsl");
+			Shader = ClientAssetsManager.Get<Shader>(new UPath("/assets/base/Shaders/defaultTile.glsl"));
 			return;
 		}
 

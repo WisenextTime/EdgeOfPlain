@@ -5,15 +5,29 @@ using System.Linq;
 using System.Reflection;
 using EdgeOfPlain.Core.Framework.IO;
 using Xunit;
+using Zio;
+using Zio.FileSystems;
 
 namespace EdgeOfPlain.Tests;
 
 public sealed class ZipFileSystemTests
 {
-	private static ZipFileSystem Open(params (string Name, string Content)[] entries)
+	[Fact]
+	public void RawZioZipDoesNotReportImplicitFolders()
 	{
-		var buffer = new MemoryStream();
-		using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
+		var path = CreateArchive(("nested/b.txt", "b"));
+		using var zip = new ZipArchiveFileSystem(path, ZipArchiveMode.Read, leaveOpen: false, isCaseSensitive: false);
+
+		Assert.False(zip.DirectoryExists(new UPath("/nested")));
+	}
+
+	private static string CreateArchive(params (string Name, string Content)[] entries)
+	{
+		var path = Path.Combine(AppContext.BaseDirectory, "test-temp", Guid.NewGuid().ToString("N") + ".zip");
+		Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+		using (var stream = File.Create(path))
+		using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
 		{
 			foreach (var (name, content) in entries)
 			{
@@ -23,120 +37,151 @@ public sealed class ZipFileSystemTests
 			}
 		}
 
-		buffer.Position = 0;
-		return new ZipFileSystem(buffer);
+		return path;
 	}
+
+	private static ZipFileSystem Open(string path)
+		=> new(path, isCaseSensitive: false);
 
 	[Fact]
 	public void ReadsEntriesAndFolders()
 	{
-		using var zip = Open(("a.txt", "a"), ("nested/b.txt", "b"));
+		var path = CreateArchive(("a.txt", "a"), ("nested/b.txt", "b"));
+		using var zip = Open(path);
 
-		Assert.True(zip.FileExists("a.txt"));
-		Assert.True(zip.FileExists("NESTED/B.TXT"));
-		Assert.True(zip.DirectoryExists("nested"));
-		Assert.True(zip.DirectoryExists(string.Empty));
-		Assert.Equal("b", zip.ReadAllText("nested/b.txt"));
+		Assert.True(zip.FileExists(new UPath("/a.txt")));
+		Assert.True(zip.FileExists(new UPath("/NESTED/B.TXT")));
+		Assert.True(zip.DirectoryExists(new UPath("/nested")));
+		Assert.True(zip.DirectoryExists(UPath.Root));
+		Assert.Equal("b", TestPath.ReadAllText(zip, new UPath("/nested/b.txt")));
 	}
 
 	[Fact]
-	public void EnumeratesChildrenOfDirectory()
+	public void EnumeratesEveryFileRecursively()
 	{
-		using var zip = Open(("a.txt", "a"), ("nested/b.txt", "b"), ("nested/deep/c.txt", "c"));
+		var path = CreateArchive(("a.txt", "a"), ("nested/b.txt", "b"), ("nested/deep/c.txt", "c"));
+		using var zip = Open(path);
 
-		var root = zip.EnumerateEntries().ToArray();
-		var nested = zip.EnumerateEntries("nested").ToArray();
-
-		Assert.Equal(2, root.Length);
-		Assert.Contains(root, entry => entry is { Path: "a.txt", IsDirectory: false });
-		Assert.Contains(root, entry => entry is { Path: "nested", IsDirectory: true });
-		Assert.Equal(2, nested.Length);
+		Assert.Equal(3, zip.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories).Count());
+		Assert.Equal(2, zip.EnumerateFiles(new UPath("/nested"), "*", SearchOption.AllDirectories).Count());
 	}
 
 	[Fact]
-	public void EnumeratesAllFilesRecursively()
+	public void MissingEntryThrowsFileNotFound()
 	{
-		using var zip = Open(("a.txt", "a"), ("nested/b.txt", "b"), ("nested/deep/c.txt", "c"));
+		var path = CreateArchive(("a.txt", "a"));
+		using var zip = Open(path);
 
-		var files = zip.EnumerateFiles(string.Empty, "*", SearchOption.AllDirectories).ToArray();
-
-		Assert.Equal(3, files.Length);
+		Assert.False(zip.FileExists(new UPath("/missing.txt")));
+		Assert.ThrowsAny<IOException>(() => zip.OpenReadShared(new UPath("/missing.txt")).Dispose());
 	}
 
 	[Fact]
-	public void IgnoresEntriesThatEscapeTheRoot()
+	public void ReadModeArchiveRejectsWrites()
 	{
-		using var zip = Open(("../../evil.txt", "evil"), ("ok.txt", "ok"));
+		var path = CreateArchive(("a.txt", "a"));
+		using var zip = Open(path);
 
-		Assert.False(zip.FileExists("evil.txt"));
-		Assert.True(zip.FileExists("ok.txt"));
-		Assert.Single(zip.EnumerateEntries());
+		Assert.ThrowsAny<IOException>(() => zip.OpenFile(new UPath("/b.txt"), FileMode.Create, FileAccess.Write));
 	}
 
 	[Fact]
-	public void MissingEntry_ThrowsFileNotFound()
+	public void SharedReadsOpenTheSameEntryTwice()
 	{
-		using var zip = Open(("a.txt", "a"));
+		var path = CreateArchive(("a.txt", "a"));
+		using var zip = Open(path);
+		var entry = new UPath("/a.txt");
 
-		Assert.False(zip.FileExists("missing.txt"));
-		Assert.Throws<FileNotFoundException>(() => zip.OpenRead("missing.txt"));
+		using var first = zip.OpenReadShared(entry);
+		using var second = zip.OpenReadShared(entry);
+
+		Assert.Equal("a", new StreamReader(first).ReadToEnd());
+		Assert.Equal("a", new StreamReader(second).ReadToEnd());
 	}
 
 	[Fact]
-	public void EmptyPath_IsNotAFile()
+	public void ExclusiveReadsConflictOnTheSameEntry()
 	{
-		using var zip = Open(("a.txt", "a"));
+		var path = CreateArchive(("a.txt", "a"));
+		using var zip = Open(path);
+		var entry = new UPath("/a.txt");
 
-		Assert.False(zip.FileExists(string.Empty));
-		Assert.True(zip.DirectoryExists(string.Empty));
+		using var first = zip.OpenFile(entry, FileMode.Open, FileAccess.Read, FileShare.None);
+
+		Assert.ThrowsAny<IOException>(() => zip.OpenFile(entry, FileMode.Open, FileAccess.Read, FileShare.None).Dispose());
 	}
 
 	[Fact]
-	public void ZipIsReadOnlyAndCaseInsensitive()
+	public void ArchivesWithoutLeadingSlashesAreUsable()
 	{
-		using var zip = Open(("a.txt", "a"));
+		var path = CreateArchive(("plain.txt", "plain"));
+		using var zip = Open(path);
 
-		Assert.True(zip.IsReadOnly);
-		Assert.False(zip.IsCaseSensitive);
-		Assert.Throws<NotSupportedException>(() => zip.OpenWrite("b.txt"));
+		Assert.Equal("plain", TestPath.ReadAllText(zip, new UPath("/plain.txt")));
 	}
 }
 
-public sealed class AssemblyResourceSystemTests
+public sealed class AssemblyResourceFileSystemTests
 {
-	private static Assembly TestAssembly => typeof(AssemblyResourceSystemTests).Assembly;
+	private static Assembly TestAssembly => typeof(AssemblyResourceFileSystemTests).Assembly;
 
 	[Fact]
 	public void MapsSingleExtensionResource()
 	{
-		using var resourceSystem = new AssemblyResourceSystem(
-			TestAssembly, "EdgeOfPlain.Tests.Assets");
+		using var resourceSystem = new AssemblyResourceFileSystem(TestAssembly, "EdgeOfPlain.Tests.Assets");
 
-		Assert.True(resourceSystem.FileExists("plain.txt"));
-		Assert.Equal("plain", resourceSystem.ReadAllText("plain.txt").Trim());
+		Assert.True(resourceSystem.FileExists(new UPath("/plain.txt")));
+		Assert.Equal("plain", TestPath.ReadAllText(resourceSystem, new UPath("/plain.txt")).Trim());
 	}
 
 	[Fact]
-	public void MapsNestedResource()
+	public void MapsNestedResourceWithDotsInItsName()
 	{
-		using var resourceSystem = new AssemblyResourceSystem(
-			TestAssembly, "EdgeOfPlain.Tests.Assets");
+		using var resourceSystem = new AssemblyResourceFileSystem(TestAssembly, "EdgeOfPlain.Tests.Assets");
 
-		Assert.True(resourceSystem.FileExists("Contents/Multi.Part.Name.toml"));
+		Assert.True(resourceSystem.FileExists(new UPath("/Contents/Multi.Part.Name.toml")));
+	}
+
+	[Fact]
+	public void DefaultPrefixIsTheAssemblyAssetsFolder()
+	{
+		using var resourceSystem = new AssemblyResourceFileSystem(TestAssembly);
+
+		Assert.True(resourceSystem.FileExists(new UPath("/plain.txt")));
 	}
 
 	[Fact]
 	public void CoreAssemblyAssetsKeepDefaultPrefix()
 	{
-		using var resourceSystem = new AssemblyResourceSystem(typeof(Core.Launcher).Assembly);
+		using var resourceSystem = new AssemblyResourceFileSystem(typeof(Core.Launcher).Assembly);
 
-		Assert.True(resourceSystem.FileExists("Contents/Tilesets/testTile.toml"));
-		Assert.True(resourceSystem.FileExists("Textures/Tiles/testTile.png"));
+		Assert.True(resourceSystem.FileExists(new UPath("/Contents/Tilesets/testTile.toml")));
+		Assert.True(resourceSystem.FileExists(new UPath("/Textures/Tiles/testTile.png")));
+	}
+
+	[Fact]
+	public void EnumeratesFoldersAndFiles()
+	{
+		using var resourceSystem = new AssemblyResourceFileSystem(TestAssembly);
+
+		Assert.True(resourceSystem.DirectoryExists(new UPath("/Contents")));
+		Assert.Equal(["/plain.txt"], resourceSystem
+			.EnumerateFiles(UPath.Root, "*", SearchOption.TopDirectoryOnly)
+			.Select(path => path.FullName));
+	}
+
+	[Fact]
+	public void MissingFileThrowsFileNotFound()
+	{
+		using var resourceSystem = new AssemblyResourceFileSystem(TestAssembly);
+
+		Assert.False(resourceSystem.FileExists(new UPath("/missing.txt")));
+		Assert.Throws<FileNotFoundException>(() => resourceSystem.OpenReadShared(new UPath("/missing.txt")).Dispose());
 	}
 
 	[Fact]
 	public void RejectsAssemblyWithoutResourcesUnderPrefix()
 	{
-		Assert.Throws<InvalidOperationException>(() => new AssemblyResourceSystem(TestAssembly, "Nothing.Here"));
+		Assert.Throws<InvalidOperationException>(() => new AssemblyResourceFileSystem(TestAssembly, "Nothing.Here"));
 	}
 }
