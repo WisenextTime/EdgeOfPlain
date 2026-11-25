@@ -17,6 +17,8 @@ public static class ModLoader
 	private static readonly List<ModPackage> _packages = [];
 	private static readonly List<(Mod Mod, ModPackage Package)> _discovered = [];
 	private static readonly List<ModAssemblyLoadContext> _contexts = [];
+	private static readonly Dictionary<string, ModAssemblyLoadContext> _contextsById = new(StringComparer.Ordinal);
+	private static readonly ModAssemblyRegistry _assemblyProviders = new();
 	private static bool _discoveryStarted;
 	private static bool _committed;
 
@@ -48,16 +50,31 @@ public static class ModLoader
 			.OrderBy(path => path.FullName, StringComparer.Ordinal)
 			.ToArray();
 
+		var discovered = new List<(ModPackage Package, ModInfo Info)>(archives.Length);
+
 		foreach (var archive in archives)
 		{
 			try
 			{
-				LoadPackage(archive);
+				discovered.Add(OpenPackage(archive));
 			}
 			catch(Exception e)
 			{
 				LogUtils.Logger(typeof(ModLoader)).LogError("Failed to load mod package '{ArchivePath}': {EMessage}",
 					archive.FullName, e.Message);
+			}
+		}
+
+		foreach (var entry in ModLoadOrder.OrderInfos(discovered, static entry => entry.Info))
+		{
+			try
+			{
+				LoadPackage(entry.Package, entry.Info);
+			}
+			catch(Exception e)
+			{
+				LogUtils.Logger(typeof(ModLoader)).LogError("Failed to load mod package '{ArchivePath}': {EMessage}",
+					entry.Package.ZipPath, e.Message);
 			}
 		}
 
@@ -106,39 +123,75 @@ public static class ModLoader
 			string.Join(" → ", order.Select(mod => mod.ModInfo.Id)));
 	}
 
-	private static void LoadPackage(UPath sourcePath)
+	private static (ModPackage Package, ModInfo Info) OpenPackage(UPath sourcePath)
 	{
 		if (!FileIO.Root.TryGetPhysicalPath(sourcePath, out var zipPath))
 			throw new InvalidOperationException(
 				$"`{sourcePath}` is not backed by a physical file system, so mod packages cannot be opened from it.");
 
-		var package = ModPackage.Open(zipPath);
+		ModPackage? package = null;
+
+		try
+		{
+			package = ModPackage.Open(zipPath);
+			var info = package.Info
+			           ?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
+
+			return (package, info);
+		}
+		catch
+		{
+			package?.Dispose();
+			throw;
+		}
+	}
+
+	private static void LoadPackage(ModPackage package, ModInfo info)
+	{
 		var contextCount = _contexts.Count;
 
 		try
 		{
-			var info = package.Info
-			           ?? throw new InvalidDataException($"'{Path.GetFileName(zipPath)}' has no {ModPackage.ManifestName}.");
-			RegisterMods(package, CreateEntryPoints(package), info);
+			var mods = CreateEntryPoints(package, info, out var context);
+			RegisterMods(package, mods, info);
+			if (context is not null) _contextsById[context.ModId] = context;
 			_packages.Add(package);
 
 			LogUtils.Logger(typeof(ModLoader)).LogInformation(
-				"Mod package '{FileName}' loaded as '{ModId}'.", Path.GetFileName(zipPath), info.Id);
+				"Mod package '{FileName}' loaded as '{ModId}'.", Path.GetFileName(package.ZipPath), info.Id);
 		}
 		catch
 		{
-			UnloadContexts(contextCount);
+			DiscardContexts(contextCount);
 			package.Dispose();
 			throw;
 		}
 	}
 
-	private static IReadOnlyList<Mod> CreateEntryPoints(ModPackage package)
+	private static IReadOnlyList<Mod> CreateEntryPoints(
+		ModPackage package,
+		ModInfo info,
+		out ModAssemblyLoadContext? context)
 	{
+		context = null;
+
 		var directory = ModExtractor.Extract(package, FileIO.Root, CacheRoot);
 		if (directory is null) return [new Mod()];
 
-		var mods = ModEntryPoints.Create(package.ModId, directory, _contexts, out var hasManagedAssemblies);
+		var providers = new List<ModAssemblyLoadContext>();
+		if (info.Dependence is { } dependence)
+		{
+			foreach (var required in dependence)
+			{
+				if (string.IsNullOrEmpty(required.Id)) continue;
+				if (_contextsById.TryGetValue(required.Id, out var provider)) providers.Add(provider);
+			}
+		}
+
+		var mods = ModEntryPoints.Create(
+			package.ModId, directory, providers, _assemblyProviders, _contexts,
+			out var hasManagedAssemblies, out context);
+
 		if (hasManagedAssemblies && mods.Count == 0)
 			throw new InvalidDataException(
 				$"'{Path.GetFileName(package.ZipPath)}' contains managed assemblies but no {nameof(Mod)} implementation.");
@@ -200,12 +253,14 @@ public static class ModLoader
 		}
 	}
 
-	private static void UnloadContexts(int keepCount)
+	private static void DiscardContexts(int keepCount)
 	{
 		while (_contexts.Count > keepCount)
 		{
 			var context = _contexts[^1];
 			_contexts.RemoveAt(_contexts.Count - 1);
+			_contextsById.Remove(context.ModId);
+			_assemblyProviders.Remove(context);
 			context.Unload();
 		}
 	}

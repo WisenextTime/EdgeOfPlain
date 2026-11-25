@@ -13,26 +13,53 @@ internal static class ModEntryPoints
 	public static IReadOnlyList<Mod> Create(
 		string modId,
 		string directory,
+		IReadOnlyList<ModAssemblyLoadContext> providers,
+		ModAssemblyRegistry registry,
 		List<ModAssemblyLoadContext> contexts,
-		out bool hasManagedAssemblies)
+		out bool hasManagedAssemblies,
+		out ModAssemblyLoadContext? context)
 	{
 		hasManagedAssemblies = false;
+		context = null;
 
 		var assemblies = ManagedAssemblies(directory);
 		if (assemblies.Count == 0) return [];
 
 		hasManagedAssemblies = true;
 
-		var context = new ModAssemblyLoadContext(modId, directory, assemblies);
-		contexts.Add(context);
+		var created = new ModAssemblyLoadContext(modId, directory, assemblies, registry);
+		context = created;
+		contexts.Add(created);
+
+		foreach (var provider in providers) created.AddProvider(provider);
+		registry.Add(created);
 
 		var mods = new List<Mod>();
 		foreach (var assemblyPath in assemblies)
 		{
+			var name = ReadAssemblyName(assemblyPath);
+			if (name is not null && ModAssemblyLoadContext.IsShared(name))
+			{
+				LogUtils.Logger(typeof(ModEntryPoints)).LogDebug(
+					"Mod '{ModId}': assembly '{AssemblyName}' is provided by the host and will not be loaded from the mod.",
+					modId, name);
+				continue;
+			}
+
+			if (name is not null && TryFindProvider(providers, name) is { } dependency)
+			{
+				LogUtils.Logger(typeof(ModEntryPoints)).LogInformation(
+					"Mod '{ModId}': assembly '{AssemblyName}' is provided by dependency mod '{ProviderModId}' and will not be loaded again.",
+					modId, name, dependency.ModId);
+
+				WarnOnBundledVersionMismatch(modId, assemblyPath, name, dependency);
+				continue;
+			}
+
 			Assembly assembly;
 			try
 			{
-				assembly = context.LoadFromAssemblyPath(assemblyPath);
+				assembly = created.LoadFromAssemblyPath(assemblyPath);
 			}
 			catch(Exception e)
 			{
@@ -61,6 +88,67 @@ internal static class ModEntryPoints
 		}
 
 		return mods;
+	}
+
+	private static ModAssemblyLoadContext? TryFindProvider(
+		IReadOnlyList<ModAssemblyLoadContext> providers,
+		string assemblyName)
+	{
+		foreach (var provider in providers)
+		{
+			if (provider.Ships(assemblyName)) return provider;
+		}
+
+		return null;
+	}
+
+	private static void WarnOnBundledVersionMismatch(
+		string modId,
+		string bundledPath,
+		string assemblyName,
+		ModAssemblyLoadContext provider)
+	{
+		if (!provider.TryGetOwnPath(assemblyName, out var providedPath)) return;
+
+		var bundled = ReadAssemblyVersion(bundledPath);
+		var provided = ReadAssemblyVersion(providedPath);
+		if (bundled is null || provided is null || bundled == provided) return;
+
+		LogUtils.Logger(typeof(ModEntryPoints)).LogWarning(
+			"Mod '{ModId}' bundles '{AssemblyName}' {BundledVersion}, but dependency '{ProviderModId}' provides {ProvidedVersion}; the dependency version will be used.",
+			modId, assemblyName, bundled, provider.ModId, provided);
+	}
+
+	private static Version? ReadAssemblyVersion(string path)
+	{
+		try
+		{
+			return AssemblyName.GetAssemblyName(path).Version;
+		}
+		catch(BadImageFormatException)
+		{
+			return null;
+		}
+		catch(FileLoadException)
+		{
+			return null;
+		}
+	}
+
+	private static string? ReadAssemblyName(string path)
+	{
+		try
+		{
+			return AssemblyName.GetAssemblyName(path).Name;
+		}
+		catch(BadImageFormatException)
+		{
+			return null;
+		}
+		catch(FileLoadException)
+		{
+			return null;
+		}
 	}
 
 	private static List<string> ManagedAssemblies(string directory)
