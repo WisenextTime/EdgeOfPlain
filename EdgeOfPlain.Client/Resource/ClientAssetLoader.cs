@@ -4,27 +4,28 @@ using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Zio;
 
-namespace EdgeOfPlain.Client.Resource;
-
-public static class ClientAssetLoader
+namespace EdgeOfPlain.Client.Resource
 {
-	public static bool Register<T>(string directory, Func<UPath, bool>? filter = null) where T : class
-		=> ModResourceLoader.TryRegister(directory, resources => LoadFolder<T>(resources, filter));
-
-	public static void LoadFolder<T>(ModResourceDirectory directory, Func<UPath, bool>? filter = null) where T : class
+	public static class ClientAssetLoader
 	{
-		foreach (var file in directory.Files)
-		{
-			if (filter is not null && !filter(file)) continue;
+		public static bool Register<T>(string directory, Func<UPath, bool>? filter = null) where T : class
+			=> ModResourceLoader.TryRegister(directory, resources => LoadFolder<T>(resources, filter));
 
-			try
+		public static void LoadFolder<T>(ModResourceDirectory directory, Func<UPath, bool>? filter = null) where T : class
+		{
+			foreach (var file in directory.Files)
 			{
-				ClientAssetsManager.Get<T>(file);
-			}
-			catch(Exception e)
-			{
-				LogUtils.Logger(typeof(ClientAssetLoader))
-					.LogError("Failed to load client asset '{File}': {EMessage}", file, e.Message);
+				if (filter is not null && !filter(file)) continue;
+
+				try
+				{
+					ClientAssetsManager.Get<T>(file);
+				}
+				catch(Exception e)
+				{
+					LogUtils.Logger(typeof(ClientAssetLoader))
+						.LogError("Failed to load client asset '{File}': {EMessage}", file, e.Message);
+				}
 			}
 		}
 	}

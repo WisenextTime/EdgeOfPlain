@@ -12,158 +12,159 @@ using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Zio;
 
-namespace EdgeOfPlain.Core;
-
-public abstract class Launcher
+namespace EdgeOfPlain.Core
 {
-	private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
-	private bool _initialized;
-	private bool _contentLoaded;
-
-	protected abstract IFileSystem BaseAssetsSystem { get; }
-	protected abstract string DataDirectory { get; }
-	protected abstract string ModDirectory { get; }
-
-	protected ModFileSystem AssetFileSystem { get; } = new();
-
-	protected SceneManager Scenes { get; } = new();
-	protected InputState Input { get; } = new();
-	protected GameLoop Loop { get; private set; } = null!;
-
-	protected void Init()
+	public abstract class Launcher
 	{
-		if (_initialized) throw new InvalidOperationException("The launcher has already been initialized.");
-		_initialized = true;
+		private static readonly TimeSpan _eventPumpTimeout = TimeSpan.FromMilliseconds(200);
+		private bool _initialized;
+		private bool _contentLoaded;
 
-		InitFileSystems();
-		LogUtils.InitFileSystem();
-		InitResourceOperators();
+		protected abstract IFileSystem BaseAssetsSystem { get; }
+		protected abstract string DataDirectory { get; }
+		protected abstract string ModDirectory { get; }
 
-		LogUtils.Logger<Launcher>().LogInformation(
-			"Launcher initialized; data directory '{DataDirectory}', mod directory '{ModDirectory}'.",
-			DataDirectory, ModDirectory);
-	}
+		protected ModFileSystem AssetFileSystem { get; } = new();
 
-	protected void LoadContent(Action<string>? progress = null)
-	{
-		if (!_initialized) throw new InvalidOperationException("Init() must run before LoadContent().");
-		if (_contentLoaded) throw new InvalidOperationException("Content has already been loaded.");
-		_contentLoaded = true;
-		progress?.Invoke("Loading…");
-		LogUtils.Logger<Launcher>().LogInformation("Content loading started.");
+		protected SceneManager Scenes { get; } = new();
+		protected InputState Input { get; } = new();
+		protected GameLoop Loop { get; private set; } = null!;
 
-		ModLoader.Discover();
-		progress?.Invoke($"Loading all {ModLoader.Packages.Count} modpacks…");
-		ModLoader.Commit(AssetFileSystem);
-
-		progress?.Invoke($"Already loaded {ModLoader.LoadedMods.Count} modpacks");
-		LogUtils.Logger<Launcher>().LogInformation(
-			"Content loading finished: {Loaded} of {Packages} mod packages loaded.",
-			ModLoader.LoadedMods.Count, ModLoader.Packages.Count);
-	}
-
-	protected virtual void InitFileSystems()
-	{
-		FileIO.Initialize(DataDirectory, ModDirectory);
-		AssetFileSystem.RegisterNamespace(ModFileSystem.BaseNamespace, BaseAssetsSystem);
-		FileIO.Mount(FileIO.Assets, AssetFileSystem);
-	}
-
-	protected virtual void InitResourceOperators()
-	{
-		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
-		AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
-		AssetsManager.RegisterResourceOperator(MapOperatorBuilder.Build);
-	}
-
-	protected virtual ColorF ClearColor => ColorF.Black;
-
-	protected virtual bool PumpsEventsInLoop => true;
-
-	protected abstract IScene CreateInitialScene();
-
-	protected virtual ITimeSource CreateTimeSource() => new StopwatchTimeSource();
-
-	protected void Launch(IGameWindow window)
-	{
-		ArgumentNullException.ThrowIfNull(window);
-
-		Loop = new GameLoop(CreateTimeSource());
-		Scenes.Attach(window);
-		Scenes.Push(CreateInitialScene());
-		var previousSize = window.Size;
-
-		try
+		protected void Init()
 		{
-			while (window.IsOpen)
-			{
-				Input.BeginFrame();
+			if (_initialized) throw new InvalidOperationException("The launcher has already been initialized.");
+			_initialized = true;
 
-				if (PumpsEventsInLoop)
-				{
-					window.PollEvents();
-					Input.ApplyPending();
-				}
+			InitFileSystems();
+			LogUtils.InitFileSystem();
+			InitResourceOperators();
 
-				var size = window.Size;
-				if (size != previousSize)
-				{
-					EventBus.Publish(new WindowResizedEvent(previousSize, size));
-					previousSize = size;
-				}
-
-				Loop.BeginFrame();
-
-				Scenes.HandleInput(Input);
-				while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
-
-				window.Clear(ClearColor);
-				Scenes.Draw(Loop.RenderTime);
-				window.Present();
-			}
-
-			LogUtils.Logger<Launcher>().LogInformation("Game loop exited.");
+			LogUtils.Logger<Launcher>().LogInformation(
+				"Launcher initialized; data directory '{DataDirectory}', mod directory '{ModDirectory}'.",
+				DataDirectory, ModDirectory);
 		}
-		catch(Exception e)
+
+		protected void LoadContent(Action<string>? progress = null)
 		{
-			LogUtils.Logger<Launcher>().LogError("{Error}", e.ToString());
-			throw;
+			if (!_initialized) throw new InvalidOperationException("Init() must run before LoadContent().");
+			if (_contentLoaded) throw new InvalidOperationException("Content has already been loaded.");
+			_contentLoaded = true;
+			progress?.Invoke("Loading…");
+			LogUtils.Logger<Launcher>().LogInformation("Content loading started.");
+
+			ModLoader.Discover();
+			progress?.Invoke($"Loading all {ModLoader.Packages.Count} modpacks…");
+			ModLoader.Commit(AssetFileSystem);
+
+			progress?.Invoke($"Already loaded {ModLoader.LoadedMods.Count} modpacks");
+			LogUtils.Logger<Launcher>().LogInformation(
+				"Content loading finished: {Loaded} of {Packages} mod packages loaded.",
+				ModLoader.LoadedMods.Count, ModLoader.Packages.Count);
 		}
-	}
 
-	protected void LaunchWithEventPump(IGameWindow window)
-	{
-		ArgumentNullException.ThrowIfNull(window);
-
-		Exception? failure = null;
-		var completed = 0;
-
-		window.DeactivateContext();
-
-		var game = new Thread(() =>
+		protected virtual void InitFileSystems()
 		{
+			FileIO.Initialize(DataDirectory, ModDirectory);
+			AssetFileSystem.RegisterNamespace(ModFileSystem.BaseNamespace, BaseAssetsSystem);
+			FileIO.Mount(FileIO.Assets, AssetFileSystem);
+		}
+
+		protected virtual void InitResourceOperators()
+		{
+			AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
+			AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
+			AssetsManager.RegisterResourceOperator(MapOperatorBuilder.Build);
+		}
+
+		protected virtual ColorF ClearColor => ColorF.Black;
+
+		protected virtual bool PumpsEventsInLoop => true;
+
+		protected abstract IScene CreateInitialScene();
+
+		protected virtual ITimeSource CreateTimeSource() => new StopwatchTimeSource();
+
+		protected void Launch(IGameWindow window)
+		{
+			ArgumentNullException.ThrowIfNull(window);
+
+			Loop = new GameLoop(CreateTimeSource());
+			Scenes.Attach(window);
+			Scenes.Push(CreateInitialScene());
+			var previousSize = window.Size;
+
 			try
 			{
-				window.ActivateContext();
-				Launch(window);
+				while (window.IsOpen)
+				{
+					Input.BeginFrame();
+
+					if (PumpsEventsInLoop)
+					{
+						window.PollEvents();
+						Input.ApplyPending();
+					}
+
+					var size = window.Size;
+					if (size != previousSize)
+					{
+						EventBus.Publish(new WindowResizedEvent(previousSize, size));
+						previousSize = size;
+					}
+
+					Loop.BeginFrame();
+
+					Scenes.HandleInput(Input);
+					while (Loop.TryStep(out var time)) Scenes.Update(time, Input);
+
+					window.Clear(ClearColor);
+					Scenes.Draw(Loop.RenderTime);
+					window.Present();
+				}
+
+				LogUtils.Logger<Launcher>().LogInformation("Game loop exited.");
 			}
 			catch(Exception e)
 			{
-				failure = e;
+				LogUtils.Logger<Launcher>().LogError("{Error}", e.ToString());
+				throw;
 			}
-			finally
-			{
-				Volatile.Write(ref completed, 1);
-			}
-		})
-		{
-			IsBackground = true,
-			Name = "game-loop",
-		};
-		game.Start();
-		while (window.IsOpen && Volatile.Read(ref completed) == 0) window.WaitForEvents(_eventPumpTimeout);
-		game.Join();
+		}
 
-		if (failure is not null) throw new AggregateException("The game loop terminated with an error.", failure);
+		protected void LaunchWithEventPump(IGameWindow window)
+		{
+			ArgumentNullException.ThrowIfNull(window);
+
+			Exception? failure = null;
+			var completed = 0;
+
+			window.DeactivateContext();
+
+			var game = new Thread(() =>
+			{
+				try
+				{
+					window.ActivateContext();
+					Launch(window);
+				}
+				catch(Exception e)
+				{
+					failure = e;
+				}
+				finally
+				{
+					Volatile.Write(ref completed, 1);
+				}
+			})
+			{
+				IsBackground = true,
+				Name = "game-loop",
+			};
+			game.Start();
+			while (window.IsOpen && Volatile.Read(ref completed) == 0) window.WaitForEvents(_eventPumpTimeout);
+			game.Join();
+
+			if (failure is not null) throw new AggregateException("The game loop terminated with an error.", failure);
+		}
 	}
 }

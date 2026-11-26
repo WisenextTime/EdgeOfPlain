@@ -8,113 +8,114 @@ using Tomlyn;
 using Tomlyn.Serialization;
 using Zio;
 
-namespace EdgeOfPlain.Core.Definitions;
-
-[TomlPolymorphic]
-[method: TomlConstructor]
-public abstract class ContentDef(string id) : IComparable<ContentDef>
+namespace EdgeOfPlain.Core.Definitions
 {
-	private ModInfo? _sourceMod;
-
-	public string Id { get; } = id;
-
-	[TomlIgnore]
-	public ContentKey Key => new(SourceMod.Id, ContentTypeRegistry.Discriminator(GetType()), Id);
-
-	[TomlIgnore]
-	public string FullId => $"{SourceMod.Id}:{ContentTypeRegistry.Discriminator(GetType())}/{Id}";
-
-	[TomlIgnore]
-	public ModInfo SourceMod
+	[TomlPolymorphic]
+	[method: TomlConstructor]
+	public abstract class ContentDef(string id) : IComparable<ContentDef>
 	{
-		get => _sourceMod ?? throw new InvalidOperationException(
-			$"Content '{GetType().Name}({Id})' has no source mod assigned. " +
-			$"It must be registered through the mod loading pipeline.");
-		internal set => _sourceMod = value;
-	}
+		private ModInfo? _sourceMod;
 
-	public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
+		public string Id { get; } = id;
 
-	public UPath ResolveResourcePath(string path)
-	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(path);
+		[TomlIgnore]
+		public ContentKey Key => new(SourceMod.Id, ContentTypeRegistry.Discriminator(GetType()), Id);
 
-		var normalized = path.Replace('\\', '/').Trim();
+		[TomlIgnore]
+		public string FullId => $"{SourceMod.Id}:{ContentTypeRegistry.Discriminator(GetType())}/{Id}";
 
-		if (normalized.Contains(":/", StringComparison.Ordinal))
-			throw new ArgumentException(
-				$"'{path}' uses a file system scheme; resource paths are absolute UPaths.", nameof(path));
-
-		return normalized.StartsWith(FileIO.Assets.FullName + "/", StringComparison.Ordinal)
-			? new UPath(normalized)
-			: new UPath($"{FileIO.Assets.FullName}/{SourceMod.Id}/{normalized.TrimStart('/')}");
-	}
-
-	public override string ToString() => FullId;
-}
-
-[AttributeUsage(AttributeTargets.Class)]
-public sealed class ContentTypeNameAttribute(string name) : Attribute
-{
-	public string Name { get; } = name;
-}
-
-public static class ContentSerializer
-{
-	private static readonly Lock _gate = new();
-	private static TomlSerializerOptions _options = CreateOptions();
-	private static int _version = ContentTypeRegistry.Version;
-
-	public static void ResetOptions()
-	{
-		lock (_gate)
+		[TomlIgnore]
+		public ModInfo SourceMod
 		{
-			_options = CreateOptions();
-			_version = ContentTypeRegistry.Version;
+			get => _sourceMod ?? throw new InvalidOperationException(
+				$"Content '{GetType().Name}({Id})' has no source mod assigned. " +
+				$"It must be registered through the mod loading pipeline.");
+			internal set => _sourceMod = value;
 		}
+
+		public int CompareTo(ContentDef? other) => string.Compare(FullId, other?.FullId, StringComparison.Ordinal);
+
+		public UPath ResolveResourcePath(string path)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+			var normalized = path.Replace('\\', '/').Trim();
+
+			if (normalized.Contains(":/", StringComparison.Ordinal))
+				throw new ArgumentException(
+					$"'{path}' uses a file system scheme; resource paths are absolute UPaths.", nameof(path));
+
+			return normalized.StartsWith(FileIO.Assets.FullName + "/", StringComparison.Ordinal)
+				? new UPath(normalized)
+				: new UPath($"{FileIO.Assets.FullName}/{SourceMod.Id}/{normalized.TrimStart('/')}");
+		}
+
+		public override string ToString() => FullId;
 	}
 
-	public static TDef? Deserialize<TDef>(string toml) where TDef : ContentDef
-		=> TomlSerializer.Deserialize<TDef>(toml, CurrentOptions);
-
-	public static string Serialize(ContentDef def) => TomlSerializer.Serialize(def, CurrentOptions);
-
-	private static TomlSerializerOptions CurrentOptions
+	[AttributeUsage(AttributeTargets.Class)]
+	public sealed class ContentTypeNameAttribute(string name) : Attribute
 	{
-		get
-		{
-			var version = ContentTypeRegistry.Version;
-			if (version == Volatile.Read(ref _version)) return _options;
+		public string Name { get; } = name;
+	}
 
+	public static class ContentSerializer
+	{
+		private static readonly Lock _gate = new();
+		private static TomlSerializerOptions _options = CreateOptions();
+		private static int _version = ContentTypeRegistry.Version;
+
+		public static void ResetOptions()
+		{
 			lock (_gate)
 			{
-				if (version != _version)
-				{
-					_options = CreateOptions();
-					_version = version;
-				}
-
-				return _options;
+				_options = CreateOptions();
+				_version = ContentTypeRegistry.Version;
 			}
 		}
-	}
 
-	private static TomlSerializerOptions CreateOptions()
-	{
-		var mappings = new Dictionary<Type, IReadOnlyList<TomlDerivedType>>
-		{
-			[typeof(ContentDef)] = ContentTypeRegistry.BuildDerivedTypes(),
-		};
+		public static TDef? Deserialize<TDef>(string toml) where TDef : ContentDef
+			=> TomlSerializer.Deserialize<TDef>(toml, CurrentOptions);
 
-		return new TomlSerializerOptions
+		public static string Serialize(ContentDef def) => TomlSerializer.Serialize(def, CurrentOptions);
+
+		private static TomlSerializerOptions CurrentOptions
 		{
-			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			PropertyNameCaseInsensitive = true,
-			PolymorphismOptions = new TomlPolymorphismOptions
+			get
 			{
-				TypeDiscriminatorPropertyName = "type",
-				DerivedTypeMappings = mappings,
-			},
-		};
+				var version = ContentTypeRegistry.Version;
+				if (version == Volatile.Read(ref _version)) return _options;
+
+				lock (_gate)
+				{
+					if (version != _version)
+					{
+						_options = CreateOptions();
+						_version = version;
+					}
+
+					return _options;
+				}
+			}
+		}
+
+		private static TomlSerializerOptions CreateOptions()
+		{
+			var mappings = new Dictionary<Type, IReadOnlyList<TomlDerivedType>>
+			{
+				[typeof(ContentDef)] = ContentTypeRegistry.BuildDerivedTypes(),
+			};
+
+			return new TomlSerializerOptions
+			{
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+				PropertyNameCaseInsensitive = true,
+				PolymorphismOptions = new TomlPolymorphismOptions
+				{
+					TypeDiscriminatorPropertyName = "type",
+					DerivedTypeMappings = mappings,
+				},
+			};
+		}
 	}
 }

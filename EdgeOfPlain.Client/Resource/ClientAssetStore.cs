@@ -4,50 +4,51 @@ using System.Collections.Generic;
 using System.Linq;
 using Zio;
 
-namespace EdgeOfPlain.Client.Resource;
-
-internal sealed class ClientAssetStore
+namespace EdgeOfPlain.Client.Resource
 {
-	private readonly Dictionary<Type, IDictionary> _resources = [];
-
-	public void Set<T>(UPath key, T value) where T : class
+	internal sealed class ClientAssetStore
 	{
-		if (key.IsNull || key.IsEmpty)
-			throw new ArgumentException("An asset key is required.", nameof(key));
+		private readonly Dictionary<Type, IDictionary> _resources = [];
 
-		ArgumentNullException.ThrowIfNull(value);
-
-		Map<T>()[key] = value;
-	}
-
-	public bool TryGet<T>(UPath key, out T value) where T : class
-	{
-		if (_resources.TryGetValue(typeof(T), out var map) && map.Contains(key))
+		public void Set<T>(UPath key, T value) where T : class
 		{
-			value = (T)map[key]!;
-			return true;
+			if (key.IsNull || key.IsEmpty)
+				throw new ArgumentException("An asset key is required.", nameof(key));
+
+			ArgumentNullException.ThrowIfNull(value);
+
+			Map<T>()[key] = value;
 		}
 
-		value = null!;
-		return false;
-	}
+		public bool TryGet<T>(UPath key, out T value) where T : class
+		{
+			if (_resources.TryGetValue(typeof(T), out var map) && map.Contains(key))
+			{
+				value = (T)map[key]!;
+				return true;
+			}
 
-	public IReadOnlyDictionary<UPath, T> All<T>() where T : class => Map<T>();
+			value = null!;
+			return false;
+		}
 
-	public IEnumerable<object> Values()
-	{
-		return _resources.Values.SelectMany(map => map.Values.OfType<object>());
-	}
+		public IReadOnlyDictionary<UPath, T> All<T>() where T : class => Map<T>();
 
-	public void Clear() => _resources.Clear();
+		public IEnumerable<object> Values()
+		{
+			return _resources.Values.SelectMany(map => map.Values.OfType<object>());
+		}
 
-	private Dictionary<UPath, T> Map<T>() where T : class
-	{
-		if (_resources.TryGetValue(typeof(T), out var existing)) return (Dictionary<UPath, T>)existing;
+		public void Clear() => _resources.Clear();
 
-		var map = new Dictionary<UPath, T>(UPathComparer.Ordinal);
-		_resources[typeof(T)] = map;
+		private Dictionary<UPath, T> Map<T>() where T : class
+		{
+			if (_resources.TryGetValue(typeof(T), out var existing)) return (Dictionary<UPath, T>)existing;
 
-		return map;
+			var map = new Dictionary<UPath, T>(UPathComparer.Ordinal);
+			_resources[typeof(T)] = map;
+
+			return map;
+		}
 	}
 }

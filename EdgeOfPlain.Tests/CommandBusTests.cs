@@ -2,97 +2,98 @@ using EdgeOfPlain.Core.Game.Commands;
 using LiteNetLib.Utils;
 using Xunit;
 
-namespace EdgeOfPlain.Tests;
-
-public sealed class CommandBusTests
+namespace EdgeOfPlain.Tests
 {
-	private struct TestCommand(int value) : ICommand
+	public sealed class CommandBusTests
 	{
-		public int Value = value;
-		public void Serialize(NetDataWriter writer) { }
-		public void Deserialize(NetDataReader reader) { }
-	}
+		private struct TestCommand(int value) : ICommand
+		{
+			public int Value = value;
+			public void Serialize(NetDataWriter writer) { }
+			public void Deserialize(NetDataReader reader) { }
+		}
 
-	private readonly struct OtherCommand(int value) : ICommand
-	{
-		public readonly int Value = value;
-		public void Serialize(NetDataWriter writer) { }
-		public void Deserialize(NetDataReader reader) { }
-	}
+		private readonly struct OtherCommand(int value) : ICommand
+		{
+			public readonly int Value = value;
+			public void Serialize(NetDataWriter writer) { }
+			public void Deserialize(NetDataReader reader) { }
+		}
 
-	[Fact]
-	public void EnqueueKeepsOrderPerCommandType()
-	{
-		var bus = new CommandBus();
+		[Fact]
+		public void EnqueueKeepsOrderPerCommandType()
+		{
+			var bus = new CommandBus();
 
-		bus.Enqueue(new TestCommand(1));
-		bus.Enqueue(new TestCommand(2));
-		bus.Enqueue(new TestCommand(3));
+			bus.Enqueue(new TestCommand(1));
+			bus.Enqueue(new TestCommand(2));
+			bus.Enqueue(new TestCommand(3));
 
-		var pending = bus.Pending<TestCommand>();
-		Assert.Equal(3, pending.Count);
-		Assert.Equal(1, pending[0].Value);
-		Assert.Equal(2, pending[1].Value);
-		Assert.Equal(3, pending[2].Value);
-	}
+			var pending = bus.Pending<TestCommand>();
+			Assert.Equal(3, pending.Count);
+			Assert.Equal(1, pending[0].Value);
+			Assert.Equal(2, pending[1].Value);
+			Assert.Equal(3, pending[2].Value);
+		}
 
-	[Fact]
-	public void DifferentCommandTypesDoNotShareAQueue()
-	{
-		var bus = new CommandBus();
+		[Fact]
+		public void DifferentCommandTypesDoNotShareAQueue()
+		{
+			var bus = new CommandBus();
 
-		bus.Enqueue(new TestCommand(1));
-		bus.Enqueue(new OtherCommand(42));
+			bus.Enqueue(new TestCommand(1));
+			bus.Enqueue(new OtherCommand(42));
 
-		Assert.Equal(1, bus.Count<TestCommand>());
-		Assert.Equal(1, bus.Count<OtherCommand>());
-		Assert.Equal(42, bus.Pending<OtherCommand>()[0].Value);
-	}
+			Assert.Equal(1, bus.Count<TestCommand>());
+			Assert.Equal(1, bus.Count<OtherCommand>());
+			Assert.Equal(42, bus.Pending<OtherCommand>()[0].Value);
+		}
 
-	[Fact]
-	public void PendingTypesListsFirstEnqueueOrder()
-	{
-		var bus = new CommandBus();
+		[Fact]
+		public void PendingTypesListsFirstEnqueueOrder()
+		{
+			var bus = new CommandBus();
 
-		bus.Enqueue(new TestCommand(1));
-		bus.Enqueue(new OtherCommand(2));
-		bus.Enqueue(new TestCommand(3));
+			bus.Enqueue(new TestCommand(1));
+			bus.Enqueue(new OtherCommand(2));
+			bus.Enqueue(new TestCommand(3));
 
-		Assert.Equal([typeof(TestCommand), typeof(OtherCommand)], bus.PendingTypes);
-	}
+			Assert.Equal([typeof(TestCommand), typeof(OtherCommand)], bus.PendingTypes);
+		}
 
-	[Fact]
-	public void PendingIsEmptyForUnusedType()
-	{
-		var bus = new CommandBus();
+		[Fact]
+		public void PendingIsEmptyForUnusedType()
+		{
+			var bus = new CommandBus();
 
-		Assert.Empty(bus.Pending<TestCommand>());
-		Assert.Equal(0, bus.Count<TestCommand>());
-	}
+			Assert.Empty(bus.Pending<TestCommand>());
+			Assert.Equal(0, bus.Count<TestCommand>());
+		}
 
-	[Fact]
-	public void EnqueueStoresACopyOfTheCommand()
-	{
-		var bus = new CommandBus();
-		var command = new TestCommand(1);
+		[Fact]
+		public void EnqueueStoresACopyOfTheCommand()
+		{
+			var bus = new CommandBus();
+			var command = new TestCommand(1);
 
-		bus.Enqueue(in command);
-		command.Value = 99;
+			bus.Enqueue(in command);
+			command.Value = 99;
 
-		Assert.Equal(1, bus.Pending<TestCommand>()[0].Value);
-	}
+			Assert.Equal(1, bus.Pending<TestCommand>()[0].Value);
+		}
 
-	[Fact]
-	public void ClearEmptiesEveryQueue()
-	{
-		var bus = new CommandBus();
-		bus.Enqueue(new TestCommand(1));
-		bus.Enqueue(new OtherCommand(2));
+		[Fact]
+		public void ClearEmptiesEveryQueue()
+		{
+			var bus = new CommandBus();
+			bus.Enqueue(new TestCommand(1));
+			bus.Enqueue(new OtherCommand(2));
 
-		bus.Clear();
+			bus.Clear();
 
-		Assert.Equal(0, bus.Count<TestCommand>());
-		Assert.Equal(0, bus.Count<OtherCommand>());
-		Assert.Empty(bus.PendingTypes);
+			Assert.Equal(0, bus.Count<TestCommand>());
+			Assert.Equal(0, bus.Count<OtherCommand>());
+			Assert.Empty(bus.PendingTypes);
+		}
 	}
 }

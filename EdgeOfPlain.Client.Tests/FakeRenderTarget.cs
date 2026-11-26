@@ -2,85 +2,86 @@ using System.Collections.Generic;
 using SFML.Graphics;
 using SFML.System;
 
-namespace EdgeOfPlain.Client.Tests;
-
-internal sealed class FakeRenderTarget : IRenderTarget
+namespace EdgeOfPlain.Client.Tests
 {
-
-	public Vector2u Size { get; set; } = new(1280, 720);
-
-	public bool IsSrgb => false;
-
-	public View DefaultView { get; private set; } = new(new FloatRect(new Vector2f(0, 0), new Vector2f(1280, 720)));
-
-	public List<DrawBatch> VertexBatches { get; } = [];
-
-	public List<IDrawable> Drawables { get; } = [];
-
-	public View GetView() => DefaultView;
-
-	public void SetView(View view) => DefaultView = view;
-
-	public IntRect GetViewport(View view)
+	internal sealed class FakeRenderTarget : IRenderTarget
 	{
-		var viewport = view.Viewport;
-		return new IntRect(
-			new Vector2i((int)viewport.Left, (int)viewport.Top),
-			new Vector2i((int)viewport.Width, (int)viewport.Height));
-	}
 
-	public IntRect GetScissor(View view)
-	{
-		var scissor = view.Scissor;
-		return new IntRect(
-			new Vector2i((int)scissor.Left, (int)scissor.Top),
-			new Vector2i((int)scissor.Width, (int)scissor.Height));
-	}
+		public Vector2u Size { get; set; } = new(1280, 720);
 
-	public Vector2f MapPixelToCoords(Vector2i point) => new(point.X, point.Y);
+		public bool IsSrgb => false;
 
-	public Vector2f MapPixelToCoords(Vector2i point, View view) => new(point.X, point.Y);
+		public View DefaultView { get; private set; } = new(new FloatRect(new Vector2f(0, 0), new Vector2f(1280, 720)));
 
-	public Vector2i MapCoordsToPixel(Vector2f point) => new((int)point.X, (int)point.Y);
+		public List<DrawBatch> VertexBatches { get; } = [];
 
-	public Vector2i MapCoordsToPixel(Vector2f point, View view) => new((int)point.X, (int)point.Y);
+		public List<IDrawable> Drawables { get; } = [];
 
-	public void Clear() { }
+		public View GetView() => DefaultView;
 
-	public void Clear(Color color) { }
+		public void SetView(View view) => DefaultView = view;
 
-	public void Clear(Color color, StencilValue stencilValue) { }
+		public IntRect GetViewport(View view)
+		{
+			var viewport = view.Viewport;
+			return new IntRect(
+				new Vector2i((int)viewport.Left, (int)viewport.Top),
+				new Vector2i((int)viewport.Width, (int)viewport.Height));
+		}
 
-	public void ClearStencil(StencilValue stencilValue) { }
+		public IntRect GetScissor(View view)
+		{
+			var scissor = view.Scissor;
+			return new IntRect(
+				new Vector2i((int)scissor.Left, (int)scissor.Top),
+				new Vector2i((int)scissor.Width, (int)scissor.Height));
+		}
 
-	public void Draw(IDrawable drawable) => Drawables.Add(drawable);
+		public Vector2f MapPixelToCoords(Vector2i point) => new(point.X, point.Y);
 
-	public void Draw(IDrawable drawable, RenderStates states) => Drawables.Add(drawable);
+		public Vector2f MapPixelToCoords(Vector2i point, View view) => new(point.X, point.Y);
 
-	public void Draw(Vertex[] vertices, PrimitiveType type)
-		=> Draw(vertices, 0, (uint)vertices.Length, type, RenderStates.Default);
+		public Vector2i MapCoordsToPixel(Vector2f point) => new((int)point.X, (int)point.Y);
 
-	public void Draw(Vertex[] vertices, PrimitiveType type, RenderStates states)
-		=> Draw(vertices, 0, (uint)vertices.Length, type, states);
+		public Vector2i MapCoordsToPixel(Vector2f point, View view) => new((int)point.X, (int)point.Y);
 
-	public void Draw(Vertex[] vertices, uint start, uint count, PrimitiveType type)
-		=> Draw(vertices, start, count, type, RenderStates.Default);
+		public void Clear() { }
 
-	public void Draw(Vertex[] vertices, uint start, uint count, PrimitiveType type, RenderStates states)
-		=> VertexBatches.Add(new DrawBatch(vertices[(int)start..(int)(start + count)], type, states));
+		public void Clear(Color color) { }
 
-	public bool SetActive(bool active) => true;
+		public void Clear(Color color, StencilValue stencilValue) { }
 
-	public void PushGLStates() { }
+		public void ClearStencil(StencilValue stencilValue) { }
 
-	public void PopGLStates() { }
+		public void Draw(IDrawable drawable) => Drawables.Add(drawable);
 
-	public void ResetGLStates() { }
+		public void Draw(IDrawable drawable, RenderStates states) => Drawables.Add(drawable);
 
-	internal sealed record DrawBatch(Vertex[] Vertices, PrimitiveType Type, RenderStates States)
-	{
-		public Vertex First => Vertices[0];
+		public void Draw(Vertex[] vertices, PrimitiveType type)
+			=> Draw(vertices, 0, (uint)vertices.Length, type, RenderStates.Default);
 
-		public Vertex Last => Vertices[^1];
+		public void Draw(Vertex[] vertices, PrimitiveType type, RenderStates states)
+			=> Draw(vertices, 0, (uint)vertices.Length, type, states);
+
+		public void Draw(Vertex[] vertices, uint start, uint count, PrimitiveType type)
+			=> Draw(vertices, start, count, type, RenderStates.Default);
+
+		public void Draw(Vertex[] vertices, uint start, uint count, PrimitiveType type, RenderStates states)
+			=> VertexBatches.Add(new DrawBatch(vertices[(int)start..(int)(start + count)], type, states));
+
+		public bool SetActive(bool active) => true;
+
+		public void PushGLStates() { }
+
+		public void PopGLStates() { }
+
+		public void ResetGLStates() { }
+
+		internal sealed record DrawBatch(Vertex[] Vertices, PrimitiveType Type, RenderStates States)
+		{
+			public Vertex First => Vertices[0];
+
+			public Vertex Last => Vertices[^1];
+		}
 	}
 }

@@ -1,20 +1,21 @@
 using System;
 using EdgeOfPlain.Core.Framework.Graphics;
 
-namespace EdgeOfPlain.Core.Framework.Scenes;
-
-public sealed class SceneContext
+namespace EdgeOfPlain.Core.Framework.Scenes
 {
-	public SceneContext(IGameWindow window, SceneManager scenes)
+	public sealed class SceneContext
 	{
-		ArgumentNullException.ThrowIfNull(window);
-		ArgumentNullException.ThrowIfNull(scenes);
+		public SceneContext(IGameWindow window, SceneManager scenes)
+		{
+			ArgumentNullException.ThrowIfNull(window);
+			ArgumentNullException.ThrowIfNull(scenes);
 
-		Window = window;
-		Scenes = scenes;
+			Window = window;
+			Scenes = scenes;
+		}
+
+		public IGameWindow Window { get; }
+
+		public SceneManager Scenes { get; }
 	}
-
-	public IGameWindow Window { get; }
-
-	public SceneManager Scenes { get; }
 }

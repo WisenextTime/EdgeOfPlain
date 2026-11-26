@@ -1,44 +1,45 @@
 using System;
+using EdgeOfPlain.Core.Content.Behaviors.Applier;
+using EdgeOfPlain.Core.Content.Behaviors.Systems;
 using EdgeOfPlain.Core.Content.Components;
-using EdgeOfPlain.Core.Content.Systems.Applier;
-using EdgeOfPlain.Core.Content.Systems.Frames;
 using EdgeOfPlain.Core.Definitions;
 using EdgeOfPlain.Core.Framework.Mods;
 using EdgeOfPlain.Core.Game.Components;
 
-namespace EdgeOfPlain.Core.Content;
-
-public class Base : Mod
+namespace EdgeOfPlain.Core.Content
 {
-	public override ModInfo ModInfo { get; } = new("base", new Version(1, 0, 0), "WisenextTime", "The base pack of game.");
-
-	public override Type[]? RegisterTypes { get; protected set; } =
-	[
-		typeof(TerrainDef),
-		typeof(TilesetDef),
-		typeof(TileRendererDef),
-		typeof(UnitDef),
-		typeof(BuildingDef),
-	];
-
-	public override void InitMod(ModContext context)
+	public class Base : Mod
 	{
-		context.AddComponent(HealthComponent.CreateComponent);
-		context.AddComponent(TransformComponent.CreateComponent);
-		context.AddComponent(TeamComponent.CreateComponent);
-		context.AddComponent(MoveTypeComponent.CreateComponent);
-		context.AddComponent(CollisionComponent.CreateComponent);
-		context.AddComponent(VelocityComponent.CreateComponent, ComponentScope<UnitDef>.ForDefType());
+		public override ModInfo ModInfo { get; } = new("base", new Version(1, 0, 0), "WisenextTime", "The base pack of game.");
 
-		context.AddQueue(new EntityDeathQueueSystem());
+		public override Type[]? RegisterTypes { get; protected set; } =
+		[
+			typeof(TerrainDef),
+			typeof(TilesetDef),
+			typeof(TileRendererDef),
+			typeof(UnitDef),
+			typeof(BuildingDef),
+		];
 
-		context.AddApplier(new SpawnEntityApplier());
-		context.AddApplier(new DeleteEntityApplier());
-		var pathfinding = new PathfindingSystem();
-		context.AddApplier(pathfinding);
+		public override void InitMod(ModContext context)
+		{
+			context.AddComponent(HealthComponent.CreateComponent);
+			context.AddComponent(TransformComponent.CreateComponent);
+			context.AddComponent(TeamComponent.CreateComponent);
+			context.AddComponent(MoveTypeComponent.CreateComponent);
+			context.AddComponent(CollisionComponent.CreateComponent);
+			context.AddComponent(VelocityComponent.CreateComponent, ComponentScope<UnitDef>.ForDefType());
 
-		context.AddFrameSystem(new PreviousTransformFrameSystem());
-		var movement = new MovementSystem(pathfinding);
-		context.AddFrameSystem(movement);
+			context.AddQueue(new EntityDeathQueueSystem());
+
+			context.AddApplier(new SpawnEntityApplier());
+			context.AddApplier(new DeleteEntityApplier());
+			var pathfinding = new PathfindingSystem();
+			context.AddApplier(pathfinding);
+
+			context.AddFrameSystem(new PreviousTransformFrameSystem());
+			var movement = new MovementSystem(pathfinding);
+			context.AddFrameSystem(movement);
+		}
 	}
 }

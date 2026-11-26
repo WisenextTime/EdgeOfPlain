@@ -14,252 +14,251 @@ using EdgeOfPlain.Core.Game.Components;
 using Xunit;
 using Zio;
 
-namespace EdgeOfPlain.Tests;
-
-public sealed class ModPipelineTests
+namespace EdgeOfPlain.Tests
 {
-	private static readonly Lock _gate = new();
-	private static Pipeline? _pipeline;
-	private static TempDirectory? _retained;
-
-	private static Pipeline Run()
+	public sealed class ModPipelineTests
 	{
-		lock (_gate)
+		private static readonly Lock _gate = new();
+		private static Pipeline? _pipeline;
+
+		private static Pipeline Run()
 		{
-			return _pipeline ??= Execute();
-		}
-	}
-
-	[Fact]
-	public void LoadSucceedsWithoutError()
-	{
-		var pipeline = Run();
-
-		Assert.Null(pipeline.Error);
-		Assert.True(pipeline.IsLoaded);
-		Assert.Matches("^[0-9A-F]{64}$", pipeline.Checksum);
-	}
-
-	[Fact]
-	public void LoadsCoreModThenDependencyOrder()
-	{
-		var pipeline = Run();
-
-		Assert.Equal(new[] { "base", "lib", "app" }, pipeline.LoadedIds);
-	}
-
-	[Fact]
-	public void ContentOfLoadedModsIsAvailable()
-	{
-		var pipeline = Run();
-
-		Assert.True(pipeline.HasLibSand);
-		Assert.True(pipeline.HasAppStone);
-	}
-
-	[Fact]
-	public void ContentOfFailedModIsRolledBack()
-	{
-		var pipeline = Run();
-
-		Assert.False(pipeline.HasBadOre);
-	}
-
-	[Fact]
-	public void TomlContentInContentsFolderIsLoaded()
-	{
-		var pipeline = Run();
-
-		Assert.True(pipeline.HasBaseTomlContent);
-	}
-
-	[Fact]
-	public void BuiltInContentTypesAreRegistered()
-	{
-		var pipeline = Run();
-
-		Assert.True(pipeline.HasBuiltInContentTypes);
-	}
-
-	[Fact]
-	public void RegistrationAfterLoadIsRejected()
-	{
-		var pipeline = Run();
-
-		Assert.True(pipeline.RejectsLateRegistration);
-	}
-
-	[Fact]
-	public void DependencyOnFailedModIsSkipped()
-	{
-		var pipeline = Run();
-
-		Assert.DoesNotContain("needsbad", pipeline.LoadedIds);
-		Assert.DoesNotContain("bad", pipeline.LoadedIds);
-	}
-
-	[Fact]
-	public void DependencyCycleAndMissingDependencyAreNotLoaded()
-	{
-		var pipeline = Run();
-
-		Assert.DoesNotContain("cyc1", pipeline.LoadedIds);
-		Assert.DoesNotContain("cyc2", pipeline.LoadedIds);
-		Assert.DoesNotContain("ghost", pipeline.LoadedIds);
-		Assert.DoesNotContain("oldapp", pipeline.LoadedIds);
-	}
-
-	[Fact]
-	public void ResourceLoaderReceivesOneDirectoryAtATime()
-	{
-		var pipeline = Run();
-
-		Assert.Equal(1, pipeline.ProbeCalls);
-		Assert.EndsWith("/base/Probe/Tiles", pipeline.ProbePath?.FullName);
-		Assert.Equal(2, pipeline.ProbeFiles.Length);
-		Assert.All(pipeline.ProbeFiles, file => Assert.Contains("base/Probe/Tiles/", file));
-	}
-
-	[Fact]
-	public void CommandRegistryIsSealedAfterLoading()
-	{
-		Run();
-
-		Assert.True(CommandRegistry.IsSealed);
-	}
-
-	private static Pipeline Execute()
-	{
-		var root = new TempDirectory();
-		_retained = root;
-		var baseDirectory = Path.Combine(root.Path, "base");
-		var libDirectory = Path.Combine(root.Path, "lib");
-		var appDirectory = Path.Combine(root.Path, "app");
-
-		Directory.CreateDirectory(Path.Combine(baseDirectory, "Contents"));
-		Directory.CreateDirectory(Path.Combine(libDirectory, "Contents"));
-		Directory.CreateDirectory(Path.Combine(appDirectory, "Contents"));
-		File.WriteAllText(Path.Combine(baseDirectory, "Contents", "base.toml"), """
-		                                                                        type = "terrain"
-		                                                                        id = "basedirt"
-		                                                                        moveCost = 2
-		                                                                        """);
-		Directory.CreateDirectory(Path.Combine(baseDirectory, "Probe", "Tiles"));
-		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "a.txt"), "a");
-		File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "b.txt"), "b");
-
-		ContentStore.Reset();
-		ContentTypeRegistry.Reset();
-		ContentSerializer.ResetOptions();
-		CommandRegistry.Reset();
-		ComponentManager.Reset();
-		AssetsManager.Clear();
-		AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
-
-		FileIO.Reset();
-		FileIO.Initialize(Path.Combine(root.Path, "data"), Path.Combine(root.Path, "mods"));
-
-		var assets = new ModFileSystem();
-		assets.RegisterNamespace("base", ZioTestExtensions.MountDirectory(baseDirectory));
-		assets.RegisterNamespace("lib", ZioTestExtensions.MountDirectory(libDirectory));
-		assets.RegisterNamespace("app", ZioTestExtensions.MountDirectory(appDirectory));
-		FileIO.Mount(FileIO.Assets, assets);
-
-		var leftover = new List<Mod>(ModRegistry.RegisteredMods);
-		foreach (var registered in leftover) ModRegistry.Unregister(registered);
-
-		Register(new TestMod(Info("lib"), init: context => context.AddContent(new TerrainDef("libsand"))));
-		Register(new TestMod(Info("app", ("lib", "1.0.0")),
-			init: context => context.AddContent(new TerrainDef("appstone"))));
-		Register(new TestMod(Info("bad"), init: context =>
-		{
-			context.AddContent(new TerrainDef("badore"));
-			throw new InvalidOperationException("boom");
-		}));
-		Register(new TestMod(Info("needsbad", ("bad", "1.0.0"))));
-		Register(new TestMod(Info("oldapp", ("lib", "2.0.0"))));
-		Register(new TestMod(Info("ghost", ("missing", "1.0.0"))));
-		Register(new TestMod(Info("cyc1", ("cyc2", "1.0.0"))));
-		Register(new TestMod(Info("cyc2", ("cyc1", "1.0.0"))));
-
-		var probeCalls = 0;
-		UPath? probePath = null;
-		string[] probeFiles = [];
-		ModResourceLoader.TryRegister("Probe", directory =>
-		{
-			probeCalls++;
-			probePath = directory.Path;
-			probeFiles = [.. directory.Files.Select(file => file.FullName)];
-		});
-
-		Exception? error = null;
-		try
-		{
-			ModLoader.LoadRegistered();
-		}
-		catch(Exception exception)
-		{
-			error = exception;
+			lock (_gate)
+			{
+				return _pipeline ??= Execute();
+			}
 		}
 
-		var lateRejected = false;
-		try
+		[Fact]
+		public void LoadSucceedsWithoutError()
 		{
-			Register(new TestMod(Info("late")));
+			var pipeline = Run();
+
+			Assert.Null(pipeline.Error);
+			Assert.True(pipeline.IsLoaded);
+			Assert.Matches("^[0-9A-F]{64}$", pipeline.Checksum);
 		}
-		catch(Exception)
+
+		[Fact]
+		public void LoadsCoreModThenDependencyOrder()
 		{
-			lateRejected = true;
+			var pipeline = Run();
+
+			Assert.Equal(new[] { "base", "lib", "app" }, pipeline.LoadedIds);
 		}
 
-		return new Pipeline(
-			[.. ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id)],
-			ModLoader.IsLoaded,
-			Globals.ModChecksum,
-			error,
-			ContentStore.Get("libsand") is not null,
-			ContentStore.Get("appstone") is not null,
-			ContentStore.Get("badore") is not null,
-			ContentStore.Get("basedirt") is not null,
-			lateRejected,
-			ContentTypeRegistry.ByType.ContainsKey(typeof(TilesetDef))
-			&& ContentTypeRegistry.ByType.ContainsKey(typeof(TileRendererDef)),
-			probeCalls,
-			probePath,
-			probeFiles);
-	}
+		[Fact]
+		public void ContentOfLoadedModsIsAvailable()
+		{
+			var pipeline = Run();
 
-	private static void Register(Mod mod) => ModRegistry.Register(mod, mod.ModInfo);
+			Assert.True(pipeline.HasLibSand);
+			Assert.True(pipeline.HasAppStone);
+		}
 
-	private static ModInfo Info(string id, params (string Id, string MinVersion)[] dependencies)
-		=> new(
-			id,
-			new Version(1, 0, 0),
-			"tests",
-			"",
-			[.. dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion)))]);
+		[Fact]
+		public void ContentOfFailedModIsRolledBack()
+		{
+			var pipeline = Run();
 
-	private sealed record Pipeline(
-		string[] LoadedIds,
-		bool IsLoaded,
-		string? Checksum,
-		Exception? Error,
-		bool HasLibSand,
-		bool HasAppStone,
-		bool HasBadOre,
-		bool HasBaseTomlContent,
-		bool RejectsLateRegistration,
-		bool HasBuiltInContentTypes,
-		int ProbeCalls,
-		UPath? ProbePath,
-		string[] ProbeFiles);
+			Assert.False(pipeline.HasBadOre);
+		}
 
-	private sealed class TestMod(ModInfo info, Type[]? types = null, Action<ModContext>? init = null) : Mod
-	{
-		public override ModInfo ModInfo => info;
+		[Fact]
+		public void TomlContentInContentsFolderIsLoaded()
+		{
+			var pipeline = Run();
 
-		public override Type[]? RegisterTypes { get; protected set; } = types;
+			Assert.True(pipeline.HasBaseTomlContent);
+		}
 
-		public override void InitMod(ModContext context) => init?.Invoke(context);
+		[Fact]
+		public void BuiltInContentTypesAreRegistered()
+		{
+			var pipeline = Run();
+
+			Assert.True(pipeline.HasBuiltInContentTypes);
+		}
+
+		[Fact]
+		public void RegistrationAfterLoadIsRejected()
+		{
+			var pipeline = Run();
+
+			Assert.True(pipeline.RejectsLateRegistration);
+		}
+
+		[Fact]
+		public void DependencyOnFailedModIsSkipped()
+		{
+			var pipeline = Run();
+
+			Assert.DoesNotContain("needsbad", pipeline.LoadedIds);
+			Assert.DoesNotContain("bad", pipeline.LoadedIds);
+		}
+
+		[Fact]
+		public void DependencyCycleAndMissingDependencyAreNotLoaded()
+		{
+			var pipeline = Run();
+
+			Assert.DoesNotContain("cyc1", pipeline.LoadedIds);
+			Assert.DoesNotContain("cyc2", pipeline.LoadedIds);
+			Assert.DoesNotContain("ghost", pipeline.LoadedIds);
+			Assert.DoesNotContain("oldapp", pipeline.LoadedIds);
+		}
+
+		[Fact]
+		public void ResourceLoaderReceivesOneDirectoryAtATime()
+		{
+			var pipeline = Run();
+
+			Assert.Equal(1, pipeline.ProbeCalls);
+			Assert.EndsWith("/base/Probe/Tiles", pipeline.ProbePath?.FullName);
+			Assert.Equal(2, pipeline.ProbeFiles.Length);
+			Assert.All(pipeline.ProbeFiles, file => Assert.Contains("base/Probe/Tiles/", file));
+		}
+
+		[Fact]
+		public void CommandRegistryIsSealedAfterLoading()
+		{
+			Run();
+
+			Assert.True(CommandRegistry.IsSealed);
+		}
+
+		private static Pipeline Execute()
+		{
+			var root = new TempDirectory();
+			var baseDirectory = Path.Combine(root.Path, "base");
+			var libDirectory = Path.Combine(root.Path, "lib");
+			var appDirectory = Path.Combine(root.Path, "app");
+
+			Directory.CreateDirectory(Path.Combine(baseDirectory, "Contents"));
+			Directory.CreateDirectory(Path.Combine(libDirectory, "Contents"));
+			Directory.CreateDirectory(Path.Combine(appDirectory, "Contents"));
+			File.WriteAllText(Path.Combine(baseDirectory, "Contents", "base.toml"), """
+			                                                                        type = "terrain"
+			                                                                        id = "basedirt"
+			                                                                        moveCost = 2
+			                                                                        """);
+			Directory.CreateDirectory(Path.Combine(baseDirectory, "Probe", "Tiles"));
+			File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "a.txt"), "a");
+			File.WriteAllText(Path.Combine(baseDirectory, "Probe", "Tiles", "b.txt"), "b");
+
+			ContentStore.Reset();
+			ContentTypeRegistry.Reset();
+			ContentSerializer.ResetOptions();
+			CommandRegistry.Reset();
+			ComponentManager.Reset();
+			AssetsManager.Clear();
+			AssetsManager.RegisterResourceOperator(TextOperatorBuilder.Build);
+
+			FileIO.Reset();
+			FileIO.Initialize(Path.Combine(root.Path, "data"), Path.Combine(root.Path, "mods"));
+
+			var assets = new ModFileSystem();
+			assets.RegisterNamespace("base", ZioTestExtensions.MountDirectory(baseDirectory));
+			assets.RegisterNamespace("lib", ZioTestExtensions.MountDirectory(libDirectory));
+			assets.RegisterNamespace("app", ZioTestExtensions.MountDirectory(appDirectory));
+			FileIO.Mount(FileIO.Assets, assets);
+
+			var leftover = new List<Mod>(ModRegistry.RegisteredMods);
+			foreach (var registered in leftover) ModRegistry.Unregister(registered);
+
+			Register(new TestMod(Info("lib"), init: context => context.AddContent(new TerrainDef("libsand"))));
+			Register(new TestMod(Info("app", ("lib", "1.0.0")),
+				init: context => context.AddContent(new TerrainDef("appstone"))));
+			Register(new TestMod(Info("bad"), init: context =>
+			{
+				context.AddContent(new TerrainDef("badore"));
+				throw new InvalidOperationException("boom");
+			}));
+			Register(new TestMod(Info("needsbad", ("bad", "1.0.0"))));
+			Register(new TestMod(Info("oldapp", ("lib", "2.0.0"))));
+			Register(new TestMod(Info("ghost", ("missing", "1.0.0"))));
+			Register(new TestMod(Info("cyc1", ("cyc2", "1.0.0"))));
+			Register(new TestMod(Info("cyc2", ("cyc1", "1.0.0"))));
+
+			var probeCalls = 0;
+			UPath? probePath = null;
+			string[] probeFiles = [];
+			ModResourceLoader.TryRegister("Probe", directory =>
+			{
+				probeCalls++;
+				probePath = directory.Path;
+				probeFiles = [.. directory.Files.Select(file => file.FullName)];
+			});
+
+			Exception? error = null;
+			try
+			{
+				ModLoader.LoadRegistered();
+			}
+			catch(Exception exception)
+			{
+				error = exception;
+			}
+
+			var lateRejected = false;
+			try
+			{
+				Register(new TestMod(Info("late")));
+			}
+			catch(Exception)
+			{
+				lateRejected = true;
+			}
+
+			return new Pipeline(
+				[.. ModLoader.LoadedMods.Select(mod => mod.ModInfo.Id)],
+				ModLoader.IsLoaded,
+				Globals.ModChecksum,
+				error,
+				ContentStore.Get("libsand") is not null,
+				ContentStore.Get("appstone") is not null,
+				ContentStore.Get("badore") is not null,
+				ContentStore.Get("basedirt") is not null,
+				lateRejected,
+				ContentTypeRegistry.ByType.ContainsKey(typeof(TilesetDef))
+				&& ContentTypeRegistry.ByType.ContainsKey(typeof(TileRendererDef)),
+				probeCalls,
+				probePath,
+				probeFiles);
+		}
+
+		private static void Register(Mod mod) => ModRegistry.Register(mod, mod.ModInfo);
+
+		private static ModInfo Info(string id, params (string Id, string MinVersion)[] dependencies)
+			=> new(
+				id,
+				new Version(1, 0, 0),
+				"tests",
+				"",
+				[.. dependencies.Select(dependency => new ModDependenceInfo(dependency.Id, Version.Parse(dependency.MinVersion)))]);
+
+		private sealed record Pipeline(
+			string[] LoadedIds,
+			bool IsLoaded,
+			string? Checksum,
+			Exception? Error,
+			bool HasLibSand,
+			bool HasAppStone,
+			bool HasBadOre,
+			bool HasBaseTomlContent,
+			bool RejectsLateRegistration,
+			bool HasBuiltInContentTypes,
+			int ProbeCalls,
+			UPath? ProbePath,
+			string[] ProbeFiles);
+
+		private sealed class TestMod(ModInfo info, Type[]? types = null, Action<ModContext>? init = null) : Mod
+		{
+			public override ModInfo ModInfo => info;
+
+			public override Type[]? RegisterTypes { get; protected set; } = types;
+
+			public override void InitMod(ModContext context) => init?.Invoke(context);
+		}
 	}
 }

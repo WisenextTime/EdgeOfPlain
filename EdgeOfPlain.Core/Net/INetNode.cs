@@ -1,8 +1,9 @@
 using System;
 
-namespace EdgeOfPlain.Core.Net;
-
-public interface INetNode : IDisposable
+namespace EdgeOfPlain.Core.Net
 {
-	void PollEvents();
+	public interface INetNode : IDisposable
+	{
+		void PollEvents();
+	}
 }

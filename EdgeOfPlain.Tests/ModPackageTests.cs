@@ -6,166 +6,167 @@ using Xunit;
 using Zio;
 using Zio.FileSystems;
 
-namespace EdgeOfPlain.Tests;
-
-internal static class ZipFactory
+namespace EdgeOfPlain.Tests
 {
-	public static string Create(TempDirectory directory, string fileName, params (string Name, string Content)[] entries)
+	internal static class ZipFactory
 	{
-		var path = Path.Combine(directory.Path, fileName);
-		using var stream = File.Create(path);
-		using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
-
-		foreach (var (name, content) in entries)
+		public static string Create(TempDirectory directory, string fileName, params (string Name, string Content)[] entries)
 		{
-			var entry = archive.CreateEntry(name);
-			using var writer = new StreamWriter(entry.Open());
-			writer.Write(content);
+			var path = Path.Combine(directory.Path, fileName);
+			using var stream = File.Create(path);
+			using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+
+			foreach (var (name, content) in entries)
+			{
+				var entry = archive.CreateEntry(name);
+				using var writer = new StreamWriter(entry.Open());
+				writer.Write(content);
+			}
+
+			return path;
 		}
 
-		return path;
+		public const string Manifest = """
+		                               id = "CoolMod"
+		                               version = "1.2.3"
+		                               author = "tester"
+		                               description = "test mod"
+		                               """;
 	}
 
-	public const string Manifest = """
-	                               id = "CoolMod"
-	                               version = "1.2.3"
-	                               author = "tester"
-	                               description = "test mod"
-	                               """;
-}
-
-public sealed class ModPackageTests
-{
-	[Fact]
-	public void Open_ReadsManifestAndAssets()
+	public sealed class ModPackageTests
 	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip",
-			("mod.toml", ZipFactory.Manifest),
-			("Asset/a.txt", "asset"));
+		[Fact]
+		public void Open_ReadsManifestAndAssets()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip",
+				("mod.toml", ZipFactory.Manifest),
+				("Asset/a.txt", "asset"));
 
-		using var package = ModPackage.Open(zip);
+			using var package = ModPackage.Open(zip);
 
-		Assert.Equal("coolmod", package.ModId);
-		Assert.True(package.HasAssets);
-		Assert.Equal("asset", package.Assets.ReadAllText(new UPath("/a.txt")));
-		Assert.NotNull(package.Info);
-		Assert.Equal("1.2.3", package.Info!.Value.Version.ToString());
+			Assert.Equal("coolmod", package.ModId);
+			Assert.True(package.HasAssets);
+			Assert.Equal("asset", package.Assets.ReadAllText(new UPath("/a.txt")));
+			Assert.NotNull(package.Info);
+			Assert.Equal("1.2.3", package.Info!.Value.Version.ToString());
+		}
+
+		[Fact]
+		public void Open_MissingManifest_Throws()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip", ("Asset/a.txt", "asset"));
+
+			Assert.Throws<InvalidDataException>(() => ModPackage.Open(zip));
+		}
+
+		[Fact]
+		public void Open_ReservedId_Throws()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", "id = \"base\"\nversion = \"1.0.0\""));
+
+			Assert.Throws<InvalidDataException>(() => ModPackage.Open(zip));
+		}
+
+		[Fact]
+		public void Open_ExplicitIdOverridesManifest()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest));
+
+			using var package = ModPackage.Open(zip, "Chosen");
+
+			Assert.Equal("chosen", package.ModId);
+		}
+
+		[Fact]
+		public void Open_WithoutAssetDirectory_HasNoAssets()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest), ("other/a.txt", "x"));
+
+			using var package = ModPackage.Open(zip);
+
+			Assert.False(package.HasAssets);
+			Assert.Empty(package.Assets.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories));
+		}
+
+		[Fact]
+		public void Open_MapsOverriderDirectories()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip",
+				("mod.toml", ZipFactory.Manifest),
+				("Overrider/base/a.txt", "override"));
+
+			using var package = ModPackage.Open(zip);
+
+			Assert.True(package.Overriders.ContainsKey("base"));
+			Assert.Equal("override", package.Overriders["base"].ReadAllText(new UPath("/a.txt")));
+		}
+
+		[Fact]
+		public void Open_UnknownModIdMustComeFromManifest()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest));
+
+			using var package = ModPackage.Open(zip);
+
+			Assert.Equal("coolmod", package.ModId);
+		}
 	}
 
-	[Fact]
-	public void Open_MissingManifest_Throws()
+	public sealed class ModExtractorTests
 	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip", ("Asset/a.txt", "asset"));
+		private static readonly UPath _cacheRoot = new("/cache");
 
-		Assert.Throws<InvalidDataException>(() => ModPackage.Open(zip));
-	}
+		[Fact]
+		public void Extract_CopiesManagedFilesAndWritesMarker()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip",
+				("mod.toml", ZipFactory.Manifest),
+				("lib/a.dll", "fake"),
+				("Asset/a.txt", "asset"));
+			using var cache = ZioTestExtensions.MountDirectory(directory.Path);
+			using var package = ModPackage.Open(zip);
 
-	[Fact]
-	public void Open_ReservedId_Throws()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", "id = \"base\"\nversion = \"1.0.0\""));
+			var extracted = ModExtractor.Extract(package, cache, _cacheRoot);
 
-		Assert.Throws<InvalidDataException>(() => ModPackage.Open(zip));
-	}
+			Assert.NotNull(extracted);
+			Assert.True(File.Exists(Path.Combine(extracted, "lib", "a.dll")));
+			Assert.False(File.Exists(Path.Combine(extracted, "Asset", "a.txt")));
+			Assert.Equal(extracted, ModExtractor.Extract(package, cache, _cacheRoot));
+		}
 
-	[Fact]
-	public void Open_ExplicitIdOverridesManifest()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest));
+		[Fact]
+		public void Extract_WithoutManagedFiles_ReturnsNull()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip",
+				("mod.toml", ZipFactory.Manifest),
+				("Asset/a.txt", "asset"));
+			using var cache = ZioTestExtensions.MountDirectory(directory.Path);
+			using var package = ModPackage.Open(zip);
 
-		using var package = ModPackage.Open(zip, "Chosen");
+			Assert.Null(ModExtractor.Extract(package, cache, _cacheRoot));
+		}
 
-		Assert.Equal("chosen", package.ModId);
-	}
+		[Fact]
+		public void Extract_RequiresPhysicalCacheRoot()
+		{
+			using var directory = new TempDirectory();
+			var zip = ZipFactory.Create(directory, "a.zip",
+				("mod.toml", ZipFactory.Manifest),
+				("a.dll", "fake"));
+			using var cache = new MemoryFileSystem();
+			using var package = ModPackage.Open(zip);
 
-	[Fact]
-	public void Open_WithoutAssetDirectory_HasNoAssets()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest), ("other/a.txt", "x"));
-
-		using var package = ModPackage.Open(zip);
-
-		Assert.False(package.HasAssets);
-		Assert.Empty(package.Assets.EnumerateFiles(UPath.Root, "*", SearchOption.AllDirectories));
-	}
-
-	[Fact]
-	public void Open_MapsOverriderDirectories()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip",
-			("mod.toml", ZipFactory.Manifest),
-			("Overrider/base/a.txt", "override"));
-
-		using var package = ModPackage.Open(zip);
-
-		Assert.True(package.Overriders.ContainsKey("base"));
-		Assert.Equal("override", package.Overriders["base"].ReadAllText(new UPath("/a.txt")));
-	}
-
-	[Fact]
-	public void Open_UnknownModIdMustComeFromManifest()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip", ("mod.toml", ZipFactory.Manifest));
-
-		using var package = ModPackage.Open(zip);
-
-		Assert.Equal("coolmod", package.ModId);
-	}
-}
-
-public sealed class ModExtractorTests
-{
-	private static readonly UPath CacheRoot = new("/cache");
-
-	[Fact]
-	public void Extract_CopiesManagedFilesAndWritesMarker()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip",
-			("mod.toml", ZipFactory.Manifest),
-			("lib/a.dll", "fake"),
-			("Asset/a.txt", "asset"));
-		using var cache = ZioTestExtensions.MountDirectory(directory.Path);
-		using var package = ModPackage.Open(zip);
-
-		var extracted = ModExtractor.Extract(package, cache, CacheRoot);
-
-		Assert.NotNull(extracted);
-		Assert.True(File.Exists(Path.Combine(extracted, "lib", "a.dll")));
-		Assert.False(File.Exists(Path.Combine(extracted, "Asset", "a.txt")));
-		Assert.Equal(extracted, ModExtractor.Extract(package, cache, CacheRoot));
-	}
-
-	[Fact]
-	public void Extract_WithoutManagedFiles_ReturnsNull()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip",
-			("mod.toml", ZipFactory.Manifest),
-			("Asset/a.txt", "asset"));
-		using var cache = ZioTestExtensions.MountDirectory(directory.Path);
-		using var package = ModPackage.Open(zip);
-
-		Assert.Null(ModExtractor.Extract(package, cache, CacheRoot));
-	}
-
-	[Fact]
-	public void Extract_RequiresPhysicalCacheRoot()
-	{
-		using var directory = new TempDirectory();
-		var zip = ZipFactory.Create(directory, "a.zip",
-			("mod.toml", ZipFactory.Manifest),
-			("a.dll", "fake"));
-		using var cache = new MemoryFileSystem();
-		using var package = ModPackage.Open(zip);
-
-		Assert.Throws<InvalidOperationException>(() => ModExtractor.Extract(package, cache, CacheRoot));
+			Assert.Throws<InvalidOperationException>(() => ModExtractor.Extract(package, cache, _cacheRoot));
+		}
 	}
 }

@@ -1,123 +1,123 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
-namespace EdgeOfPlain.Core.Game.Commands;
-
-public interface ICommand;
-
-public interface ICommandSink
+namespace EdgeOfPlain.Core.Game.Commands
 {
-	void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand;
-}
+	public interface ICommand;
 
-public interface IWorldScopedCommand
-{
-	WorldKey WorldKey { get; }
-}
-
-public sealed class CommandBus : ICommandSink
-{
-	private readonly Dictionary<Type, ICommandQueue> _byType = new();
-	private readonly List<ICommandQueue> _queues = [];
-	private readonly List<Type> _pendingTypes = [];
-
-	public IReadOnlyList<Type> PendingTypes => _pendingTypes;
-
-	public int PendingCount
+	public interface ICommandSink
 	{
-		get
+		void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand;
+	}
+
+	public interface IWorldScopedCommand
+	{
+		WorldKey WorldKey { get; }
+	}
+
+	public sealed class CommandBus : ICommandSink
+	{
+		private readonly Dictionary<Type, ICommandQueue> _byType = new();
+		private readonly List<ICommandQueue> _queues = [];
+		private readonly List<Type> _pendingTypes = [];
+
+		public IReadOnlyList<Type> PendingTypes => _pendingTypes;
+
+		public int PendingCount
 		{
-			var total = 0;
-			foreach (var queue in _queues) total += queue.Count;
-			return total;
+			get
+			{
+				return _queues.Sum(queue => queue.Count);
+			}
 		}
-	}
 
-	public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand
-	{
-		var queue = GetOrCreate<TCommand>();
-		if (queue.Count == 0) _pendingTypes.Add(typeof(TCommand));
-		queue.Add(command);
-	}
-
-	public int Count<TCommand>() where TCommand : struct, ICommand =>
-		Get<TCommand>()?.Count ?? 0;
-
-	public IReadOnlyList<TCommand> Pending<TCommand>() where TCommand : struct, ICommand
-	{
-		var queue = Get<TCommand>();
-		return queue is null ? Array.Empty<TCommand>() : queue.Items;
-	}
-
-	public void Clear()
-	{
-		foreach (var c in _queues) c.Clear();
-		_pendingTypes.Clear();
-	}
-
-	public void Clear<TCommand>() where TCommand : struct, ICommand
-	{
-		var queue = Get<TCommand>();
-		if (queue is null || queue.Count == 0) return;
-		queue.Clear();
-		_pendingTypes.Remove(typeof(TCommand));
-	}
-
-	public void Clear<TCommand>(int count) where TCommand : struct, ICommand
-	{
-		var queue = Get<TCommand>();
-		if (queue is null) return;
-
-		if (count >= queue.Count)
+		public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand
 		{
+			var queue = GetOrCreate<TCommand>();
+			if (queue.Count == 0) _pendingTypes.Add(typeof(TCommand));
+			queue.Add(command);
+		}
+
+		public int Count<TCommand>() where TCommand : struct, ICommand =>
+			Get<TCommand>()?.Count ?? 0;
+
+		public IReadOnlyList<TCommand> Pending<TCommand>() where TCommand : struct, ICommand
+		{
+			var queue = Get<TCommand>();
+			return queue is null ? Array.Empty<TCommand>() : queue.Items;
+		}
+
+		public void Clear()
+		{
+			foreach (var c in _queues) c.Clear();
+			_pendingTypes.Clear();
+		}
+
+		public void Clear<TCommand>() where TCommand : struct, ICommand
+		{
+			var queue = Get<TCommand>();
+			if (queue is null || queue.Count == 0) return;
 			queue.Clear();
 			_pendingTypes.Remove(typeof(TCommand));
-			return;
 		}
 
-		queue.RemoveFirst(count);
-	}
+		public void Clear<TCommand>(int count) where TCommand : struct, ICommand
+		{
+			var queue = Get<TCommand>();
+			if (queue is null) return;
 
-	internal void ClearType(Type commandType)
-	{
-		if (_byType.TryGetValue(commandType, out var queue)) queue.Clear();
-		_pendingTypes.Remove(commandType);
-	}
+			if (count >= queue.Count)
+			{
+				queue.Clear();
+				_pendingTypes.Remove(typeof(TCommand));
+				return;
+			}
 
-	internal int CountType(Type commandType) =>
-		_byType.TryGetValue(commandType, out var queue) ? queue.Count : 0;
+			queue.RemoveFirst(count);
+		}
 
-	private CommandQueue<TCommand>? Get<TCommand>() where TCommand : struct, ICommand =>
-		_byType.TryGetValue(typeof(TCommand), out var queue) ? (CommandQueue<TCommand>)queue : null;
+		internal void ClearType(Type commandType)
+		{
+			if (_byType.TryGetValue(commandType, out var queue)) queue.Clear();
+			_pendingTypes.Remove(commandType);
+		}
 
-	private CommandQueue<TCommand> GetOrCreate<TCommand>() where TCommand : struct, ICommand
-	{
-		if (_byType.TryGetValue(typeof(TCommand), out var existing)) return (CommandQueue<TCommand>)existing;
+		internal int CountType(Type commandType) =>
+			_byType.TryGetValue(commandType, out var queue) ? queue.Count : 0;
 
-		var created = new CommandQueue<TCommand>();
-		_byType.Add(typeof(TCommand), created);
-		_queues.Add(created);
-		return created;
-	}
+		private CommandQueue<TCommand>? Get<TCommand>() where TCommand : struct, ICommand =>
+			_byType.TryGetValue(typeof(TCommand), out var queue) ? (CommandQueue<TCommand>)queue : null;
 
-	private interface ICommandQueue
-	{
-		int Count { get; }
+		private CommandQueue<TCommand> GetOrCreate<TCommand>() where TCommand : struct, ICommand
+		{
+			if (_byType.TryGetValue(typeof(TCommand), out var existing)) return (CommandQueue<TCommand>)existing;
 
-		void Clear();
-	}
+			var created = new CommandQueue<TCommand>();
+			_byType.Add(typeof(TCommand), created);
+			_queues.Add(created);
+			return created;
+		}
 
-	private sealed class CommandQueue<TCommand> : ICommandQueue
-		where TCommand : struct, ICommand
-	{
-		public readonly List<TCommand> Items = [];
+		private interface ICommandQueue
+		{
+			int Count { get; }
 
-		public int Count => Items.Count;
+			void Clear();
+		}
 
-		public void Add(in TCommand command) => Items.Add(command);
+		private sealed class CommandQueue<TCommand> : ICommandQueue
+			where TCommand : struct, ICommand
+		{
+			public readonly List<TCommand> Items = [];
 
-		public void Clear() => Items.Clear();
+			public int Count => Items.Count;
 
-		public void RemoveFirst(int count) => Items.RemoveRange(0, count);
+			public void Add(in TCommand command) => Items.Add(command);
+
+			public void Clear() => Items.Clear();
+
+			public void RemoveFirst(int count) => Items.RemoveRange(0, count);
+		}
 	}
 }

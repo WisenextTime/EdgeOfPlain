@@ -4,41 +4,42 @@ using System.Numerics;
 using SFML.Graphics;
 using Zio;
 
-namespace EdgeOfPlain.Client.Resource.Textures;
-
-public sealed class TextureData
+namespace EdgeOfPlain.Client.Resource.Textures
 {
-	internal TextureData(string spriteId, UPath texturePath, Rectangle source, RectangleF uv)
+	public sealed class TextureData
 	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(spriteId);
+		internal TextureData(string spriteId, UPath texturePath, Rectangle source, RectangleF uv)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(spriteId);
 
-		if (texturePath.IsNull || texturePath.IsEmpty)
-			throw new System.ArgumentException("A texture path is required.", nameof(texturePath));
+			if (texturePath.IsNull || texturePath.IsEmpty)
+				throw new ArgumentException("A texture path is required.", nameof(texturePath));
 
-		SpriteId = spriteId;
-		TexturePath = texturePath;
-		Source = source;
-		Uv = uv;
-	}
+			SpriteId = spriteId;
+			TexturePath = texturePath;
+			Source = source;
+			Uv = uv;
+		}
 
-	public string SpriteId { get; }
+		public string SpriteId { get; }
 
-	public UPath TexturePath { get; }
+		public UPath TexturePath { get; }
 
-	public UPath Key => MakeKey(TexturePath, SpriteId);
+		public UPath Key => MakeKey(TexturePath, SpriteId);
 
-	public Rectangle Source { get; }
+		public Rectangle Source { get; }
 
-	public RectangleF Uv { get; }
+		public RectangleF Uv { get; }
 
-	public Vector2 Size => new(Source.Width, Source.Height);
+		public Vector2 Size => new(Source.Width, Source.Height);
 
-	public Texture Texture => ClientAssetsManager.Get<Texture>(TexturePath);
+		public Texture Texture => ClientAssetsManager.Get<Texture>(TexturePath);
 
-	public static UPath MakeKey(UPath texturePath, string spriteId)
-	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(spriteId);
+		public static UPath MakeKey(UPath texturePath, string spriteId)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(spriteId);
 
-		return new UPath($"{texturePath.FullName}#{spriteId}");
+			return new UPath($"{texturePath.FullName}#{spriteId}");
+		}
 	}
 }

@@ -11,739 +11,740 @@ using EdgeOfPlain.Core.Framework.Time;
 using FixedMathSharp;
 using Xunit;
 
-namespace EdgeOfPlain.Tests;
-
-internal sealed class FakeTimeSource : ITimeSource
+namespace EdgeOfPlain.Tests
 {
-	public Fixed64 ElapsedSeconds { get; set; }
-}
-
-public sealed class GameLoopTests
-{
-	private static readonly Fixed64 _step = GameLoop.DefaultFixedStep;
-
-	[Fact]
-	public void ProducesNoStepBeforeOneFixedStepElapsed()
+	internal sealed class FakeTimeSource : ITimeSource
 	{
-		var time = new FakeTimeSource();
-		var loop = new GameLoop(time);
-
-		time.ElapsedSeconds = _step / (Fixed64)2;
-		loop.BeginFrame();
-
-		Assert.False(loop.TryStep(out _));
-		Assert.Equal(0, loop.Tick);
-		Assert.Equal(0.5, (double)loop.Alpha, 5);
+		public Fixed64 ElapsedSeconds { get; set; }
 	}
 
-	[Fact]
-	public void ProducesOneStepPerFixedStep()
+	public sealed class GameLoopTests
 	{
-		var time = new FakeTimeSource();
-		var loop = new GameLoop(time);
+		private static readonly Fixed64 _step = GameLoop.DefaultFixedStep;
 
-		time.ElapsedSeconds = _step * (Fixed64)2;
-		loop.BeginFrame();
-
-		Assert.True(loop.TryStep(out var first));
-		Assert.True(loop.TryStep(out var second));
-		Assert.False(loop.TryStep(out _));
-		Assert.Equal(1, first.Tick);
-		Assert.Equal(2, second.Tick);
-		Assert.Equal((double)_step * 2, (double)loop.TotalSeconds, 9);
-	}
-
-	[Fact]
-	public void ClampsVeryLongFrames()
-	{
-		var time = new FakeTimeSource();
-		var loop = new GameLoop(time);
-
-		time.ElapsedSeconds = (Fixed64)10;
-		loop.BeginFrame();
-
-		Assert.Equal(2, loop.PendingSteps);
-		Assert.True(loop.RenderTime.FrameDelta >= Fixed64.Zero && loop.RenderTime.FrameDelta <= GameLoop.MaxFrameDelta);
-	}
-
-	[Fact]
-	public void IgnoresNegativeTimeJumps()
-	{
-		var time = new FakeTimeSource { ElapsedSeconds = (Fixed64)5 };
-		var loop = new GameLoop(time);
-
-		time.ElapsedSeconds = (Fixed64)4;
-		loop.BeginFrame();
-
-		Assert.Equal(0, loop.PendingSteps);
-		Assert.Equal(Fixed64.Zero, loop.RenderTime.FrameDelta);
-	}
-
-	[Fact]
-	public void AlphaIsFractionOfRemainingAccumulator()
-	{
-		var time = new FakeTimeSource();
-		var loop = new GameLoop(time);
-
-		time.ElapsedSeconds = _step * (Fixed64)1.5;
-		loop.BeginFrame();
-		Assert.True(loop.TryStep(out _));
-
-		Assert.Equal(0.5, (double)loop.Alpha, 5);
-	}
-
-	[Fact]
-	public void RejectsInvalidSettings()
-	{
-		Assert.Throws<ArgumentNullException>(() => new GameLoop(null!));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), (Fixed64)0));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), _step, 0));
-	}
-}
-
-public sealed class Camera2DTests
-{
-	private static readonly Vector2 _pixels = new(1280, 720);
-
-	[Fact]
-	public void DefaultCameraMapsWorldOriginToTopLeftInPixelSpace()
-	{
-		var camera = Camera2D.Default;
-
-		Assert.Equal(new Vector2(640, 360), camera.WorldToScreen(Vector2.Zero, _pixels));
-	}
-
-	[Fact]
-	public void WorldAndScreenConversionRoundTrip()
-	{
-		var camera = new Camera2D(new Vector2(120, -40), 2.5f, 0.3f);
-		var world = new Vector2(17, 23);
-
-		var screen = camera.WorldToScreen(world, _pixels);
-		var restored = camera.ScreenToWorld(screen, _pixels);
-
-		Assert.Equal(world.X, restored.X, 3);
-		Assert.Equal(world.Y, restored.Y, 3);
-	}
-
-	[Fact]
-	public void WorldSizeScalesWithZoom()
-	{
-		var camera = new Camera2D(Vector2.Zero, 2f);
-
-		Assert.Equal(new Vector2(640, 360), camera.WorldSize(_pixels));
-	}
-
-	[Fact]
-	public void CullingBounds_MatchesViewWhenUnrotated()
-	{
-		var camera = new Camera2D(new Vector2(100, 50), 2f);
-
-		var bounds = camera.CullingBounds(_pixels);
-
-		Assert.Equal(-220f, bounds.Left, 3);
-		Assert.Equal(-130f, bounds.Top, 3);
-		Assert.Equal(640f, bounds.Width, 3);
-		Assert.Equal(360f, bounds.Height, 3);
-	}
-
-	[Fact]
-	public void CullingBounds_ExpandsToContainRotatedView()
-	{
-		var camera = new Camera2D(Vector2.Zero, 1f, MathF.PI / 4f);
-
-		var bounds = camera.CullingBounds(_pixels);
-
-		Assert.Equal(1414.2136f, bounds.Width, 1);
-		Assert.Equal(1414.2136f, bounds.Height, 1);
-	}
-
-	[Fact]
-	public void CullingBounds_CoversEveryRotatedViewCorner()
-	{
-		var camera = new Camera2D(new Vector2(10, -20), 1.5f, 0.7f);
-		var half = camera.WorldSize(_pixels) / 2f;
-		var cos = MathF.Cos(camera.Rotation);
-		var sin = MathF.Sin(camera.Rotation);
-
-		var bounds = camera.CullingBounds(_pixels);
-
-		foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
+		[Fact]
+		public void ProducesNoStepBeforeOneFixedStepElapsed()
 		{
-			var local = corner * half;
-			var world = camera.Position + new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos);
+			var time = new FakeTimeSource();
+			var loop = new GameLoop(time);
 
-			Assert.InRange(world.X, bounds.Left, bounds.Right);
-			Assert.InRange(world.Y, bounds.Top, bounds.Bottom);
+			time.ElapsedSeconds = _step / (Fixed64)2;
+			loop.BeginFrame();
+
+			Assert.False(loop.TryStep(out _));
+			Assert.Equal(0, loop.Tick);
+			Assert.Equal(0.5, (double)loop.Alpha, 5);
+		}
+
+		[Fact]
+		public void ProducesOneStepPerFixedStep()
+		{
+			var time = new FakeTimeSource();
+			var loop = new GameLoop(time);
+
+			time.ElapsedSeconds = _step * (Fixed64)2;
+			loop.BeginFrame();
+
+			Assert.True(loop.TryStep(out var first));
+			Assert.True(loop.TryStep(out var second));
+			Assert.False(loop.TryStep(out _));
+			Assert.Equal(1, first.Tick);
+			Assert.Equal(2, second.Tick);
+			Assert.Equal((double)_step * 2, (double)loop.TotalSeconds, 9);
+		}
+
+		[Fact]
+		public void ClampsVeryLongFrames()
+		{
+			var time = new FakeTimeSource();
+			var loop = new GameLoop(time);
+
+			time.ElapsedSeconds = (Fixed64)10;
+			loop.BeginFrame();
+
+			Assert.Equal(2, loop.PendingSteps);
+			Assert.True(loop.RenderTime.FrameDelta >= Fixed64.Zero && loop.RenderTime.FrameDelta <= GameLoop.MaxFrameDelta);
+		}
+
+		[Fact]
+		public void IgnoresNegativeTimeJumps()
+		{
+			var time = new FakeTimeSource { ElapsedSeconds = (Fixed64)5 };
+			var loop = new GameLoop(time);
+
+			time.ElapsedSeconds = (Fixed64)4;
+			loop.BeginFrame();
+
+			Assert.Equal(0, loop.PendingSteps);
+			Assert.Equal(Fixed64.Zero, loop.RenderTime.FrameDelta);
+		}
+
+		[Fact]
+		public void AlphaIsFractionOfRemainingAccumulator()
+		{
+			var time = new FakeTimeSource();
+			var loop = new GameLoop(time);
+
+			time.ElapsedSeconds = _step * (Fixed64)1.5;
+			loop.BeginFrame();
+			Assert.True(loop.TryStep(out _));
+
+			Assert.Equal(0.5, (double)loop.Alpha, 5);
+		}
+
+		[Fact]
+		public void RejectsInvalidSettings()
+		{
+			Assert.Throws<ArgumentNullException>(() => new GameLoop(null!));
+			Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), (Fixed64)0));
+			Assert.Throws<ArgumentOutOfRangeException>(() => new GameLoop(new FakeTimeSource(), _step, 0));
 		}
 	}
 
-	[Fact]
-	public void NonPositiveZoomIsRejected()
+	public sealed class Camera2DTests
 	{
-		var camera = new Camera2D(Vector2.Zero, 0f);
+		private static readonly Vector2 _pixels = new(1280, 720);
 
-		Assert.Throws<ArgumentOutOfRangeException>(() => camera.WorldSize(_pixels));
-		Assert.Throws<ArgumentOutOfRangeException>(() => new Camera2D(Vector2.Zero, float.NaN).WorldToScreen(default, _pixels));
-	}
-
-	[Fact]
-	public void ClampTo_KeepsCameraInsideWorld()
-	{
-		var bounds = new RectangleF(0, 0, 5000, 4000);
-		var camera = new Camera2D(new Vector2(-100, -100));
-
-		var clamped = camera.ClampTo(bounds, _pixels);
-
-		Assert.Equal(640, clamped.Position.X);
-		Assert.Equal(360, clamped.Position.Y);
-	}
-
-	[Fact]
-	public void ClampTo_CentersSmallWorld()
-	{
-		var bounds = new RectangleF(0, 0, 100, 100);
-
-		var clamped = Camera2D.Default.ClampTo(bounds, _pixels);
-
-		Assert.Equal(50, clamped.Position.X);
-		Assert.Equal(50, clamped.Position.Y);
-	}
-
-	[Fact]
-	public void NormalizeAngle_WrapsIntoHalfTurnRange()
-	{
-		Assert.Equal(0, Camera2D.NormalizeAngle(MathF.Tau * 2), 5);
-		Assert.Equal(MathF.PI, MathF.Abs(Camera2D.NormalizeAngle(-MathF.PI)), 5);
-		Assert.Equal(0.25f, Camera2D.NormalizeAngle(MathF.Tau + 0.25f), 5);
-	}
-
-	[Fact]
-	public void Interpolate_TakesShortestRotationPath()
-	{
-		var from = new Camera2D(Vector2.Zero, 1f, 3.0f);
-		var to = new Camera2D(Vector2.Zero, 1f, -3.0f);
-
-		var half = Camera2D.Interpolate(from, to, 0.5f);
-
-		Assert.InRange(MathF.Abs(Camera2D.NormalizeAngle(half.Rotation)), 3.1415f, 3.1416f);
-	}
-}
-
-public sealed class EventBusTests
-{
-	[Fact]
-	public void Publish_InvokesSubscribersInOrder()
-	{
-		EventBus.Clear();
-		var calls = new List<int>();
-
-		using var first = EventBus.Subscribe<int>(calls.Add);
-		using var second = EventBus.Subscribe<int>(value => calls.Add(value * 10));
-
-		EventBus.Publish(1);
-
-		Assert.Equal([1, 10], calls);
-	}
-
-	[Fact]
-	public void DisposingSubscriptionStopsDelivery()
-	{
-		EventBus.Clear();
-		var calls = 0;
-
-		var subscription = EventBus.Subscribe<string>(_ => calls++);
-		EventBus.Publish("a");
-		subscription.Dispose();
-		EventBus.Publish("a");
-
-		Assert.Equal(1, calls);
-		Assert.Equal(0, EventBus.SubscriberCount<string>());
-		Assert.False(EventBus.HasSubscribers<string>());
-	}
-
-	[Fact]
-	public void DisposingOneOfManyKeepsTheRest()
-	{
-		EventBus.Clear();
-		var calls = 0;
-
-		var a = EventBus.Subscribe((Action<int>)First);
-		using var b = EventBus.Subscribe((Action<int>)Second);
-		using var c = EventBus.Subscribe((Action<int>)Third);
-
-		a.Dispose();
-		EventBus.Publish(0);
-		a.Dispose();
-
-		Assert.Equal(110, calls);
-		Assert.Equal(2, EventBus.SubscriberCount<int>());
-		return;
-
-		void First(int _)
+		[Fact]
+		public void DefaultCameraMapsWorldOriginToTopLeftInPixelSpace()
 		{
-			calls++;
+			var camera = Camera2D.Default;
+
+			Assert.Equal(new Vector2(640, 360), camera.WorldToScreen(Vector2.Zero, _pixels));
 		}
 
-		void Second(int _)
+		[Fact]
+		public void WorldAndScreenConversionRoundTrip()
 		{
-			calls += 10;
+			var camera = new Camera2D(new Vector2(120, -40), 2.5f, 0.3f);
+			var world = new Vector2(17, 23);
+
+			var screen = camera.WorldToScreen(world, _pixels);
+			var restored = camera.ScreenToWorld(screen, _pixels);
+
+			Assert.Equal(world.X, restored.X, 3);
+			Assert.Equal(world.Y, restored.Y, 3);
 		}
 
-		void Third(int _)
+		[Fact]
+		public void WorldSizeScalesWithZoom()
 		{
-			calls += 100;
+			var camera = new Camera2D(Vector2.Zero, 2f);
+
+			Assert.Equal(new Vector2(640, 360), camera.WorldSize(_pixels));
+		}
+
+		[Fact]
+		public void CullingBounds_MatchesViewWhenUnrotated()
+		{
+			var camera = new Camera2D(new Vector2(100, 50), 2f);
+
+			var bounds = camera.CullingBounds(_pixels);
+
+			Assert.Equal(-220f, bounds.Left, 3);
+			Assert.Equal(-130f, bounds.Top, 3);
+			Assert.Equal(640f, bounds.Width, 3);
+			Assert.Equal(360f, bounds.Height, 3);
+		}
+
+		[Fact]
+		public void CullingBounds_ExpandsToContainRotatedView()
+		{
+			var camera = new Camera2D(Vector2.Zero, 1f, MathF.PI / 4f);
+
+			var bounds = camera.CullingBounds(_pixels);
+
+			Assert.Equal(1414.2136f, bounds.Width, 1);
+			Assert.Equal(1414.2136f, bounds.Height, 1);
+		}
+
+		[Fact]
+		public void CullingBounds_CoversEveryRotatedViewCorner()
+		{
+			var camera = new Camera2D(new Vector2(10, -20), 1.5f, 0.7f);
+			var half = camera.WorldSize(_pixels) / 2f;
+			var cos = MathF.Cos(camera.Rotation);
+			var sin = MathF.Sin(camera.Rotation);
+
+			var bounds = camera.CullingBounds(_pixels);
+
+			foreach (var corner in new[] { new Vector2(-1, -1), new Vector2(1, -1), new Vector2(1, 1), new Vector2(-1, 1) })
+			{
+				var local = corner * half;
+				var world = camera.Position + new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos);
+
+				Assert.InRange(world.X, bounds.Left, bounds.Right);
+				Assert.InRange(world.Y, bounds.Top, bounds.Bottom);
+			}
+		}
+
+		[Fact]
+		public void NonPositiveZoomIsRejected()
+		{
+			var camera = new Camera2D(Vector2.Zero, 0f);
+
+			Assert.Throws<ArgumentOutOfRangeException>(() => camera.WorldSize(_pixels));
+			Assert.Throws<ArgumentOutOfRangeException>(() => new Camera2D(Vector2.Zero, float.NaN).WorldToScreen(default, _pixels));
+		}
+
+		[Fact]
+		public void ClampTo_KeepsCameraInsideWorld()
+		{
+			var bounds = new RectangleF(0, 0, 5000, 4000);
+			var camera = new Camera2D(new Vector2(-100, -100));
+
+			var clamped = camera.ClampTo(bounds, _pixels);
+
+			Assert.Equal(640, clamped.Position.X);
+			Assert.Equal(360, clamped.Position.Y);
+		}
+
+		[Fact]
+		public void ClampTo_CentersSmallWorld()
+		{
+			var bounds = new RectangleF(0, 0, 100, 100);
+
+			var clamped = Camera2D.Default.ClampTo(bounds, _pixels);
+
+			Assert.Equal(50, clamped.Position.X);
+			Assert.Equal(50, clamped.Position.Y);
+		}
+
+		[Fact]
+		public void NormalizeAngle_WrapsIntoHalfTurnRange()
+		{
+			Assert.Equal(0, Camera2D.NormalizeAngle(MathF.Tau * 2), 5);
+			Assert.Equal(MathF.PI, MathF.Abs(Camera2D.NormalizeAngle(-MathF.PI)), 5);
+			Assert.Equal(0.25f, Camera2D.NormalizeAngle(MathF.Tau + 0.25f), 5);
+		}
+
+		[Fact]
+		public void Interpolate_TakesShortestRotationPath()
+		{
+			var from = new Camera2D(Vector2.Zero, 1f, 3.0f);
+			var to = new Camera2D(Vector2.Zero, 1f, -3.0f);
+
+			var half = Camera2D.Interpolate(from, to, 0.5f);
+
+			Assert.InRange(MathF.Abs(Camera2D.NormalizeAngle(half.Rotation)), 3.1415f, 3.1416f);
 		}
 	}
 
-	[Fact]
-	public void PublishWithoutSubscribers_IsNoOp()
+	public sealed class EventBusTests
 	{
-		EventBus.Clear();
-
-		EventBus.Publish(new WindowResizedEvent(new Size(1, 1), new Size(2, 2)));
-	}
-
-	[Fact]
-	public void Publish_ReentrantSubscriptionDoesNotAffectCurrentDispatch()
-	{
-		EventBus.Clear();
-		var calls = 0;
-
-		using var subscription = EventBus.Subscribe<int>(_ =>
+		[Fact]
+		public void Publish_InvokesSubscribersInOrder()
 		{
-			calls++;
-			EventBus.Subscribe<int>(_ => calls += 100);
-		});
+			EventBus.Clear();
+			var calls = new List<int>();
 
-		EventBus.Publish(0);
+			using var first = EventBus.Subscribe<int>(calls.Add);
+			using var second = EventBus.Subscribe<int>(value => calls.Add(value * 10));
 
-		Assert.Equal(1, calls);
-	}
+			EventBus.Publish(1);
 
-	[Fact]
-	public void HandlerFailureDoesNotSkipRemainingSubscribers()
-	{
-		EventBus.Clear();
-		var calls = 0;
+			Assert.Equal([1, 10], calls);
+		}
 
-		using var failing = EventBus.Subscribe<int>(_ =>
+		[Fact]
+		public void DisposingSubscriptionStopsDelivery()
 		{
-			calls++;
-			throw new InvalidOperationException("boom");
-		});
-		using var healthy = EventBus.Subscribe<int>(_ => calls += 10);
+			EventBus.Clear();
+			var calls = 0;
 
-		Assert.Throws<AggregateException>(() => EventBus.Publish(0));
-		Assert.Equal(11, calls);
+			var subscription = EventBus.Subscribe<string>(_ => calls++);
+			EventBus.Publish("a");
+			subscription.Dispose();
+			EventBus.Publish("a");
+
+			Assert.Equal(1, calls);
+			Assert.Equal(0, EventBus.SubscriberCount<string>());
+			Assert.False(EventBus.HasSubscribers<string>());
+		}
+
+		[Fact]
+		public void DisposingOneOfManyKeepsTheRest()
+		{
+			EventBus.Clear();
+			var calls = 0;
+
+			var a = EventBus.Subscribe((Action<int>)First);
+			using var b = EventBus.Subscribe((Action<int>)Second);
+			using var c = EventBus.Subscribe((Action<int>)Third);
+
+			a.Dispose();
+			EventBus.Publish(0);
+			a.Dispose();
+
+			Assert.Equal(110, calls);
+			Assert.Equal(2, EventBus.SubscriberCount<int>());
+			return;
+
+			void First(int _)
+			{
+				calls++;
+			}
+
+			void Second(int _)
+			{
+				calls += 10;
+			}
+
+			void Third(int _)
+			{
+				calls += 100;
+			}
+		}
+
+		[Fact]
+		public void PublishWithoutSubscribers_IsNoOp()
+		{
+			EventBus.Clear();
+
+			EventBus.Publish(new WindowResizedEvent(new Size(1, 1), new Size(2, 2)));
+		}
+
+		[Fact]
+		public void Publish_ReentrantSubscriptionDoesNotAffectCurrentDispatch()
+		{
+			EventBus.Clear();
+			var calls = 0;
+
+			using var subscription = EventBus.Subscribe<int>(_ =>
+			{
+				calls++;
+				EventBus.Subscribe<int>(_ => calls += 100);
+			});
+
+			EventBus.Publish(0);
+
+			Assert.Equal(1, calls);
+		}
+
+		[Fact]
+		public void HandlerFailureDoesNotSkipRemainingSubscribers()
+		{
+			EventBus.Clear();
+			var calls = 0;
+
+			using var failing = EventBus.Subscribe<int>(_ =>
+			{
+				calls++;
+				throw new InvalidOperationException("boom");
+			});
+			using var healthy = EventBus.Subscribe<int>(_ => calls += 10);
+
+			Assert.Throws<AggregateException>(() => EventBus.Publish(0));
+			Assert.Equal(11, calls);
+		}
+
+		[Fact]
+		public void SubscriptionCopy_CanBeDisposedTwice()
+		{
+			EventBus.Clear();
+			var calls = 0;
+			var subscription = EventBus.Subscribe<int>(_ => calls++);
+			var copy = subscription;
+
+			copy.Dispose();
+			subscription.Dispose();
+
+			Assert.True(subscription.IsActive);
+			EventBus.Publish(0);
+			Assert.Equal(0, calls);
+		}
 	}
 
-	[Fact]
-	public void SubscriptionCopy_CanBeDisposedTwice()
+	internal sealed class FakeWindow : IGameWindow
 	{
-		EventBus.Clear();
-		var calls = 0;
-		var subscription = EventBus.Subscribe<int>(_ => calls++);
-		var copy = subscription;
+		public bool IsOpen { get; set; } = true;
 
-		copy.Dispose();
-		subscription.Dispose();
+		public Size Size { get; set; } = new(1280, 720);
 
-		Assert.True(subscription.IsActive);
-		EventBus.Publish(0);
-		Assert.Equal(0, calls);
-	}
-}
+		public Rectangle Viewport { get; set; }
 
-internal sealed class FakeWindow : IGameWindow
-{
-	public bool IsOpen { get; set; } = true;
+		public Camera2D Camera { get; set; } = Camera2D.Default;
 
-	public Size Size { get; set; } = new(1280, 720);
+		public int ClearCount { get; private set; }
 
-	public Rectangle Viewport { get; set; }
+		public int PresentCount { get; private set; }
 
-	public Camera2D Camera { get; set; } = Camera2D.Default;
+		public void ResetCamera() => Camera = Camera2D.Default;
 
-	public int ClearCount { get; private set; }
+		public void PollEvents() { }
 
-	public int PresentCount { get; private set; }
+		public void WaitForEvents(TimeSpan timeout) { }
 
-	public void ResetCamera() => Camera = Camera2D.Default;
+		public void ActivateContext() { }
 
-	public void PollEvents() { }
+		public void DeactivateContext() { }
 
-	public void WaitForEvents(TimeSpan timeout) { }
+		public void Clear(ColorF color) => ClearCount++;
 
-	public void ActivateContext() { }
-
-	public void DeactivateContext() { }
-
-	public void Clear(ColorF color) => ClearCount++;
-
-	public void Present() => PresentCount++;
-}
-
-internal sealed class RecordingScene(string name) : Scene
-{
-	public List<string> Log { get; } = [];
-
-	public bool HandleAll { get; init; }
-
-	public override string Name => name;
-
-	public override void Enter(SceneContext context) => Log.Add($"enter:{name}");
-
-	public override void Exit() => Log.Add($"exit:{name}");
-
-	public override void Update(LogicTime time, IInputState input) => Log.Add($"update:{name}");
-
-	public override bool HandleInput(IInputState input)
-	{
-		Log.Add($"input:{name}");
-		return HandleAll;
+		public void Present() => PresentCount++;
 	}
 
-	public override void Draw(RenderTime time) => Log.Add($"draw:{name}");
-}
-
-public sealed class SceneManagerTests
-{
-	private static (SceneManager Scenes, FakeWindow Window, List<string> Log) Create()
+	internal sealed class RecordingScene(string name) : Scene
 	{
-		EventBus.Clear();
-		var scenes = new SceneManager();
-		var window = new FakeWindow();
-		scenes.Attach(window);
-		return (scenes, window, []);
+		public List<string> Log { get; } = [];
+
+		public bool HandleAll { get; init; }
+
+		public override string Name => name;
+
+		public override void Enter(SceneContext context) => Log.Add($"enter:{name}");
+
+		public override void Exit() => Log.Add($"exit:{name}");
+
+		public override void Update(LogicTime time, IInputState input) => Log.Add($"update:{name}");
+
+		public override bool HandleInput(IInputState input)
+		{
+			Log.Add($"input:{name}");
+			return HandleAll;
+		}
+
+		public override void Draw(RenderTime time) => Log.Add($"draw:{name}");
 	}
 
-	[Fact]
-	public void PushIsDeferredUntilPump()
+	public sealed class SceneManagerTests
 	{
-		var (scenes, _, _) = Create();
-		var scene = new RecordingScene("a");
+		private static (SceneManager Scenes, FakeWindow Window, List<string> Log) Create()
+		{
+			EventBus.Clear();
+			var scenes = new SceneManager();
+			var window = new FakeWindow();
+			scenes.Attach(window);
+			return (scenes, window, []);
+		}
 
-		scenes.Push(scene);
+		[Fact]
+		public void PushIsDeferredUntilPump()
+		{
+			var (scenes, _, _) = Create();
+			var scene = new RecordingScene("a");
 
-		Assert.Null(scenes.Active);
-		scenes.Update(default, new InputState());
-		Assert.Same(scene, scenes.Active);
-		Assert.Equal(new[] { "enter:a" }, scene.Log);
+			scenes.Push(scene);
+
+			Assert.Null(scenes.Active);
+			scenes.Update(default, new InputState());
+			Assert.Same(scene, scenes.Active);
+			Assert.Equal(new[] { "enter:a" }, scene.Log);
+		}
+
+		[Fact]
+		public void PopExitsTopScene()
+		{
+			var (scenes, _, _) = Create();
+			var first = new RecordingScene("a");
+			var second = new RecordingScene("b");
+			scenes.Push(first);
+			scenes.Push(second);
+			scenes.Update(default, new InputState());
+
+			scenes.Pop();
+			scenes.Update(default, new InputState());
+
+			Assert.Same(first, scenes.Active);
+			Assert.Equal(new[] { "enter:a", "update:a" }, first.Log);
+			Assert.Equal(new[] { "enter:b", "update:b", "exit:b" }, second.Log);
+		}
+
+		[Fact]
+		public void PopOnEmptyStackIsIgnored()
+		{
+			var (scenes, _, _) = Create();
+
+			scenes.Pop();
+			scenes.Update(default, new InputState());
+
+			Assert.Null(scenes.Active);
+		}
+
+		[Fact]
+		public void ReplaceSwapsTopScene()
+		{
+			var (scenes, _, _) = Create();
+			var first = new RecordingScene("a");
+			var replacement = new RecordingScene("c");
+			scenes.Push(first);
+			scenes.Update(default, new InputState());
+
+			scenes.Replace(replacement);
+			scenes.Update(default, new InputState());
+
+			Assert.Same(replacement, scenes.Active);
+			Assert.Equal(new[] { "enter:a", "update:a", "exit:a" }, first.Log);
+			Assert.Equal(new[] { "enter:c" }, replacement.Log);
+		}
+
+		[Fact]
+		public void PopToUnwindsEverythingAboveTarget()
+		{
+			var (scenes, _, _) = Create();
+			var root = new RecordingScene("root");
+			var middle = new RecordingScene("middle");
+			var top = new RecordingScene("top");
+			scenes.Push(root);
+			scenes.Push(middle);
+			scenes.Push(top);
+			scenes.Update(default, new InputState());
+
+			scenes.PopTo(root);
+			scenes.Update(default, new InputState());
+
+			Assert.Same(root, scenes.Active);
+			Assert.Contains("exit:top", top.Log);
+			Assert.Contains("exit:middle", middle.Log);
+		}
+
+		[Fact]
+		public void PopToUnknownSceneIsIgnored()
+		{
+			var (scenes, _, _) = Create();
+			var root = new RecordingScene("root");
+			scenes.Push(root);
+			scenes.Update(default, new InputState());
+
+			scenes.PopTo(new RecordingScene("stranger"));
+			scenes.Update(default, new InputState());
+
+			Assert.Same(root, scenes.Active);
+		}
+
+		[Fact]
+		public void ClearRemovesAllScenes()
+		{
+			var (scenes, _, _) = Create();
+			scenes.Push(new RecordingScene("a"));
+			scenes.Push(new RecordingScene("b"));
+			scenes.Update(default, new InputState());
+
+			scenes.Clear();
+			scenes.Update(default, new InputState());
+
+			Assert.Null(scenes.Active);
+			Assert.Empty(scenes.Scenes);
+		}
+
+		[Fact]
+		public void InputStopsAtFirstHandlingScene()
+		{
+			var (scenes, _, _) = Create();
+			var bottom = new RecordingScene("bottom");
+			var top = new RecordingScene("top") { HandleAll = true };
+			scenes.Push(bottom);
+			scenes.Push(top);
+			scenes.Update(default, new InputState());
+
+			scenes.HandleInput(new InputState());
+
+			Assert.Equal(new[] { "input:top" }, top.Log.Where(line => line.StartsWith("input:")).ToArray());
+			Assert.DoesNotContain("input:bottom", bottom.Log);
+		}
+
+		[Fact]
+		public void DisabledOrHiddenScenesAreSkipped()
+		{
+			var (scenes, _, _) = Create();
+			var scene = new RecordingScene("a") { IsEnabled = false, IsVisible = false };
+			scenes.Push(scene);
+			scenes.Update(default, new InputState());
+
+			scenes.Update(default, new InputState());
+			scenes.Draw(default);
+
+			Assert.DoesNotContain("update:a", scene.Log);
+			Assert.DoesNotContain("draw:a", scene.Log);
+		}
+
+		[Fact]
+		public void SceneChangeEventsArePublished()
+		{
+			var (scenes, _, _) = Create();
+			var kinds = new List<SceneChangeKind>();
+			using var subscription = EventBus.Subscribe<SceneChangedEvent>(e => kinds.Add(e.Kind));
+
+			scenes.Push(new RecordingScene("a"));
+			scenes.Update(default, new InputState());
+			scenes.Pop();
+			scenes.Update(default, new InputState());
+
+			Assert.Equal(new[] { SceneChangeKind.Push, SceneChangeKind.Pop }, kinds);
+		}
+
+		[Fact]
+		public void ContextRequiresAttachedWindow()
+		{
+			var scenes = new SceneManager();
+
+			Assert.Throws<InvalidOperationException>(() => scenes.Context);
+		}
+
+		private static List<string> Combine(RecordingScene first, RecordingScene second)
+		{
+			var result = new List<string>(first.Log);
+			foreach (var line in second.Log)
+				if (!result.Contains(line))
+					result.Add(line);
+			return result;
+		}
+
 	}
 
-	[Fact]
-	public void PopExitsTopScene()
+	public sealed class InputStateTests
 	{
-		var (scenes, _, _) = Create();
-		var first = new RecordingScene("a");
-		var second = new RecordingScene("b");
-		scenes.Push(first);
-		scenes.Push(second);
-		scenes.Update(default, new InputState());
-
-		scenes.Pop();
-		scenes.Update(default, new InputState());
-
-		Assert.Same(first, scenes.Active);
-		Assert.Equal(new[] { "enter:a", "update:a" }, first.Log);
-		Assert.Equal(new[] { "enter:b", "update:b", "exit:b" }, second.Log);
-	}
-
-	[Fact]
-	public void PopOnEmptyStackIsIgnored()
-	{
-		var (scenes, _, _) = Create();
-
-		scenes.Pop();
-		scenes.Update(default, new InputState());
-
-		Assert.Null(scenes.Active);
-	}
-
-	[Fact]
-	public void ReplaceSwapsTopScene()
-	{
-		var (scenes, _, _) = Create();
-		var first = new RecordingScene("a");
-		var replacement = new RecordingScene("c");
-		scenes.Push(first);
-		scenes.Update(default, new InputState());
-
-		scenes.Replace(replacement);
-		scenes.Update(default, new InputState());
-
-		Assert.Same(replacement, scenes.Active);
-		Assert.Equal(new[] { "enter:a", "update:a", "exit:a" }, first.Log);
-		Assert.Equal(new[] { "enter:c" }, replacement.Log);
-	}
-
-	[Fact]
-	public void PopToUnwindsEverythingAboveTarget()
-	{
-		var (scenes, _, _) = Create();
-		var root = new RecordingScene("root");
-		var middle = new RecordingScene("middle");
-		var top = new RecordingScene("top");
-		scenes.Push(root);
-		scenes.Push(middle);
-		scenes.Push(top);
-		scenes.Update(default, new InputState());
-
-		scenes.PopTo(root);
-		scenes.Update(default, new InputState());
-
-		Assert.Same(root, scenes.Active);
-		Assert.Contains("exit:top", top.Log);
-		Assert.Contains("exit:middle", middle.Log);
-	}
-
-	[Fact]
-	public void PopToUnknownSceneIsIgnored()
-	{
-		var (scenes, _, _) = Create();
-		var root = new RecordingScene("root");
-		scenes.Push(root);
-		scenes.Update(default, new InputState());
-
-		scenes.PopTo(new RecordingScene("stranger"));
-		scenes.Update(default, new InputState());
-
-		Assert.Same(root, scenes.Active);
-	}
-
-	[Fact]
-	public void ClearRemovesAllScenes()
-	{
-		var (scenes, _, _) = Create();
-		scenes.Push(new RecordingScene("a"));
-		scenes.Push(new RecordingScene("b"));
-		scenes.Update(default, new InputState());
-
-		scenes.Clear();
-		scenes.Update(default, new InputState());
-
-		Assert.Null(scenes.Active);
-		Assert.Empty(scenes.Scenes);
-	}
-
-	[Fact]
-	public void InputStopsAtFirstHandlingScene()
-	{
-		var (scenes, _, _) = Create();
-		var bottom = new RecordingScene("bottom");
-		var top = new RecordingScene("top") { HandleAll = true };
-		scenes.Push(bottom);
-		scenes.Push(top);
-		scenes.Update(default, new InputState());
-
-		scenes.HandleInput(new InputState());
-
-		Assert.Equal(new[] { "input:top" }, top.Log.Where(line => line.StartsWith("input:")).ToArray());
-		Assert.DoesNotContain("input:bottom", bottom.Log);
-	}
-
-	[Fact]
-	public void DisabledOrHiddenScenesAreSkipped()
-	{
-		var (scenes, _, _) = Create();
-		var scene = new RecordingScene("a") { IsEnabled = false, IsVisible = false };
-		scenes.Push(scene);
-		scenes.Update(default, new InputState());
+		[Fact]
+		public void KeyDown_RaisesPressedUntilNextFrame()
+		{
+			var input = new InputState();
 
-		scenes.Update(default, new InputState());
-		scenes.Draw(default);
+			input.OnKeyDown(Key.A);
 
-		Assert.DoesNotContain("update:a", scene.Log);
-		Assert.DoesNotContain("draw:a", scene.Log);
-	}
+			Assert.True(input.IsKeyDown(Key.A));
+			Assert.True(input.WasKeyPressed(Key.A));
+			Assert.False(input.WasKeyReleased(Key.A));
 
-	[Fact]
-	public void SceneChangeEventsArePublished()
-	{
-		var (scenes, _, _) = Create();
-		var kinds = new List<SceneChangeKind>();
-		using var subscription = EventBus.Subscribe<SceneChangedEvent>(e => kinds.Add(e.Kind));
-
-		scenes.Push(new RecordingScene("a"));
-		scenes.Update(default, new InputState());
-		scenes.Pop();
-		scenes.Update(default, new InputState());
+			input.BeginFrame();
 
-		Assert.Equal(new[] { SceneChangeKind.Push, SceneChangeKind.Pop }, kinds);
-	}
+			Assert.True(input.IsKeyDown(Key.A));
+			Assert.False(input.WasKeyPressed(Key.A));
+		}
 
-	[Fact]
-	public void ContextRequiresAttachedWindow()
-	{
-		var scenes = new SceneManager();
+		[Fact]
+		public void RepeatedKeyDown_DoesNotRaisePressedTwice()
+		{
+			var input = new InputState();
+			input.OnKeyDown(Key.A);
 
-		Assert.Throws<InvalidOperationException>(() => scenes.Context);
-	}
+			input.OnKeyDown(Key.A);
 
-	private static List<string> Combine(RecordingScene first, RecordingScene second)
-	{
-		var result = new List<string>(first.Log);
-		foreach (var line in second.Log)
-			if (!result.Contains(line))
-				result.Add(line);
-		return result;
-	}
+			Assert.True(input.WasKeyPressed(Key.A));
+			Assert.True(input.IsKeyDown(Key.A));
+		}
 
-}
+		[Fact]
+		public void KeyUp_RaisesReleasedOnlyWhenHeld()
+		{
+			var input = new InputState();
 
-public sealed class InputStateTests
-{
-	[Fact]
-	public void KeyDown_RaisesPressedUntilNextFrame()
-	{
-		var input = new InputState();
+			input.OnKeyUp(Key.B);
 
-		input.OnKeyDown(Key.A);
+			Assert.False(input.WasKeyReleased(Key.B));
 
-		Assert.True(input.IsKeyDown(Key.A));
-		Assert.True(input.WasKeyPressed(Key.A));
-		Assert.False(input.WasKeyReleased(Key.A));
+			input.OnKeyDown(Key.B);
+			input.BeginFrame();
+			input.OnKeyUp(Key.B);
 
-		input.BeginFrame();
+			Assert.False(input.IsKeyDown(Key.B));
+			Assert.True(input.WasKeyReleased(Key.B));
+		}
 
-		Assert.True(input.IsKeyDown(Key.A));
-		Assert.False(input.WasKeyPressed(Key.A));
-	}
+		[Fact]
+		public void MouseButtonsTrackPressedAndReleased()
+		{
+			var input = new InputState();
 
-	[Fact]
-	public void RepeatedKeyDown_DoesNotRaisePressedTwice()
-	{
-		var input = new InputState();
-		input.OnKeyDown(Key.A);
+			input.OnMouseButtonDown(MouseButton.Right);
 
-		input.OnKeyDown(Key.A);
+			Assert.True(input.IsMouseButtonDown(MouseButton.Right));
+			Assert.True(input.WasMouseButtonPressed(MouseButton.Right));
 
-		Assert.True(input.WasKeyPressed(Key.A));
-		Assert.True(input.IsKeyDown(Key.A));
-	}
+			input.BeginFrame();
+			input.OnMouseButtonUp(MouseButton.Right);
 
-	[Fact]
-	public void KeyUp_RaisesReleasedOnlyWhenHeld()
-	{
-		var input = new InputState();
+			Assert.False(input.IsMouseButtonDown(MouseButton.Right));
+			Assert.True(input.WasMouseButtonReleased(MouseButton.Right));
+		}
 
-		input.OnKeyUp(Key.B);
+		[Fact]
+		public void MouseDeltaAccumulatesWithinFrameAndResetsAfterward()
+		{
+			var input = new InputState();
 
-		Assert.False(input.WasKeyReleased(Key.B));
+			input.OnMouseMoved(10, 20);
+			input.BeginFrame();
+			input.OnMouseMoved(14, 26);
 
-		input.OnKeyDown(Key.B);
-		input.BeginFrame();
-		input.OnKeyUp(Key.B);
+			Assert.Equal(new Vector2(14, 26), input.MousePosition);
+			Assert.Equal(new Vector2(4, 6), input.MouseDelta);
 
-		Assert.False(input.IsKeyDown(Key.B));
-		Assert.True(input.WasKeyReleased(Key.B));
-	}
+			input.BeginFrame();
 
-	[Fact]
-	public void MouseButtonsTrackPressedAndReleased()
-	{
-		var input = new InputState();
+			Assert.Equal(Vector2.Zero, input.MouseDelta);
+		}
 
-		input.OnMouseButtonDown(MouseButton.Right);
+		[Fact]
+		public void FirstMouseMoveDoesNotProduceDelta()
+		{
+			var input = new InputState();
 
-		Assert.True(input.IsMouseButtonDown(MouseButton.Right));
-		Assert.True(input.WasMouseButtonPressed(MouseButton.Right));
+			input.OnMouseMoved(400, 300);
 
-		input.BeginFrame();
-		input.OnMouseButtonUp(MouseButton.Right);
+			Assert.Equal(new Vector2(400, 300), input.MousePosition);
+			Assert.Equal(Vector2.Zero, input.MouseDelta);
 
-		Assert.False(input.IsMouseButtonDown(MouseButton.Right));
-		Assert.True(input.WasMouseButtonReleased(MouseButton.Right));
-	}
+			input.OnMouseMoved(410, 300);
 
-	[Fact]
-	public void MouseDeltaAccumulatesWithinFrameAndResetsAfterward()
-	{
-		var input = new InputState();
+			Assert.Equal(new Vector2(10, 0), input.MouseDelta);
 
-		input.OnMouseMoved(10, 20);
-		input.BeginFrame();
-		input.OnMouseMoved(14, 26);
+			input.Reset();
+			input.OnMouseMoved(900, 900);
 
-		Assert.Equal(new Vector2(14, 26), input.MousePosition);
-		Assert.Equal(new Vector2(4, 6), input.MouseDelta);
+			Assert.Equal(Vector2.Zero, input.MouseDelta);
+		}
 
-		input.BeginFrame();
+		[Fact]
+		public void ScrollAccumulatesWithinFrameAndResetsAfterward()
+		{
+			var input = new InputState();
 
-		Assert.Equal(Vector2.Zero, input.MouseDelta);
-	}
+			input.OnScroll(1.5f);
+			input.OnScroll(-0.5f);
 
-	[Fact]
-	public void FirstMouseMoveDoesNotProduceDelta()
-	{
-		var input = new InputState();
+			Assert.Equal(1f, input.ScrollDelta, 5);
 
-		input.OnMouseMoved(400, 300);
+			input.BeginFrame();
 
-		Assert.Equal(new Vector2(400, 300), input.MousePosition);
-		Assert.Equal(Vector2.Zero, input.MouseDelta);
+			Assert.Equal(0f, input.ScrollDelta);
+		}
 
-		input.OnMouseMoved(410, 300);
+		[Fact]
+		public void PostedEventsOnlyApplyWhenPendingIsDrained()
+		{
+			var input = new InputState();
 
-		Assert.Equal(new Vector2(10, 0), input.MouseDelta);
+			input.PostKeyDown(Key.C);
 
-		input.Reset();
-		input.OnMouseMoved(900, 900);
+			Assert.False(input.IsKeyDown(Key.C));
 
-		Assert.Equal(Vector2.Zero, input.MouseDelta);
-	}
+			input.ApplyPending();
 
-	[Fact]
-	public void ScrollAccumulatesWithinFrameAndResetsAfterward()
-	{
-		var input = new InputState();
+			Assert.True(input.IsKeyDown(Key.C));
+		}
 
-		input.OnScroll(1.5f);
-		input.OnScroll(-0.5f);
+		[Fact]
+		public void ResetClearsHeldState()
+		{
+			var input = new InputState();
+			input.OnKeyDown(Key.D);
+			input.OnMouseMoved(5, 5);
+			input.OnScroll(2f);
 
-		Assert.Equal(1f, input.ScrollDelta, 5);
+			input.Reset();
 
-		input.BeginFrame();
+			Assert.False(input.IsKeyDown(Key.D));
+			Assert.Equal(Vector2.Zero, input.MouseDelta);
+			Assert.Equal(0f, input.ScrollDelta);
+		}
 
-		Assert.Equal(0f, input.ScrollDelta);
-	}
+		[Fact]
+		public void UnknownKeyNeverThrows()
+		{
+			var input = new InputState();
 
-	[Fact]
-	public void PostedEventsOnlyApplyWhenPendingIsDrained()
-	{
-		var input = new InputState();
-
-		input.PostKeyDown(Key.C);
-
-		Assert.False(input.IsKeyDown(Key.C));
-
-		input.ApplyPending();
-
-		Assert.True(input.IsKeyDown(Key.C));
-	}
-
-	[Fact]
-	public void ResetClearsHeldState()
-	{
-		var input = new InputState();
-		input.OnKeyDown(Key.D);
-		input.OnMouseMoved(5, 5);
-		input.OnScroll(2f);
-
-		input.Reset();
-
-		Assert.False(input.IsKeyDown(Key.D));
-		Assert.Equal(Vector2.Zero, input.MouseDelta);
-		Assert.Equal(0f, input.ScrollDelta);
-	}
-
-	[Fact]
-	public void UnknownKeyNeverThrows()
-	{
-		var input = new InputState();
-
-		Assert.False(input.IsKeyDown(Key.Unknown));
-		Assert.False(input.WasKeyPressed((Key)12345));
+			Assert.False(input.IsKeyDown(Key.Unknown));
+			Assert.False(input.WasKeyPressed((Key)12345));
+		}
 	}
 }

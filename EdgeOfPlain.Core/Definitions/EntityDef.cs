@@ -3,30 +3,31 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using FixedMathSharp;
 using Tomlyn.Serialization;
 
-namespace EdgeOfPlain.Core.Definitions;
-
-public abstract class EntityDef(string id) : ContentDef(id)
+namespace EdgeOfPlain.Core.Definitions
 {
-	public const int DefaultCollisionRadius = 16;
-	private int _radius = DefaultCollisionRadius;
-
-	public bool EnableCollision { get; set; } = true;
-	public int Radius
+	public abstract class EntityDef(string id) : ContentDef(id)
 	{
-		get => _radius;
-		set
+		public const int DefaultCollisionRadius = 16;
+		private int _radius = DefaultCollisionRadius;
+
+		public bool EnableCollision { get; set; } = true;
+		public int Radius
 		{
-			ArgumentOutOfRangeException.ThrowIfNegative(value);
-			_radius = value;
+			get => _radius;
+			set
+			{
+				ArgumentOutOfRangeException.ThrowIfNegative(value);
+				_radius = value;
+			}
 		}
+
+		[TomlRequired]
+		public int MaxHealth { get; set; }
+		[TomlConverter(typeof(Fixed64Converter))]
+		public Fixed64 InitHealth { get; set; } = (Fixed64)1;
+		[TomlRequired]
+		public string Texture { get; set; } = "";
+
+		public PassageMask MoveType { get; set; } = PassageMask.Ground;
 	}
-
-	[TomlRequired]
-	public int MaxHealth { get; set; }
-	[TomlConverter(typeof(Fixed64Converter))]
-	public Fixed64 InitHealth { get; set; } = (Fixed64)1;
-	[TomlRequired]
-	public string Texture { get; set; } = "";
-
-	public PassageMask MoveType { get; set; } = PassageMask.Ground;
 }

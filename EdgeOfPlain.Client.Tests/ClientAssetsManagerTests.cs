@@ -9,127 +9,128 @@ using Xunit;
 using Zio;
 using Zio.FileSystems;
 
-namespace EdgeOfPlain.Client.Tests;
-
-public sealed class ClientAssetsManagerTests : IDisposable
+namespace EdgeOfPlain.Client.Tests
 {
-	private readonly TempDirectory _root = new();
-	private int _loadCount;
-
-	private sealed record ProbeAsset(string Text);
-
-	private sealed class DisposableAsset : IDisposable
+	public sealed class ClientAssetsManagerTests : IDisposable
 	{
-		public bool IsDisposed { get; private set; }
+		private readonly TempDirectory _root = new();
+		private int _loadCount;
 
-		public void Dispose() => IsDisposed = true;
-	}
+		private sealed record ProbeAsset(string Text);
 
-	public sealed record NullAsset;
-
-	public ClientAssetsManagerTests()
-	{
-		ClientAssetsManager.Dispose();
-		AssetsManager.Clear();
-		FileIO.Reset();
-		FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
-		FileIO.Mount(FileIO.Assets, Mount(_root.Path));
-	}
-
-	public void Dispose()
-	{
-		ClientAssetsManager.Dispose();
-		AssetsManager.Clear();
-		FileIO.Reset();
-		_root.Dispose();
-	}
-
-	[Fact]
-	public void GetLoadsOnceAndCachesTheResult()
-	{
-		_root.Write("probe.txt", "hello");
-		AssetsManager.RegisterResourceOperator(new ResourceOperator<ProbeAsset>(stream =>
+		private sealed class DisposableAsset : IDisposable
 		{
-			_loadCount++;
-			using var reader = new StreamReader(stream);
-			return new ProbeAsset(reader.ReadToEnd());
-		}));
+			public bool IsDisposed { get; private set; }
 
-		var first = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
-		var second = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
+			public void Dispose() => IsDisposed = true;
+		}
 
-		Assert.Same(first, second);
-		Assert.Equal("hello", first.Text);
-		Assert.Equal(1, _loadCount);
-	}
+		public sealed record NullAsset;
 
-	[Fact]
-	public void TryGetReportsWhetherAnAssetIsLoaded()
-	{
-		_root.Write("probe.txt", "hello");
-		AssetsManager.RegisterResourceOperator(
-			new ResourceOperator<ProbeAsset>(stream => new ProbeAsset(new StreamReader(stream).ReadToEnd())));
+		public ClientAssetsManagerTests()
+		{
+			ClientAssetsManager.Dispose();
+			AssetsManager.Clear();
+			FileIO.Reset();
+			FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
+			FileIO.Mount(FileIO.Assets, Mount(_root.Path));
+		}
 
-		Assert.False(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out _));
+		public void Dispose()
+		{
+			ClientAssetsManager.Dispose();
+			AssetsManager.Clear();
+			FileIO.Reset();
+			_root.Dispose();
+		}
 
-		ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
+		[Fact]
+		public void GetLoadsOnceAndCachesTheResult()
+		{
+			_root.Write("probe.txt", "hello");
+			AssetsManager.RegisterResourceOperator(new ResourceOperator<ProbeAsset>(stream =>
+			{
+				_loadCount++;
+				using var reader = new StreamReader(stream);
+				return new ProbeAsset(reader.ReadToEnd());
+			}));
 
-		Assert.True(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out var asset));
-		Assert.Equal("hello", asset.Text);
-	}
+			var first = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
+			var second = ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
 
-	[Fact]
-	public void GetAllReturnsOnlyTheRequestedType()
-	{
-		AssetsManager.RegisterResourceOperator(new ResourceOperator<ProbeAsset>(_ => new ProbeAsset("default")));
-		_root.Write("a.txt", "a");
-		_root.Write("b.txt", "b");
+			Assert.Same(first, second);
+			Assert.Equal("hello", first.Text);
+			Assert.Equal(1, _loadCount);
+		}
 
-		ClientAssetsManager.Get<ProbeAsset>("/assets/a.txt");
-		ClientAssetsManager.Get<ProbeAsset>("/assets/b.txt");
+		[Fact]
+		public void TryGetReportsWhetherAnAssetIsLoaded()
+		{
+			_root.Write("probe.txt", "hello");
+			AssetsManager.RegisterResourceOperator(
+				new ResourceOperator<ProbeAsset>(stream => new ProbeAsset(new StreamReader(stream).ReadToEnd())));
 
-		Assert.Equal(2, ClientAssetsManager.GetAll<ProbeAsset>().Count);
-	}
+			Assert.False(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out _));
 
-	[Fact]
-	public void GetThrowsWhenNoOperatorIsRegistered()
-	{
-		Assert.Throws<KeyNotFoundException>(() => ClientAssetsManager.Get<TextureData>("/assets/missing#main"));
-	}
+			ClientAssetsManager.Get<ProbeAsset>("/assets/probe.txt");
 
-	[Fact]
-	public void GetRejectsBlankKeys()
-	{
-		Assert.Throws<ArgumentException>(() => ClientAssetsManager.Get<ProbeAsset>(""));
-		Assert.Throws<ArgumentException>(() => ClientAssetsManager.TryGet<ProbeAsset>("", out _));
-	}
+			Assert.True(ClientAssetsManager.TryGet<ProbeAsset>("/assets/probe.txt", out var asset));
+			Assert.Equal("hello", asset.Text);
+		}
 
-	[Fact]
-	public void GetRejectsNullLoadedAssets()
-	{
-		_root.Write("null.txt", "x");
-		AssetsManager.RegisterResourceOperator(new ResourceOperator<NullAsset>(_ => null!));
+		[Fact]
+		public void GetAllReturnsOnlyTheRequestedType()
+		{
+			AssetsManager.RegisterResourceOperator(new ResourceOperator<ProbeAsset>(_ => new ProbeAsset("default")));
+			_root.Write("a.txt", "a");
+			_root.Write("b.txt", "b");
 
-		Assert.Throws<InvalidOperationException>(() => ClientAssetsManager.Get<NullAsset>("/assets/null.txt"));
-	}
+			ClientAssetsManager.Get<ProbeAsset>("/assets/a.txt");
+			ClientAssetsManager.Get<ProbeAsset>("/assets/b.txt");
 
-	[Fact]
-	public void DisposeDisposesStoredResourcesAndClearsTheStore()
-	{
-		_root.Write("disposable.txt", "x");
-		AssetsManager.RegisterResourceOperator(new ResourceOperator<DisposableAsset>(_ => new DisposableAsset()));
+			Assert.Equal(2, ClientAssetsManager.GetAll<ProbeAsset>().Count);
+		}
 
-		var asset = ClientAssetsManager.Get<DisposableAsset>("/assets/disposable.txt");
+		[Fact]
+		public void GetThrowsWhenNoOperatorIsRegistered()
+		{
+			Assert.Throws<KeyNotFoundException>(() => ClientAssetsManager.Get<TextureData>("/assets/missing#main"));
+		}
 
-		ClientAssetsManager.Dispose();
+		[Fact]
+		public void GetRejectsBlankKeys()
+		{
+			Assert.Throws<ArgumentException>(() => ClientAssetsManager.Get<ProbeAsset>(""));
+			Assert.Throws<ArgumentException>(() => ClientAssetsManager.TryGet<ProbeAsset>("", out _));
+		}
 
-		Assert.True(asset.IsDisposed);
-		Assert.Empty(ClientAssetsManager.GetAll<DisposableAsset>());
-	}
+		[Fact]
+		public void GetRejectsNullLoadedAssets()
+		{
+			_root.Write("null.txt", "x");
+			AssetsManager.RegisterResourceOperator(new ResourceOperator<NullAsset>(_ => null!));
 
-	private static IFileSystem Mount(string directory)
-	{
-		var physical = new PhysicalFileSystem();
-		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
+			Assert.Throws<InvalidOperationException>(() => ClientAssetsManager.Get<NullAsset>("/assets/null.txt"));
+		}
+
+		[Fact]
+		public void DisposeDisposesStoredResourcesAndClearsTheStore()
+		{
+			_root.Write("disposable.txt", "x");
+			AssetsManager.RegisterResourceOperator(new ResourceOperator<DisposableAsset>(_ => new DisposableAsset()));
+
+			var asset = ClientAssetsManager.Get<DisposableAsset>("/assets/disposable.txt");
+
+			ClientAssetsManager.Dispose();
+
+			Assert.True(asset.IsDisposed);
+			Assert.Empty(ClientAssetsManager.GetAll<DisposableAsset>());
+		}
+
+		private static IFileSystem Mount(string directory)
+		{
+			var physical = new PhysicalFileSystem();
+			return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
+		}
 	}
 }

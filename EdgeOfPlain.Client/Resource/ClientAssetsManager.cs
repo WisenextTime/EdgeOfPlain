@@ -4,50 +4,51 @@ using EdgeOfPlain.Client.Resource.Textures;
 using EdgeOfPlain.Core.Framework.Resource;
 using Zio;
 
-namespace EdgeOfPlain.Client.Resource;
-
-public static class ClientAssetsManager
+namespace EdgeOfPlain.Client.Resource
 {
-	private static readonly ClientAssetStore _store = new();
-
-	public static IReadOnlyDictionary<UPath, TextureData> Textures => _store.All<TextureData>();
-
-	public static T Get<T>(UPath key) where T : class
+	public static class ClientAssetsManager
 	{
-		if (key.IsNull || key.IsEmpty)
-			throw new ArgumentException("An asset key is required.", nameof(key));
+		private static readonly ClientAssetStore _store = new();
 
-		if (_store.TryGet<T>(key, out var value)) return value;
+		public static IReadOnlyDictionary<UPath, TextureData> Textures => _store.All<TextureData>();
 
-		if (!AssetsManager.IsRegistered<T>())
-			throw new KeyNotFoundException($"Asset '{key}' of type '{typeof(T).Name}' is not loaded.");
+		public static T Get<T>(UPath key) where T : class
+		{
+			if (key.IsNull || key.IsEmpty)
+				throw new ArgumentException("An asset key is required.", nameof(key));
 
-		value = AssetsManager.LoadResource<T>(key);
-		if (value is null)
-			throw new InvalidOperationException($"Resource operator of '{typeof(T).Name}' returned null for '{key}'.");
+			if (_store.TryGet<T>(key, out var value)) return value;
 
-		_store.Set(key, value);
+			if (!AssetsManager.IsRegistered<T>())
+				throw new KeyNotFoundException($"Asset '{key}' of type '{typeof(T).Name}' is not loaded.");
 
-		return value;
-	}
+			value = AssetsManager.LoadResource<T>(key);
+			if (value is null)
+				throw new InvalidOperationException($"Resource operator of '{typeof(T).Name}' returned null for '{key}'.");
 
-	public static bool TryGet<T>(UPath key, out T value) where T : class
-	{
-		if (key.IsNull || key.IsEmpty)
-			throw new ArgumentException("An asset key is required.", nameof(key));
+			_store.Set(key, value);
 
-		return _store.TryGet(key, out value);
-	}
+			return value;
+		}
 
-	public static IReadOnlyDictionary<UPath, T> GetAll<T>() where T : class => _store.All<T>();
+		public static bool TryGet<T>(UPath key, out T value) where T : class
+		{
+			if (key.IsNull || key.IsEmpty)
+				throw new ArgumentException("An asset key is required.", nameof(key));
 
-	internal static void Add<T>(UPath key, T value) where T : class => _store.Set(key, value);
+			return _store.TryGet(key, out value);
+		}
 
-	public static void Dispose()
-	{
-		foreach (var resource in _store.Values())
-			(resource as IDisposable)?.Dispose();
+		public static IReadOnlyDictionary<UPath, T> GetAll<T>() where T : class => _store.All<T>();
 
-		_store.Clear();
+		internal static void Add<T>(UPath key, T value) where T : class => _store.Set(key, value);
+
+		public static void Dispose()
+		{
+			foreach (var resource in _store.Values())
+				(resource as IDisposable)?.Dispose();
+
+			_store.Clear();
+		}
 	}
 }

@@ -1,8 +1,9 @@
-namespace EdgeOfPlain.Core.Framework.Graphics;
-
-public interface IRenderPipeline
+namespace EdgeOfPlain.Core.Framework.Graphics
 {
-	void Begin(Camera2D? camera2D = null);
+	public interface IRenderPipeline
+	{
+		void Begin(Camera2D? camera2D = null);
 
-	void End();
+		void End();
+	}
 }

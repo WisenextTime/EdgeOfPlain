@@ -1,16 +1,17 @@
 using System.Diagnostics;
 using FixedMathSharp;
 
-namespace EdgeOfPlain.Core.Framework.Time;
-
-public interface ITimeSource
+namespace EdgeOfPlain.Core.Framework.Time
 {
-	Fixed64 ElapsedSeconds { get; }
-}
+	public interface ITimeSource
+	{
+		Fixed64 ElapsedSeconds { get; }
+	}
 
-public sealed class StopwatchTimeSource : ITimeSource
-{
-	private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
+	public sealed class StopwatchTimeSource : ITimeSource
+	{
+		private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
-	public Fixed64 ElapsedSeconds => (Fixed64)_stopwatch.Elapsed.TotalSeconds;
+		public Fixed64 ElapsedSeconds => (Fixed64)_stopwatch.Elapsed.TotalSeconds;
+	}
 }

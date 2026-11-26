@@ -5,106 +5,121 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Components;
 using EdgeOfPlain.Core.Game.Systems;
 
-namespace EdgeOfPlain.Core.Framework.Mods;
-
-public class ModContext : IDisposable
+namespace EdgeOfPlain.Core.Framework.Mods
 {
-	private readonly List<Type> _registeredComponents = [];
-	private readonly List<ContentDef> _registeredDefs = [];
-	private readonly List<Type> _registeredAppliers = [];
-	private readonly List<IQueueSystem> _registeredQueues = [];
-	private readonly List<IFrameSystem> _registeredFrameSystems = [];
-	public bool IsDisposed { get; private set; }
-
-	public ModContext(Mod sourceMod)
+	public class ModContext : IDisposable
 	{
-		ArgumentNullException.ThrowIfNull(sourceMod);
-		SourceMod = sourceMod;
-	}
+		private readonly List<Type> _registeredComponents = [];
+		private readonly List<ContentDef> _registeredDefs = [];
+		private readonly List<Type> _registeredAppliers = [];
+		private readonly List<Type> _registeredCoreAppliers = [];
+		private readonly List<IQueueSystem> _registeredQueues = [];
+		private readonly List<IFrameSystem> _registeredFrameSystems = [];
+		public bool IsDisposed { get; private set; }
 
-	private Mod SourceMod { get; }
+		public ModContext(Mod sourceMod)
+		{
+			ArgumentNullException.ThrowIfNull(sourceMod);
+			SourceMod = sourceMod;
+		}
 
-	public void AddContent(ContentDef content)
-	{
-		ObjectDisposedException.ThrowIf(IsDisposed, this);
-		ArgumentNullException.ThrowIfNull(content);
-		content.SourceMod = SourceMod.ModInfo;
-		ContentStore.Add(content);
-		_registeredDefs.Add(content);
-	}
+		private Mod SourceMod { get; }
 
-	public void AddComponent<T>(Func<EntityDef, T> factory) where T : unmanaged
-		=> AddComponent(factory, ComponentScope<EntityDef>.All);
+		public void AddContent(ContentDef content)
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(content);
+			content.SourceMod = SourceMod.ModInfo;
+			ContentStore.Add(content);
+			_registeredDefs.Add(content);
+		}
 
-	public void AddComponent<TDef, T>(Func<TDef, T> factory, ComponentScope<TDef> scope)
-		where TDef : EntityDef where T : unmanaged
-	{
-		ObjectDisposedException.ThrowIf(IsDisposed, this);
-		ArgumentNullException.ThrowIfNull(factory);
-		ArgumentNullException.ThrowIfNull(scope);
+		public void AddComponent<T>(Func<EntityDef, T> factory) where T : unmanaged
+			=> AddComponent(factory, ComponentScope<EntityDef>.All);
 
-		ComponentManager.StageComponent(factory, scope, SourceMod.ModInfo.Id);
-		_registeredComponents.Add(typeof(T));
-	}
+		public void AddComponent<TDef, T>(Func<TDef, T> factory, ComponentScope<TDef> scope)
+			where TDef : EntityDef where T : unmanaged
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(factory);
+			ArgumentNullException.ThrowIfNull(scope);
 
-	public void AddApplier<TCommand>(ICommandApplier<TCommand> applier) where TCommand : struct, ICommand
-	{
-		ObjectDisposedException.ThrowIf(IsDisposed, this);
-		ArgumentNullException.ThrowIfNull(applier);
+			ComponentManager.StageComponent(factory, scope, SourceMod.ModInfo.Id);
+			_registeredComponents.Add(typeof(T));
+		}
 
-		CommandRegistry.RegisterApplier(applier);
-		_registeredAppliers.Add(typeof(TCommand));
-	}
+		public void AddApplier<TCommand>(ICommandApplier<TCommand> applier) where TCommand : struct, ICommand
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(applier);
 
-	public void AddFrameSystem(IFrameSystem system)
-	{
-		ObjectDisposedException.ThrowIf(IsDisposed, this);
-		ArgumentNullException.ThrowIfNull(system);
+			CommandRegistry.RegisterApplier(applier);
+			_registeredAppliers.Add(typeof(TCommand));
+		}
 
-		CommandRegistry.RegisterFrameSystem(system);
-		_registeredFrameSystems.Add(system);
-	}
+		public void AddCoreApplier<TCommand>(ICoreCommandApplier<TCommand> applier) where TCommand : struct, ICommand
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(applier);
 
-	public void AddQueue(IQueueSystem queue)
-	{
-		ObjectDisposedException.ThrowIf(IsDisposed, this);
-		ArgumentNullException.ThrowIfNull(queue);
+			CommandRegistry.RegisterCoreApplier(applier);
+			_registeredCoreAppliers.Add(typeof(TCommand));
+		}
 
-		CommandRegistry.RegisterQueue(queue);
-		_registeredQueues.Add(queue);
-	}
+		public void AddFrameSystem(IFrameSystem system)
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(system);
 
-	internal void Return()
-	{
-		foreach (var component in _registeredComponents)
-			ComponentManager.TryUnstageComponent(component);
+			CommandRegistry.RegisterFrameSystem(system);
+			_registeredFrameSystems.Add(system);
+		}
 
-		foreach (var def in _registeredDefs)
-			ContentStore.TryRemove(def);
+		public void AddQueue(IQueueSystem queue)
+		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
+			ArgumentNullException.ThrowIfNull(queue);
 
-		foreach (var applier in _registeredAppliers)
-			CommandRegistry.TryUnregisterApplier(applier);
+			CommandRegistry.RegisterQueue(queue);
+			_registeredQueues.Add(queue);
+		}
 
-		foreach (var queue in _registeredQueues)
-			CommandRegistry.TryUnregisterQueue(queue);
+		internal void Return()
+		{
+			foreach (var component in _registeredComponents)
+				ComponentManager.TryUnstageComponent(component);
 
-		foreach (var system in _registeredFrameSystems)
-			CommandRegistry.TryUnregisterFrameSystem(system);
-	}
+			foreach (var def in _registeredDefs)
+				ContentStore.TryRemove(def);
 
-	private void Clear()
-	{
-		_registeredComponents.Clear();
-		_registeredDefs.Clear();
-		_registeredAppliers.Clear();
-		_registeredQueues.Clear();
-		_registeredFrameSystems.Clear();
-	}
+			foreach (var applier in _registeredAppliers)
+				CommandRegistry.TryUnregisterApplier(applier);
 
-	public void Dispose()
-	{
-		Clear();
-		IsDisposed = true;
-		GC.SuppressFinalize(this);
+			foreach (var applier in _registeredCoreAppliers)
+				CommandRegistry.TryUnregisterCoreApplier(applier);
+
+			foreach (var queue in _registeredQueues)
+				CommandRegistry.TryUnregisterQueue(queue);
+
+			foreach (var system in _registeredFrameSystems)
+				CommandRegistry.TryUnregisterFrameSystem(system);
+		}
+
+		private void Clear()
+		{
+			_registeredComponents.Clear();
+			_registeredDefs.Clear();
+			_registeredAppliers.Clear();
+			_registeredCoreAppliers.Clear();
+			_registeredQueues.Clear();
+			_registeredFrameSystems.Clear();
+		}
+
+		public void Dispose()
+		{
+			Clear();
+			IsDisposed = true;
+			GC.SuppressFinalize(this);
+		}
 	}
 }

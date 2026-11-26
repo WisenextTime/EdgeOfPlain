@@ -3,136 +3,137 @@ using System.Collections.Generic;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using FixedMathSharp;
 
-namespace EdgeOfPlain.Core.Game.PathFinding;
-
-public sealed class FlowField
+namespace EdgeOfPlain.Core.Game.PathFinding
 {
-	private static readonly Fixed64 Sqrt2 = (Fixed64)1.41421356;
-
-	private static readonly (int Dx, int Dy)[] _directions =
-	[
-		(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1),
-	];
-
-	private readonly int _width;
-	private readonly int _height;
-	private readonly int[] _nextX;
-	private readonly int[] _nextY;
-	private readonly Fixed64[] _distance;
-
-	public FlowField(
-		GameMap map,
-		long goalTile,
-		PassageMask mask,
-		Func<int, int, PassageMask, int> cost)
+	public sealed class FlowField
 	{
-		Map = map;
-		GoalTile = goalTile;
-		Mask = mask;
-		_width = map.Width;
-		_height = map.Height;
+		private static readonly Fixed64 _sqrt2 = (Fixed64)1.41421356;
 
-		var count = _width * _height;
-		_nextX = new int[count];
-		_nextY = new int[count];
-		_distance = new Fixed64[count];
+		private static readonly (int Dx, int Dy)[] _directions =
+		[
+			(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1),
+		];
 
-		Array.Fill(_nextX, -1);
-		Array.Fill(_nextY, -1);
-		Array.Fill(_distance, Fixed64.MaxValue);
+		private readonly int _width;
+		private readonly int _height;
+		private readonly int[] _nextX;
+		private readonly int[] _nextY;
+		private readonly Fixed64[] _distance;
 
-		var (goalX, goalY) = Unpack(goalTile);
-		Compute(goalX, goalY, cost);
-	}
-
-	public GameMap Map { get; }
-	public long GoalTile { get; }
-	public PassageMask Mask { get; }
-
-	public (int X, int Y)? Next(int tileX, int tileY)
-	{
-		if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return null;
-
-		var index = Index(tileX, tileY);
-		if (_nextX[index] < 0) return null;
-
-		return (_nextX[index], _nextY[index]);
-	}
-
-	public Fixed64 Distance(int tileX, int tileY)
-	{
-		if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return Fixed64.MaxValue;
-		return _distance[Index(tileX, tileY)];
-	}
-
-	public static long Pack(int tileX, int tileY) => (uint)tileX | (long)tileY << 32;
-
-	public static (int X, int Y) Unpack(long tile) => ((int)tile, (int)(tile >> 32));
-
-	private int Index(int x, int y) => y * _width + x;
-
-	private void Compute(int goalX, int goalY, Func<int, int, PassageMask, int> cost)
-	{
-		if ((uint)goalX >= (uint)_width || (uint)goalY >= (uint)_height) return;
-		var costs = new int[_distance.Length];
-		Array.Fill(costs, -1);
-		int CostAt(int x, int y)
+		public FlowField(
+			GameMap map,
+			long goalTile,
+			PassageMask mask,
+			Func<int, int, PassageMask, int> cost)
 		{
-			var index = Index(x, y);
-			if (costs[index] < 0) costs[index] = Math.Max(0, cost(x, y, Mask));
-			return costs[index];
+			Map = map;
+			GoalTile = goalTile;
+			Mask = mask;
+			_width = map.Width;
+			_height = map.Height;
+
+			var count = _width * _height;
+			_nextX = new int[count];
+			_nextY = new int[count];
+			_distance = new Fixed64[count];
+
+			Array.Fill(_nextX, -1);
+			Array.Fill(_nextY, -1);
+			Array.Fill(_distance, Fixed64.MaxValue);
+
+			var (goalX, goalY) = Unpack(goalTile);
+			Compute(goalX, goalY, cost);
 		}
-		if (CostAt(goalX, goalY) <= 0) return;
-		var start = Index(goalX, goalY);
-		_distance[start] = (Fixed64)0;
 
-		var queue = new PriorityQueue<(int X, int Y), (Fixed64 Distance, int Tie)>();
-		queue.Enqueue((goalX, goalY), ((Fixed64)0, 0));
+		public GameMap Map { get; }
+		public long GoalTile { get; }
+		public PassageMask Mask { get; }
 
-		var tie = 0;
-
-		while (queue.Count > 0)
+		public (int X, int Y)? Next(int tileX, int tileY)
 		{
-			queue.TryDequeue(out var node, out var priority);
-			var (x, y) = node;
+			if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return null;
 
-			if (priority.Distance > _distance[Index(x, y)]) continue;
+			var index = Index(tileX, tileY);
+			if (_nextX[index] < 0) return null;
 
-			foreach (var (dx, dy) in _directions)
+			return (_nextX[index], _nextY[index]);
+		}
+
+		public Fixed64 Distance(int tileX, int tileY)
+		{
+			if ((uint)tileX >= (uint)_width || (uint)tileY >= (uint)_height) return Fixed64.MaxValue;
+			return _distance[Index(tileX, tileY)];
+		}
+
+		public static long Pack(int tileX, int tileY) => (uint)tileX | (long)tileY << 32;
+
+		public static (int X, int Y) Unpack(long tile) => ((int)tile, (int)(tile >> 32));
+
+		private int Index(int x, int y) => y * _width + x;
+
+		private void Compute(int goalX, int goalY, Func<int, int, PassageMask, int> cost)
+		{
+			if ((uint)goalX >= (uint)_width || (uint)goalY >= (uint)_height) return;
+			var costs = new int[_distance.Length];
+			Array.Fill(costs, -1);
+			int CostAt(int x, int y)
 			{
-				var nx = x + dx;
-				var ny = y + dy;
+				var index = Index(x, y);
+				if (costs[index] < 0) costs[index] = Math.Max(0, cost(x, y, Mask));
+				return costs[index];
+			}
+			if (CostAt(goalX, goalY) <= 0) return;
+			var start = Index(goalX, goalY);
+			_distance[start] = (Fixed64)0;
 
-				if ((uint)nx >= (uint)_width || (uint)ny >= (uint)_height) continue;
+			var queue = new PriorityQueue<(int X, int Y), (Fixed64 Distance, int Tie)>();
+			queue.Enqueue((goalX, goalY), ((Fixed64)0, 0));
 
-				Fixed64 moveCost;
+			var tie = 0;
 
-				if (dx != 0 && dy != 0)
+			while (queue.Count > 0)
+			{
+				queue.TryDequeue(out var node, out var priority);
+				var (x, y) = node;
+
+				if (priority.Distance > _distance[Index(x, y)]) continue;
+
+				foreach (var (dx, dy) in _directions)
 				{
-					var destination = CostAt(nx, ny);
-					var sideA = CostAt(nx, y);
-					var sideB = CostAt(x, ny);
+					var nx = x + dx;
+					var ny = y + dy;
 
-					if (destination <= 0 || sideA <= 0 || sideB <= 0) continue;
+					if ((uint)nx >= (uint)_width || (uint)ny >= (uint)_height) continue;
 
-					moveCost = Sqrt2 * FixedMath.Max(FixedMath.Max((Fixed64)sideA, (Fixed64)sideB), (Fixed64)destination);
+					Fixed64 moveCost;
+
+					if (dx != 0 && dy != 0)
+					{
+						var destination = CostAt(nx, ny);
+						var sideA = CostAt(nx, y);
+						var sideB = CostAt(x, ny);
+
+						if (destination <= 0 || sideA <= 0 || sideB <= 0) continue;
+
+						moveCost = _sqrt2 * FixedMath.Max(FixedMath.Max((Fixed64)sideA, (Fixed64)sideB), (Fixed64)destination);
+					}
+					else
+					{
+						moveCost = (Fixed64)CostAt(nx, ny);
+					}
+
+					if (moveCost <= Fixed64.Zero) continue;
+
+					var newDistance = _distance[Index(x, y)] + moveCost;
+					var neighbor = Index(nx, ny);
+
+					if (newDistance >= _distance[neighbor]) continue;
+
+					_distance[neighbor] = newDistance;
+					_nextX[neighbor] = x;
+					_nextY[neighbor] = y;
+					queue.Enqueue((nx, ny), (newDistance, tie++));
 				}
-				else
-				{
-					moveCost = (Fixed64)CostAt(nx, ny);
-				}
-
-				if (moveCost <= Fixed64.Zero) continue;
-
-				var newDistance = _distance[Index(x, y)] + moveCost;
-				var neighbor = Index(nx, ny);
-
-				if (newDistance >= _distance[neighbor]) continue;
-
-				_distance[neighbor] = newDistance;
-				_nextX[neighbor] = x;
-				_nextY[neighbor] = y;
-				queue.Enqueue((nx, ny), (newDistance, tie++));
 			}
 		}
 	}

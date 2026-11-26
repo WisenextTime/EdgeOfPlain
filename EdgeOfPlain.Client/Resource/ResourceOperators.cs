@@ -4,50 +4,51 @@ using EdgeOfPlain.Client.Utils;
 using EdgeOfPlain.Core.Framework.Resource;
 using SFML.Graphics;
 
-namespace EdgeOfPlain.Client.Resource;
-
-public static class FontOperatorBuilder
+namespace EdgeOfPlain.Client.Resource
 {
-	private static readonly Func<Stream, Font> _loader = stream =>
+	public static class FontOperatorBuilder
 	{
-		using var buffer = new MemoryStream();
-		stream.CopyTo(buffer);
-		return new Font(buffer.ToArray());
-	};
-	public static ResourceOperator<Font> Build => field ??= new ResourceOperator<Font>(_loader);
-}
+		private static readonly Func<Stream, Font> _loader = stream =>
+		{
+			using var buffer = new MemoryStream();
+			stream.CopyTo(buffer);
+			return new Font(buffer.ToArray());
+		};
+		public static ResourceOperator<Font> Build => field ??= new ResourceOperator<Font>(_loader);
+	}
 
-public static class ImageOperatorBuilder
-{
-	private static readonly Func<Stream, Image> _loader = stream => new Image(stream);
-	private static readonly Action<Stream, Image> _saver = (stream, image) =>
+	public static class ImageOperatorBuilder
 	{
-		if (!image.SaveToMemory(out var buffer, "png")) throw new Exception("Save failed");
-		stream.Write(buffer);
-	};
+		private static readonly Func<Stream, Image> _loader = stream => new Image(stream);
+		private static readonly Action<Stream, Image> _saver = (stream, image) =>
+		{
+			if (!image.SaveToMemory(out var buffer, "png")) throw new Exception("Save failed");
+			stream.Write(buffer);
+		};
 
-	public static ResourceOperator<Image> Build => field ??= new ResourceOperator<Image>(_loader, _saver);
-}
+		public static ResourceOperator<Image> Build => field ??= new ResourceOperator<Image>(_loader, _saver);
+	}
 
-public static class ShaderOperatorBuilder
-{
-	public static ResourceOperator<Shader> Build => field ??= new ResourceOperator<Shader>(ShaderParser.ParseShader);
-}
-
-public static class TextureOperatorBuilder
-{
-	private static readonly Func<Stream, Texture> _loader = stream =>
+	public static class ShaderOperatorBuilder
 	{
-		var texture = new Texture(stream);
-		texture.Smooth = false;
-		texture.Repeated = false;
-		return texture;
-	};
-	private static readonly Action<Stream, Texture> _saver = (stream, texture) =>
-	{
-		if (!texture.CopyToImage().SaveToMemory(out var buffer, "png")) throw new Exception("Save failed");
-		stream.Write(buffer);
-	};
+		public static ResourceOperator<Shader> Build => field ??= new ResourceOperator<Shader>(ShaderParser.ParseShader);
+	}
 
-	public static ResourceOperator<Texture> Build => field ??= new ResourceOperator<Texture>(_loader, _saver);
+	public static class TextureOperatorBuilder
+	{
+		private static readonly Func<Stream, Texture> _loader = stream =>
+		{
+			var texture = new Texture(stream);
+			texture.Smooth = false;
+			texture.Repeated = false;
+			return texture;
+		};
+		private static readonly Action<Stream, Texture> _saver = (stream, texture) =>
+		{
+			if (!texture.CopyToImage().SaveToMemory(out var buffer, "png")) throw new Exception("Save failed");
+			stream.Write(buffer);
+		};
+
+		public static ResourceOperator<Texture> Build => field ??= new ResourceOperator<Texture>(_loader, _saver);
+	}
 }

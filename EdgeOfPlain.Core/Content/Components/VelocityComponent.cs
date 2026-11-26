@@ -1,23 +1,24 @@
 using EdgeOfPlain.Core.Definitions;
 using FixedMathSharp;
 
-namespace EdgeOfPlain.Core.Content.Components;
-
-public struct VelocityComponent
+namespace EdgeOfPlain.Core.Content.Components
 {
-	public Fixed64 MaxVelocity;
-	public Fixed64 Acceleration;
-	public Fixed64 Velocity;
-
-	public Fixed64 RotationalVelocity;
-
-	public bool AlignBeforeTurn;
-
-	public static VelocityComponent CreateComponent(UnitDef def) => new()
+	public struct VelocityComponent
 	{
-		MaxVelocity = def.MaxVelocity,
-		Acceleration = def.Acceleration,
-		RotationalVelocity = def.RotationalVelocity,
-		AlignBeforeTurn = def.AlignBeforeTurn,
-	};
+		public Fixed64 MaxVelocity;
+		public Fixed64 Acceleration;
+		public Fixed64 Velocity;
+
+		public Fixed64 RotationalVelocity;
+
+		public bool AlignBeforeTurn;
+
+		public static VelocityComponent CreateComponent(UnitDef def) => new()
+		{
+			MaxVelocity = def.MaxVelocity,
+			Acceleration = def.Acceleration,
+			RotationalVelocity = def.RotationalVelocity,
+			AlignBeforeTurn = def.AlignBeforeTurn,
+		};
+	}
 }

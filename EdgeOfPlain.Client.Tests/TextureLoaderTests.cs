@@ -10,78 +10,79 @@ using Xunit;
 using Zio;
 using Zio.FileSystems;
 
-namespace EdgeOfPlain.Client.Tests;
-
-public sealed class TextureLoaderTests : IDisposable
+namespace EdgeOfPlain.Client.Tests
 {
-	private const string Namespace = "probe";
-	private static readonly UPath Directory = new($"/assets/{Namespace}/Textures/Tiles");
-
-	private readonly TempDirectory _root = new();
-
-	public TextureLoaderTests()
+	public sealed class TextureLoaderTests : IDisposable
 	{
-		ClientAssetsManager.Dispose();
-		AssetsManager.Clear();
-		FileIO.Reset();
-		FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
+		private const string Namespace = "probe";
+		private static readonly UPath _directory = new($"/assets/{Namespace}/Textures/Tiles");
 
-		_root.Write("Textures/Tiles/Test.png", TestAssets.OnePixelPng());
-		_root.Write("Textures/Tiles/Test.atlas", TestAssets.OnePixelAtlas);
+		private readonly TempDirectory _root = new();
 
-		AssetsManager.RegisterResourceOperator(ImageOperatorBuilder.Build);
-		AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
+		public TextureLoaderTests()
+		{
+			ClientAssetsManager.Dispose();
+			AssetsManager.Clear();
+			FileIO.Reset();
+			FileIO.Initialize(Path.Combine(_root.Path, "data"), Path.Combine(_root.Path, "mods"));
 
-		var assets = new ModFileSystem();
-		assets.RegisterNamespace(Namespace, Mount(_root.Path));
-		FileIO.Mount(FileIO.Assets, assets);
+			_root.Write("Textures/Tiles/Test.png", TestAssets.OnePixelPng());
+			_root.Write("Textures/Tiles/Test.atlas", TestAssets.OnePixelAtlas);
+
+			AssetsManager.RegisterResourceOperator(ImageOperatorBuilder.Build);
+			AssetsManager.RegisterResourceOperator(TextureAtlasOperatorBuilder.Build);
+
+			var assets = new ModFileSystem();
+			assets.RegisterNamespace(Namespace, Mount(_root.Path));
+			FileIO.Mount(FileIO.Assets, assets);
+		}
+
+		public void Dispose()
+		{
+			ClientAssetsManager.Dispose();
+			AssetsManager.Clear();
+			FileIO.Reset();
+			_root.Dispose();
+		}
+
+		[Fact]
+		public void LoadBuildsTextureDataFromPngAndAtlas()
+		{
+			TextureLoader.Load(CreateDirectory());
+
+			var key = TextureData.MakeKey($"{_directory}/Test", "main");
+
+			Assert.True(ClientAssetsManager.TryGet<TextureData>(key, out var data));
+			Assert.Equal("main", data.SpriteId);
+			Assert.Equal(new Rectangle(0, 0, 1, 1), data.Source);
+			Assert.Equal(new RectangleF(0, 0, 1, 1), data.Uv);
+			Assert.Single(ClientAssetsManager.Textures);
+		}
+
+		[Fact]
+		public void LoadAlsoStoresTheSourceImage()
+		{
+			TextureLoader.Load(CreateDirectory());
+
+			var path = $"{_directory}/Test.png";
+			Assert.True(ClientAssetsManager.TryGet<SFML.Graphics.Image>(path, out var image));
+			Assert.Equal(1u, image.Size.X);
+			Assert.Equal(1u, image.Size.Y);
+		}
+
+		private static IFileSystem Mount(string directory)
+		{
+			var physical = new PhysicalFileSystem();
+			return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
+		}
+
+		private static ModResourceDirectory CreateDirectory()
+			=> new(
+				_directory,
+				new ModInfo(Namespace, new Version(1, 0, 0)),
+				[
+					$"{_directory}/Test.png",
+					$"{_directory}/Test.atlas",
+				]);
 	}
-
-	public void Dispose()
-	{
-		ClientAssetsManager.Dispose();
-		AssetsManager.Clear();
-		FileIO.Reset();
-		_root.Dispose();
-	}
-
-	[Fact]
-	public void LoadBuildsTextureDataFromPngAndAtlas()
-	{
-		TextureLoader.Load(CreateDirectory());
-
-		var key = TextureData.MakeKey($"{Directory}/Test", "main");
-
-		Assert.True(ClientAssetsManager.TryGet<TextureData>(key, out var data));
-		Assert.Equal("main", data.SpriteId);
-		Assert.Equal(new Rectangle(0, 0, 1, 1), data.Source);
-		Assert.Equal(new RectangleF(0, 0, 1, 1), data.Uv);
-		Assert.Single(ClientAssetsManager.Textures);
-	}
-
-	[Fact]
-	public void LoadAlsoStoresTheSourceImage()
-	{
-		TextureLoader.Load(CreateDirectory());
-
-		var path = $"{Directory}/Test.png";
-		Assert.True(ClientAssetsManager.TryGet<SFML.Graphics.Image>(path, out var image));
-		Assert.Equal(1u, image.Size.X);
-		Assert.Equal(1u, image.Size.Y);
-	}
-
-	private static IFileSystem Mount(string directory)
-	{
-		var physical = new PhysicalFileSystem();
-		return physical.GetOrCreateSubFileSystem(physical.ConvertPathFromInternal(Path.GetFullPath(directory)));
-	}
-
-	private static ModResourceDirectory CreateDirectory()
-		=> new(
-			Directory,
-			new ModInfo(Namespace, new Version(1, 0, 0)),
-			[
-				$"{Directory}/Test.png",
-				$"{Directory}/Test.atlas",
-			]);
 }

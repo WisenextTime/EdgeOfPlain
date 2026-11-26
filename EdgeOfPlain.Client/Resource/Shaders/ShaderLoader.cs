@@ -6,50 +6,51 @@ using Microsoft.Extensions.Logging;
 using SFML.Graphics;
 using Zio;
 
-namespace EdgeOfPlain.Client.Resource.Shaders;
-
-public static class ShaderLoader
+namespace EdgeOfPlain.Client.Resource.Shaders
 {
-	public const string DirectoryName = "Shaders";
-
-	private static readonly List<UPath> _pending = [];
-	private static readonly HashSet<UPath> _seen = new(UPathComparer.Ordinal);
-	private static int _next;
-
-	public static int PendingCount => _pending.Count;
-
-	public static bool Register() => ModResourceLoader.TryRegister(DirectoryName, Collect);
-
-	public static bool WarmupNext(out int completed, out int total)
+	public static class ShaderLoader
 	{
-		completed = _next;
-		total = _pending.Count;
+		public const string DirectoryName = "Shaders";
 
-		if (_next >= _pending.Count) return false;
+		private static readonly List<UPath> _pending = [];
+		private static readonly HashSet<UPath> _seen = new(UPathComparer.Ordinal);
+		private static int _next;
 
-		var path = _pending[_next++];
+		public static int PendingCount => _pending.Count;
 
-		try
+		public static bool Register() => ModResourceLoader.TryRegister(DirectoryName, Collect);
+
+		public static bool WarmupNext(out int completed, out int total)
 		{
-			_ = ClientAssetsManager.Get<Shader>(path);
+			completed = _next;
+			total = _pending.Count;
+
+			if (_next >= _pending.Count) return false;
+
+			var path = _pending[_next++];
+
+			try
+			{
+				_ = ClientAssetsManager.Get<Shader>(path);
+			}
+			catch(Exception e)
+			{
+				LogUtils.Logger(typeof(ShaderLoader)).LogError("Failed to compile shader '{Path}': {EMessage}", path, e.Message);
+			}
+
+			completed = _next;
+
+			return true;
 		}
-		catch(Exception e)
+
+		private static void Collect(ModResourceDirectory directory)
 		{
-			LogUtils.Logger(typeof(ShaderLoader)).LogError("Failed to compile shader '{Path}': {EMessage}", path, e.Message);
-		}
+			foreach (var file in directory.Files)
+			{
+				if (!_seen.Add(file)) continue;
 
-		completed = _next;
-
-		return true;
-	}
-
-	private static void Collect(ModResourceDirectory directory)
-	{
-		foreach (var file in directory.Files)
-		{
-			if (!_seen.Add(file)) continue;
-
-			_pending.Add(file);
+				_pending.Add(file);
+			}
 		}
 	}
 }

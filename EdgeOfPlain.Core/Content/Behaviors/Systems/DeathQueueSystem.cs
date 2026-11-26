@@ -1,0 +1,21 @@
+using Arch.Core;
+using EdgeOfPlain.Core.Content.Components;
+using EdgeOfPlain.Core.Game;
+using EdgeOfPlain.Core.Game.Systems;
+
+namespace EdgeOfPlain.Core.Content.Behaviors.Systems
+{
+	public class EntityDeathQueueSystem : IQueueSystem
+	{
+		public void Operation(QueueWorld world)
+		{
+			var description = new QueryDescription().WithAll<HealthComponent>();
+			world.Query(description, (in EntityHandle handle, in HealthComponent health) =>
+			{
+				if (health.Health > 0) return;
+				if (!world.TryGetId(handle, out var id)) return;
+				world.Enqueue(new DeleteEntityCommand(id));
+			});
+		}
+	}
+}

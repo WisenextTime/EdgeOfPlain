@@ -4,189 +4,190 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using EdgeOfPlain.Core.Definitions;
 
-namespace EdgeOfPlain.Core.Game.Components;
-
-public static class ComponentManager
+namespace EdgeOfPlain.Core.Game.Components
 {
-	private readonly record struct PendingComponent(
-		Type Type,
-		Func<ComponentType> Commit,
-		Action<Entity, EntityDef> Apply,
-		ComponentScope Scope,
-		string Owner);
-
-	private sealed class ScopedGroup(ComponentScope scope)
+	public static class ComponentManager
 	{
+		private readonly record struct PendingComponent(
+			Type Type,
+			Func<ComponentType> Commit,
+			Action<Entity, EntityDef> Apply,
+			ComponentScope Scope,
+			string Owner);
 
-		public ComponentScope Scope { get; } = scope;
-		public List<ComponentType> Types { get; } = [];
-		public List<Action<Entity, EntityDef>> Appliers { get; } = [];
-	}
-
-	private sealed record EntityBlueprint(Signature Signature, Action<Entity, EntityDef>[] Appliers);
-
-	private static readonly List<PendingComponent> _pending = [];
-
-	private static ComponentType[] _baseTypes = [];
-	private static Action<Entity, EntityDef>[] _baseAppliers = [];
-	private static List<ScopedGroup> _groups = [];
-	private static readonly Dictionary<Type, EntityBlueprint> _blueprints = [];
-
-	public static bool IsSealed { get; private set; }
-
-	internal static int PendingCount => _pending.Count;
-
-	private static void ThrowIfSealed()
-	{
-		if (IsSealed) throw new InvalidOperationException("Component registry is already sealed.");
-	}
-
-	internal static void StageComponent<T>(Func<EntityDef, T> factory, string owner) where T : unmanaged
-		=> StageComponent(factory, ComponentScope<EntityDef>.All, owner);
-
-	internal static void StageComponent<TDef, T>(
-		Func<TDef, T> factory,
-		ComponentScope<TDef> scope,
-		string owner)
-		where TDef : EntityDef
-		where T : unmanaged
-	{
-		ArgumentNullException.ThrowIfNull(factory);
-		ArgumentNullException.ThrowIfNull(scope);
-		ThrowIfSealed();
-
-		var type = typeof(T);
-
-		foreach (var pending in _pending)
-			if (pending.Type == type)
-				throw new InvalidOperationException(
-					$"Component '{type.Name}' is already registered by '{pending.Owner}'.");
-
-		_pending.Add(new PendingComponent(
-			type,
-			static () =>
-			{
-				var componentType = ComponentRegistry.Add<T>();
-				ArrayRegistry.Add<T>();
-				return componentType;
-			},
-			(entity, def) => entity.Set(factory((TDef)def)),
-			scope,
-			owner));
-	}
-
-	internal static bool TryUnstageComponent(Type componentType)
-	{
-		if (IsSealed) return false;
-
-		for (var i = 0; i < _pending.Count; i++)
+		private sealed class ScopedGroup(ComponentScope scope)
 		{
-			if (_pending[i].Type != componentType) continue;
 
-			_pending.RemoveAt(i);
-			return true;
+			public ComponentScope Scope { get; } = scope;
+			public List<ComponentType> Types { get; } = [];
+			public List<Action<Entity, EntityDef>> Appliers { get; } = [];
 		}
 
-		return false;
-	}
+		private sealed record EntityBlueprint(Signature Signature, Action<Entity, EntityDef>[] Appliers);
 
-	public static void Seal()
-	{
-		if (IsSealed) return;
+		private static readonly List<PendingComponent> _pending = [];
 
-		var baseTypes = new List<ComponentType>(_pending.Count);
-		var baseAppliers = new List<Action<Entity, EntityDef>>(_pending.Count);
-		var groups = new List<ScopedGroup>();
-		var owners = new Dictionary<Type, string>(_pending.Count);
+		private static ComponentType[] _baseTypes = [];
+		private static Action<Entity, EntityDef>[] _baseAppliers = [];
+		private static List<ScopedGroup> _groups = [];
+		private static readonly Dictionary<Type, EntityBlueprint> _blueprints = [];
 
-		foreach (var pending in _pending)
+		public static bool IsSealed { get; private set; }
+
+		internal static int PendingCount => _pending.Count;
+
+		private static void ThrowIfSealed()
 		{
-			if (owners.TryGetValue(pending.Type, out var owner))
-				throw new InvalidOperationException(
-					$"Component '{pending.Type.Name}' is already registered by '{owner}'.");
+			if (IsSealed) throw new InvalidOperationException("Component registry is already sealed.");
+		}
 
-			owners[pending.Type] = pending.Owner;
+		internal static void StageComponent<T>(Func<EntityDef, T> factory, string owner) where T : unmanaged
+			=> StageComponent(factory, ComponentScope<EntityDef>.All, owner);
 
-			if (pending.Scope.IsAll)
+		internal static void StageComponent<TDef, T>(
+			Func<TDef, T> factory,
+			ComponentScope<TDef> scope,
+			string owner)
+			where TDef : EntityDef
+			where T : unmanaged
+		{
+			ArgumentNullException.ThrowIfNull(factory);
+			ArgumentNullException.ThrowIfNull(scope);
+			ThrowIfSealed();
+
+			var type = typeof(T);
+
+			foreach (var pending in _pending)
+				if (pending.Type == type)
+					throw new InvalidOperationException(
+						$"Component '{type.Name}' is already registered by '{pending.Owner}'.");
+
+			_pending.Add(new PendingComponent(
+				type,
+				static () =>
+				{
+					var componentType = ComponentRegistry.Add<T>();
+					ArrayRegistry.Add<T>();
+					return componentType;
+				},
+				(entity, def) => entity.Set(factory((TDef)def)),
+				scope,
+				owner));
+		}
+
+		internal static bool TryUnstageComponent(Type componentType)
+		{
+			if (IsSealed) return false;
+
+			for (var i = 0; i < _pending.Count; i++)
 			{
-				baseTypes.Add(pending.Commit());
-				baseAppliers.Add(pending.Apply);
+				if (_pending[i].Type != componentType) continue;
+
+				_pending.RemoveAt(i);
+				return true;
 			}
-			else
-			{
-				ScopedGroup? group = null;
 
-				foreach (var candidate in groups)
-					if (ReferenceEquals(candidate.Scope, pending.Scope))
+			return false;
+		}
+
+		public static void Seal()
+		{
+			if (IsSealed) return;
+
+			var baseTypes = new List<ComponentType>(_pending.Count);
+			var baseAppliers = new List<Action<Entity, EntityDef>>(_pending.Count);
+			var groups = new List<ScopedGroup>();
+			var owners = new Dictionary<Type, string>(_pending.Count);
+
+			foreach (var pending in _pending)
+			{
+				if (owners.TryGetValue(pending.Type, out var owner))
+					throw new InvalidOperationException(
+						$"Component '{pending.Type.Name}' is already registered by '{owner}'.");
+
+				owners[pending.Type] = pending.Owner;
+
+				if (pending.Scope.IsAll)
+				{
+					baseTypes.Add(pending.Commit());
+					baseAppliers.Add(pending.Apply);
+				}
+				else
+				{
+					ScopedGroup? group = null;
+
+					foreach (var candidate in groups)
+						if (ReferenceEquals(candidate.Scope, pending.Scope))
+						{
+							group = candidate;
+							break;
+						}
+
+					if (group is null)
 					{
-						group = candidate;
-						break;
+						group = new ScopedGroup(pending.Scope);
+						groups.Add(group);
 					}
 
-				if (group is null)
-				{
-					group = new ScopedGroup(pending.Scope);
-					groups.Add(group);
+					group.Types.Add(pending.Commit());
+					group.Appliers.Add(pending.Apply);
 				}
-
-				group.Types.Add(pending.Commit());
-				group.Appliers.Add(pending.Apply);
 			}
+
+			_baseTypes = [.. baseTypes];
+			_baseAppliers = [.. baseAppliers];
+			_groups = groups;
+
+			_pending.Clear();
+			IsSealed = true;
 		}
 
-		_baseTypes = [.. baseTypes];
-		_baseAppliers = [.. baseAppliers];
-		_groups = groups;
-
-		_pending.Clear();
-		IsSealed = true;
-	}
-
-	public static Entity CreateEntity(World world, EntityDef def)
-	{
-		if (!IsSealed) throw new InvalidOperationException("Component registry is not sealed yet.");
-
-		var defType = def.GetType();
-
-		if (!_blueprints.TryGetValue(defType, out var blueprint))
+		public static Entity CreateEntity(World world, EntityDef def)
 		{
-			blueprint = BuildBlueprint(defType);
-			_blueprints.Add(defType, blueprint);
+			if (!IsSealed) throw new InvalidOperationException("Component registry is not sealed yet.");
+
+			var defType = def.GetType();
+
+			if (!_blueprints.TryGetValue(defType, out var blueprint))
+			{
+				blueprint = BuildBlueprint(defType);
+				_blueprints.Add(defType, blueprint);
+			}
+
+			var entity = world.Create(blueprint.Signature);
+
+			foreach (var applier in blueprint.Appliers) applier(entity, def);
+
+			return entity;
 		}
 
-		var entity = world.Create(blueprint.Signature);
-
-		foreach (var applier in blueprint.Appliers) applier(entity, def);
-
-		return entity;
-	}
-
-	private static EntityBlueprint BuildBlueprint(Type defType)
-	{
-		var types = new List<ComponentType>(_baseTypes.Length + _groups.Count);
-		types.AddRange(_baseTypes);
-
-		var appliers = new List<Action<Entity, EntityDef>>(_baseAppliers.Length + _groups.Count);
-		appliers.AddRange(_baseAppliers);
-
-		foreach (var group in _groups)
+		private static EntityBlueprint BuildBlueprint(Type defType)
 		{
-			if (!group.Scope.Matches(defType)) continue;
+			var types = new List<ComponentType>(_baseTypes.Length + _groups.Count);
+			types.AddRange(_baseTypes);
 
-			types.AddRange(group.Types);
-			appliers.AddRange(group.Appliers);
+			var appliers = new List<Action<Entity, EntityDef>>(_baseAppliers.Length + _groups.Count);
+			appliers.AddRange(_baseAppliers);
+
+			foreach (var group in _groups)
+			{
+				if (!group.Scope.Matches(defType)) continue;
+
+				types.AddRange(group.Types);
+				appliers.AddRange(group.Appliers);
+			}
+
+			return new EntityBlueprint(new Signature(types.ToArray()), [.. appliers]);
 		}
 
-		return new EntityBlueprint(new Signature(types.ToArray()), [.. appliers]);
-	}
-
-	internal static void Reset()
-	{
-		IsSealed = false;
-		_pending.Clear();
-		_baseTypes = [];
-		_baseAppliers = [];
-		_groups = [];
-		_blueprints.Clear();
+		internal static void Reset()
+		{
+			IsSealed = false;
+			_pending.Clear();
+			_baseTypes = [];
+			_baseAppliers = [];
+			_groups = [];
+			_blueprints.Clear();
+		}
 	}
 }

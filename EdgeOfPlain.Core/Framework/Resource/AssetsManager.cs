@@ -7,120 +7,121 @@ using System.Threading.Tasks;
 using EdgeOfPlain.Core.Framework.IO;
 using Zio;
 
-namespace EdgeOfPlain.Core.Framework.Resource;
-
-public abstract record ResourceOperator;
-
-public sealed record ResourceOperator<T>(
-	Func<Stream, T> Loader,
-	Action<Stream, T>? Saver = null,
-	Func<Stream, CancellationToken, ValueTask<T>>? AsyncLoader = null,
-	Func<Stream, T, CancellationToken, ValueTask>? AsyncSaver = null) : ResourceOperator;
-
-public static class AssetsManager
+namespace EdgeOfPlain.Core.Framework.Resource
 {
-	private static readonly Lock _gate = new();
-	private static readonly Dictionary<Type, ResourceOperator> _registry = [];
-	private static FrozenDictionary<Type, ResourceOperator> _operators = FrozenDictionary<Type, ResourceOperator>.Empty;
+	public abstract record ResourceOperator;
 
-	public static IReadOnlyCollection<Type> RegisteredTypes => _operators.Keys;
+	public sealed record ResourceOperator<T>(
+		Func<Stream, T> Loader,
+		Action<Stream, T>? Saver = null,
+		Func<Stream, CancellationToken, ValueTask<T>>? AsyncLoader = null,
+		Func<Stream, T, CancellationToken, ValueTask>? AsyncSaver = null) : ResourceOperator;
 
-	public static void RegisterResourceOperator<T>(ResourceOperator<T> resourceOperator)
+	public static class AssetsManager
 	{
-		ArgumentNullException.ThrowIfNull(resourceOperator);
+		private static readonly Lock _gate = new();
+		private static readonly Dictionary<Type, ResourceOperator> _registry = [];
+		private static FrozenDictionary<Type, ResourceOperator> _operators = FrozenDictionary<Type, ResourceOperator>.Empty;
 
-		lock (_gate)
+		public static IReadOnlyCollection<Type> RegisteredTypes => _operators.Keys;
+
+		public static void RegisterResourceOperator<T>(ResourceOperator<T> resourceOperator)
 		{
-			if (!_registry.TryAdd(typeof(T), resourceOperator))
-				throw new ArgumentException($"operator of '{typeof(T)}' is already registered", nameof(resourceOperator));
+			ArgumentNullException.ThrowIfNull(resourceOperator);
 
-			_operators = _registry.ToFrozenDictionary();
-		}
-	}
+			lock (_gate)
+			{
+				if (!_registry.TryAdd(typeof(T), resourceOperator))
+					throw new ArgumentException($"operator of '{typeof(T)}' is already registered", nameof(resourceOperator));
 
-	public static bool IsRegistered<T>() => _operators.ContainsKey(typeof(T));
-
-	public static bool UnregisterResourceOperator<T>()
-	{
-		lock (_gate)
-		{
-			if (!_registry.Remove(typeof(T))) return false;
-
-			_operators = _registry.ToFrozenDictionary();
-			return true;
-		}
-	}
-
-	public static void Clear()
-	{
-		lock (_gate)
-		{
-			_registry.Clear();
-			_operators = FrozenDictionary<Type, ResourceOperator>.Empty;
-		}
-	}
-
-	public static T LoadResource<T>(UPath sourcePath)
-	{
-		var resourceOperator = Operator<T>();
-		using var stream = FileIO.Root.OpenReadShared(sourcePath);
-		return resourceOperator.Loader(stream);
-	}
-
-	public static async ValueTask<T> LoadResourceAsync<T>(UPath sourcePath, CancellationToken cancellationToken = default)
-	{
-		var resourceOperator = Operator<T>();
-		using var stream = FileIO.Root.OpenReadShared(sourcePath);
-
-		return resourceOperator.AsyncLoader is { } asyncLoader
-			? await asyncLoader(stream, cancellationToken).ConfigureAwait(false)
-			: resourceOperator.Loader(stream);
-	}
-
-	public static void SaveResource<T>(T resource, UPath sourcePath)
-	{
-		var resourceOperator = Operator<T>();
-		var saver = resourceOperator.Saver ?? throw UnsupportedSave<T>();
-
-		using var stream = OpenWrite(sourcePath);
-		saver(stream, resource);
-	}
-
-	public static async ValueTask SaveResourceAsync<T>(T resource, UPath sourcePath,
-		CancellationToken cancellationToken = default)
-	{
-		var resourceOperator = Operator<T>();
-		var asyncSaver = resourceOperator.AsyncSaver;
-		var saver = resourceOperator.Saver;
-
-		if (asyncSaver is null && saver is null) throw UnsupportedSave<T>();
-
-		using var stream = OpenWrite(sourcePath);
-
-		if (asyncSaver is not null)
-		{
-			await asyncSaver(stream, resource, cancellationToken).ConfigureAwait(false);
-			return;
+				_operators = _registry.ToFrozenDictionary();
+			}
 		}
 
-		saver?.Invoke(stream, resource);
+		public static bool IsRegistered<T>() => _operators.ContainsKey(typeof(T));
+
+		public static bool UnregisterResourceOperator<T>()
+		{
+			lock (_gate)
+			{
+				if (!_registry.Remove(typeof(T))) return false;
+
+				_operators = _registry.ToFrozenDictionary();
+				return true;
+			}
+		}
+
+		public static void Clear()
+		{
+			lock (_gate)
+			{
+				_registry.Clear();
+				_operators = FrozenDictionary<Type, ResourceOperator>.Empty;
+			}
+		}
+
+		public static T LoadResource<T>(UPath sourcePath)
+		{
+			var resourceOperator = Operator<T>();
+			using var stream = FileIO.Root.OpenReadShared(sourcePath);
+			return resourceOperator.Loader(stream);
+		}
+
+		public static async ValueTask<T> LoadResourceAsync<T>(UPath sourcePath, CancellationToken cancellationToken = default)
+		{
+			var resourceOperator = Operator<T>();
+			using var stream = FileIO.Root.OpenReadShared(sourcePath);
+
+			return resourceOperator.AsyncLoader is { } asyncLoader
+				? await asyncLoader(stream, cancellationToken).ConfigureAwait(false)
+				: resourceOperator.Loader(stream);
+		}
+
+		public static void SaveResource<T>(T resource, UPath sourcePath)
+		{
+			var resourceOperator = Operator<T>();
+			var saver = resourceOperator.Saver ?? throw UnsupportedSave<T>();
+
+			using var stream = OpenWrite(sourcePath);
+			saver(stream, resource);
+		}
+
+		public static async ValueTask SaveResourceAsync<T>(T resource, UPath sourcePath,
+			CancellationToken cancellationToken = default)
+		{
+			var resourceOperator = Operator<T>();
+			var asyncSaver = resourceOperator.AsyncSaver;
+			var saver = resourceOperator.Saver;
+
+			if (asyncSaver is null && saver is null) throw UnsupportedSave<T>();
+
+			using var stream = OpenWrite(sourcePath);
+
+			if (asyncSaver is not null)
+			{
+				await asyncSaver(stream, resource, cancellationToken).ConfigureAwait(false);
+				return;
+			}
+
+			saver?.Invoke(stream, resource);
+		}
+
+		private static Stream OpenWrite(UPath sourcePath)
+		{
+			var fileSystem = FileIO.Root;
+			fileSystem.CreateParentDirectory(sourcePath);
+
+			return fileSystem.OpenFile(sourcePath, FileMode.Create, FileAccess.Write);
+		}
+
+		private static ResourceOperator<T> Operator<T>()
+		{
+			if (_operators.TryGetValue(typeof(T), out var resourceOperator)) return (ResourceOperator<T>)resourceOperator;
+
+			throw new InvalidOperationException($"no resource operator is registered for '{typeof(T)}'");
+		}
+
+		private static NotSupportedException UnsupportedSave<T>()
+			=> new($"resource operator of '{typeof(T)}' does not support saving");
 	}
-
-	private static Stream OpenWrite(UPath sourcePath)
-	{
-		var fileSystem = FileIO.Root;
-		fileSystem.CreateParentDirectory(sourcePath);
-
-		return fileSystem.OpenFile(sourcePath, FileMode.Create, FileAccess.Write, FileShare.None);
-	}
-
-	private static ResourceOperator<T> Operator<T>()
-	{
-		if (_operators.TryGetValue(typeof(T), out var resourceOperator)) return (ResourceOperator<T>)resourceOperator;
-
-		throw new InvalidOperationException($"no resource operator is registered for '{typeof(T)}'");
-	}
-
-	private static NotSupportedException UnsupportedSave<T>()
-		=> new($"resource operator of '{typeof(T)}' does not support saving");
 }

@@ -4,47 +4,48 @@ using System.Text.Json;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using Tomlyn;
 
-namespace EdgeOfPlain.Core.Framework.Resource;
-
-public static class TextOperatorBuilder
+namespace EdgeOfPlain.Core.Framework.Resource
 {
-	private static readonly Func<Stream, string> _loader = stream =>
+	public static class TextOperatorBuilder
 	{
-		using var reader = new StreamReader(stream);
-		return reader.ReadToEnd();
-	};
-	private static readonly Action<Stream, string> _saver = (stream, text) =>
+		private static readonly Func<Stream, string> _loader = stream =>
+		{
+			using var reader = new StreamReader(stream);
+			return reader.ReadToEnd();
+		};
+		private static readonly Action<Stream, string> _saver = (stream, text) =>
+		{
+			using var writer = new StreamWriter(stream);
+			writer.Write(text);
+		};
+		public static ResourceOperator<string> Build => field ??= new ResourceOperator<string>(_loader, _saver);
+	}
+
+	public static class TextureAtlasOperatorBuilder
 	{
-		using var writer = new StreamWriter(stream);
-		writer.Write(text);
-	};
-	public static ResourceOperator<string> Build => field ??= new ResourceOperator<string>(_loader, _saver);
-}
+		private static readonly Func<Stream, TextureAtlas> _loader = stream =>
+		{
+			using var reader = new StreamReader(stream);
+			return TextureAtlas.Parse(reader.ReadToEnd());
+		};
 
-public static class TextureAtlasOperatorBuilder
-{
-	private static readonly Func<Stream, TextureAtlas> _loader = stream =>
+		public static ResourceOperator<TextureAtlas> Build => field ??= new ResourceOperator<TextureAtlas>(_loader);
+	}
+
+	public static class MapOperatorBuilder
 	{
-		using var reader = new StreamReader(stream);
-		return TextureAtlas.Parse(reader.ReadToEnd());
-	};
+		private static readonly TomlSerializerOptions _options = new()
+		{
+			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+			PropertyNameCaseInsensitive = true,
+		};
 
-	public static ResourceOperator<TextureAtlas> Build => field ??= new ResourceOperator<TextureAtlas>(_loader);
-}
+		private static readonly Func<Stream, Map> _loader = stream =>
+		{
+			using var reader = new StreamReader(stream);
+			return TomlSerializer.Deserialize<Map>(reader.ReadToEnd(), _options);
+		};
 
-public static class MapOperatorBuilder
-{
-	private static readonly TomlSerializerOptions _options = new()
-	{
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		PropertyNameCaseInsensitive = true,
-	};
-
-	private static readonly Func<Stream, Map> _loader = stream =>
-	{
-		using var reader = new StreamReader(stream);
-		return TomlSerializer.Deserialize<Map>(reader.ReadToEnd(), _options);
-	};
-
-	public static ResourceOperator<Map> Build => field ??= new ResourceOperator<Map>(_loader);
+		public static ResourceOperator<Map> Build => field ??= new ResourceOperator<Map>(_loader);
+	}
 }

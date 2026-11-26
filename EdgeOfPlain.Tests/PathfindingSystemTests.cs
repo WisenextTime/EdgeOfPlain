@@ -1,119 +1,120 @@
 using Arch.Core;
+using EdgeOfPlain.Core.Content.Behaviors;
 using EdgeOfPlain.Core.Content.Components;
-using EdgeOfPlain.Core.Content.Systems;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.PathFinding;
 using EdgeOfPlain.Core.Game.Waypoint;
 using Xunit;
 
-namespace EdgeOfPlain.Tests;
-
-[Collection("ComponentManager")]
-public sealed class PathfindingSystemTests : PathSystemTestBase
+namespace EdgeOfPlain.Tests
 {
-	[Fact]
-	public void MoveCommandProducesPathToGoal()
+	[Collection("ComponentManager")]
+	public sealed class PathfindingSystemTests : PathSystemTestBase
 	{
-		var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
-		using var game = new GameWorld(map);
-		RegisterSystems(game);
+		[Fact]
+		public void MoveCommandProducesPathToGoal()
+		{
+			var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
+			using var game = new GameWorld(map);
+			RegisterSystems(game);
 
-		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
-		game.Step();
+			var def = FastUnit("u");
+			game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
+			game.Step();
 
-		var entity = SingleEntity(game);
-		var handle = new EntityHandle(entity);
+			var entity = SingleEntity(game);
+			var handle = new EntityHandle(entity);
 
-		var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
-		game.Commands.Enqueue(new WaypointCommand(
-			game.Select(handle),
-			WaypointType.Move,
-			WaypointAddType.Replace,
-			new GroundTarget(goal)));
-		game.Step();
+			var goal = V(7 * 32f + 16f, 7 * 32f + 16f);
+			game.Commands.Enqueue(new WaypointCommand(
+				game.Select(handle),
+				WaypointType.Move,
+				WaypointAddType.Replace,
+				new GroundTarget(goal)));
+			game.Step();
 
-		var path = game.Pathfinding.Paths[handle];
-		Assert.NotEmpty(path.Waypoints);
-		Assert.Equal(goal, path.Waypoints[^1]);
-	}
+			var path = game.Pathfinding.Paths[handle];
+			Assert.NotEmpty(path.Waypoints);
+			Assert.Equal(goal, path.Waypoints[^1]);
+		}
 
-	[Fact]
-	public void PathAvoidsWalls()
-	{
-		var map = PathTestMaps.Build(
-			5, 5,
-			(x, y) => (x, y) == (2, 2) ? PathTestMaps.CliffKind : PathTestMaps.GroundKind);
-		using var game = new GameWorld(map);
-		RegisterSystems(game);
+		[Fact]
+		public void PathAvoidsWalls()
+		{
+			var map = PathTestMaps.Build(
+				5, 5,
+				(x, y) => (x, y) == (2, 2) ? PathTestMaps.CliffKind : PathTestMaps.GroundKind);
+			using var game = new GameWorld(map);
+			RegisterSystems(game);
 
-		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
-		game.Step();
+			var def = FastUnit("u");
+			game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
+			game.Step();
 
-		var entity = SingleEntity(game);
-		var handle = new EntityHandle(entity);
+			var entity = SingleEntity(game);
+			var handle = new EntityHandle(entity);
 
-		var goal = V(4 * 32f + 16f, 2 * 32f + 16f);
-		game.Commands.Enqueue(new WaypointCommand(
-			game.Select(handle),
-			WaypointType.Move,
-			WaypointAddType.Replace,
-			new GroundTarget(goal)));
-		game.Step();
+			var goal = V(4 * 32f + 16f, 2 * 32f + 16f);
+			game.Commands.Enqueue(new WaypointCommand(
+				game.Select(handle),
+				WaypointType.Move,
+				WaypointAddType.Replace,
+				new GroundTarget(goal)));
+			game.Step();
 
-		var path = game.Pathfinding.Paths[handle];
-		Assert.True(path.Waypoints.Count > 1);
-		Assert.Equal(goal, path.Waypoints[^1]);
-	}
+			var path = game.Pathfinding.Paths[handle];
+			Assert.True(path.Waypoints.Count > 1);
+			Assert.Equal(goal, path.Waypoints[^1]);
+		}
 
-	[Fact]
-	public void ReplaceProducesNewPath()
-	{
-		var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
-		using var game = new GameWorld(map);
-		RegisterSystems(game);
+		[Fact]
+		public void ReplaceProducesNewPath()
+		{
+			var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
+			using var game = new GameWorld(map);
+			RegisterSystems(game);
 
-		var def = FastUnit("u");
-		game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
-		game.Step();
+			var def = FastUnit("u");
+			game.Commands.Enqueue(new SpawnEntityCommand(def, new TransformComponent { Position = V(16f, 16f) }, 1));
+			game.Step();
 
-		var entity = SingleEntity(game);
-		var handle = new EntityHandle(entity);
+			var entity = SingleEntity(game);
+			var handle = new EntityHandle(entity);
 
-		game.Commands.Enqueue(new WaypointCommand(
-			game.Select(handle),
-			WaypointType.Move,
-			WaypointAddType.Replace,
-			new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
-		game.Step();
+			game.Commands.Enqueue(new WaypointCommand(
+				game.Select(handle),
+				WaypointType.Move,
+				WaypointAddType.Replace,
+				new GroundTarget(V(7 * 32f + 16f, 7 * 32f + 16f))));
+			game.Step();
 
-		var first = game.Pathfinding.Paths[handle];
+			var first = game.Pathfinding.Paths[handle];
 
-		game.Commands.Enqueue(new WaypointCommand(
-			game.Select(handle),
-			WaypointType.Move,
-			WaypointAddType.Replace,
-			new GroundTarget(V(16f, 7 * 32f + 16f))));
-		game.Step();
+			game.Commands.Enqueue(new WaypointCommand(
+				game.Select(handle),
+				WaypointType.Move,
+				WaypointAddType.Replace,
+				new GroundTarget(V(16f, 7 * 32f + 16f))));
+			game.Step();
 
-		var second = game.Pathfinding.Paths[handle];
-		Assert.NotSame(first, second);
-		Assert.NotEqual(first.Waypoints[^1], second.Waypoints[^1]);
-	}
+			var second = game.Pathfinding.Paths[handle];
+			Assert.NotSame(first, second);
+			Assert.NotEqual(first.Waypoints[^1], second.Waypoints[^1]);
+		}
 
-	[Fact]
-	public void FlowFieldCacheSharesFieldsForSameGoalAndMask()
-	{
-		var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
-		using var world = World.Create();
-		var pathfinding = WorldPathfinding.Create(world, map);
+		[Fact]
+		public void FlowFieldCacheSharesFieldsForSameGoalAndMask()
+		{
+			var map = PathTestMaps.Build(8, 8, (_, _) => PathTestMaps.GroundKind);
+			using var world = World.Create();
+			var pathfinding = WorldPathfinding.Create(world, map);
 
-		var goal = FlowField.Pack(7, 7);
+			var goal = FlowField.Pack(7, 7);
 
-		Assert.Same(
-			pathfinding.Fields.GetOrCreate(goal, PassageMask.Ground),
-			pathfinding.Fields.GetOrCreate(goal, PassageMask.Ground));
+			Assert.Same(
+				pathfinding.Fields.GetOrCreate(goal, PassageMask.Ground),
+				pathfinding.Fields.GetOrCreate(goal, PassageMask.Ground));
+		}
 	}
 }

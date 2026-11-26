@@ -6,164 +6,165 @@ using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Time;
 
-namespace EdgeOfPlain.Core.Framework.Scenes;
-
-public sealed class SceneManager
+namespace EdgeOfPlain.Core.Framework.Scenes
 {
-	private readonly List<IScene> _scenes = [];
-	private readonly List<SceneCommand> _pending = [];
-	private SceneContext? _context;
-
-	public IReadOnlyList<IScene> Scenes => _scenes;
-
-	public IScene? Active => _scenes.Count == 0 ? null : _scenes[^1];
-
-	public SceneContext Context => _context ?? throw new InvalidOperationException("Scene manager has no window attached yet.");
-
-	public void Attach(IGameWindow window)
+	public sealed class SceneManager
 	{
-		ArgumentNullException.ThrowIfNull(window);
+		private readonly List<IScene> _scenes = [];
+		private readonly List<SceneCommand> _pending = [];
+		private SceneContext? _context;
 
-		if (_context is { } attached)
+		public IReadOnlyList<IScene> Scenes => _scenes;
+
+		public IScene? Active => _scenes.Count == 0 ? null : _scenes[^1];
+
+		public SceneContext Context => _context ?? throw new InvalidOperationException("Scene manager has no window attached yet.");
+
+		public void Attach(IGameWindow window)
 		{
-			if (!ReferenceEquals(attached.Window, window))
-				throw new InvalidOperationException("The scene manager is already attached to another window.");
-			return;
+			ArgumentNullException.ThrowIfNull(window);
+
+			if (_context is { } attached)
+			{
+				if (!ReferenceEquals(attached.Window, window))
+					throw new InvalidOperationException("The scene manager is already attached to another window.");
+				return;
+			}
+
+			_context = new SceneContext(window, this);
 		}
 
-		_context = new SceneContext(window, this);
-	}
-
-	public void Push(IScene scene)
-	{
-		ArgumentNullException.ThrowIfNull(scene);
-		_pending.Add(new SceneCommand(SceneChangeKind.Push, scene));
-	}
-
-	public void Pop() => _pending.Add(new SceneCommand(SceneChangeKind.Pop, null));
-
-	public void Replace(IScene scene)
-	{
-		ArgumentNullException.ThrowIfNull(scene);
-		_pending.Add(new SceneCommand(SceneChangeKind.Replace, scene));
-	}
-
-	public void PopTo(IScene scene)
-	{
-		ArgumentNullException.ThrowIfNull(scene);
-		_pending.Add(new SceneCommand(SceneChangeKind.PopTo, scene));
-	}
-
-	public bool HandleInput(IInputState input)
-	{
-		ArgumentNullException.ThrowIfNull(input);
-
-		var handled = false;
-		for (var index = _scenes.Count - 1; index >= 0; index--)
+		public void Push(IScene scene)
 		{
-			if (!_scenes[index].IsEnabled) continue;
-			if (!_scenes[index].HandleInput(input)) continue;
-
-			handled = true;
-			break;
+			ArgumentNullException.ThrowIfNull(scene);
+			_pending.Add(new SceneCommand(SceneChangeKind.Push, scene));
 		}
 
-		Flush();
-		return handled;
-	}
+		public void Pop() => _pending.Add(new SceneCommand(SceneChangeKind.Pop, null));
 
-	public void Update(LogicTime time, IInputState input)
-	{
-		ArgumentNullException.ThrowIfNull(input);
-
-		for (var index = _scenes.Count - 1; index >= 0; index--)
+		public void Replace(IScene scene)
 		{
-			var scene = _scenes[index];
-			if (!scene.IsEnabled) continue;
-
-			scene.Update(time, input);
+			ArgumentNullException.ThrowIfNull(scene);
+			_pending.Add(new SceneCommand(SceneChangeKind.Replace, scene));
 		}
 
-		Flush();
-	}
-
-	public void Draw(RenderTime time)
-	{
-		foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(time);
-		Flush();
-	}
-
-	public void Clear() => _pending.Add(new SceneCommand(SceneChangeKind.Clear, null));
-
-	private void Flush()
-	{
-		foreach (var t in _pending) Apply(t);
-		_pending.Clear();
-	}
-
-	private void Apply(in SceneCommand command)
-	{
-		var previous = Active;
-
-		switch (command.Kind)
+		public void PopTo(IScene scene)
 		{
-			case SceneChangeKind.Push:
-				Enter(command.Scene!, previous, SceneChangeKind.Push);
+			ArgumentNullException.ThrowIfNull(scene);
+			_pending.Add(new SceneCommand(SceneChangeKind.PopTo, scene));
+		}
+
+		public bool HandleInput(IInputState input)
+		{
+			ArgumentNullException.ThrowIfNull(input);
+
+			var handled = false;
+			for (var index = _scenes.Count - 1; index >= 0; index--)
+			{
+				if (!_scenes[index].IsEnabled) continue;
+				if (!_scenes[index].HandleInput(input)) continue;
+
+				handled = true;
 				break;
+			}
 
-			case SceneChangeKind.Pop:
-				if (previous is null) return;
-				Exit();
-				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Pop, previous, Active));
-				break;
+			Flush();
+			return handled;
+		}
 
-			case SceneChangeKind.Replace:
-				if (previous is not null) Exit();
-				Enter(command.Scene!, previous, SceneChangeKind.Replace);
-				break;
+		public void Update(LogicTime time, IInputState input)
+		{
+			ArgumentNullException.ThrowIfNull(input);
 
-			case SceneChangeKind.PopTo:
-				var target = command.Scene!;
-				var found = _scenes.IndexOf(target);
-				if (found < 0) return;
+			for (var index = _scenes.Count - 1; index >= 0; index--)
+			{
+				var scene = _scenes[index];
+				if (!scene.IsEnabled) continue;
 
-				for (var index = _scenes.Count - 1; index > found; index--)
-				{
+				scene.Update(time, input);
+			}
+
+			Flush();
+		}
+
+		public void Draw(RenderTime time)
+		{
+			foreach (var scene in _scenes.Where(scene => scene.IsVisible)) scene.Draw(time);
+			Flush();
+		}
+
+		public void Clear() => _pending.Add(new SceneCommand(SceneChangeKind.Clear, null));
+
+		private void Flush()
+		{
+			foreach (var t in _pending) Apply(t);
+			_pending.Clear();
+		}
+
+		private void Apply(in SceneCommand command)
+		{
+			var previous = Active;
+
+			switch (command.Kind)
+			{
+				case SceneChangeKind.Push:
+					Enter(command.Scene!, previous, SceneChangeKind.Push);
+					break;
+
+				case SceneChangeKind.Pop:
+					if (previous is null) return;
 					Exit();
-				}
-				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
-				break;
+					EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Pop, previous, Active));
+					break;
 
-			case SceneChangeKind.Clear:
-				while (_scenes.Count > 0) Exit();
-				EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Clear, previous, null));
-				break;
+				case SceneChangeKind.Replace:
+					if (previous is not null) Exit();
+					Enter(command.Scene!, previous, SceneChangeKind.Replace);
+					break;
+
+				case SceneChangeKind.PopTo:
+					var target = command.Scene!;
+					var found = _scenes.IndexOf(target);
+					if (found < 0) return;
+
+					for (var index = _scenes.Count - 1; index > found; index--)
+					{
+						Exit();
+					}
+					EventBus.Publish(new SceneChangedEvent(SceneChangeKind.PopTo, previous, Active));
+					break;
+
+				case SceneChangeKind.Clear:
+					while (_scenes.Count > 0) Exit();
+					EventBus.Publish(new SceneChangedEvent(SceneChangeKind.Clear, previous, null));
+					break;
+			}
 		}
-	}
 
-	private void Enter(IScene scene, IScene? previous, SceneChangeKind kind)
-	{
-		_scenes.Add(scene);
-
-		try
+		private void Enter(IScene scene, IScene? previous, SceneChangeKind kind)
 		{
-			scene.Enter(Context);
+			_scenes.Add(scene);
+
+			try
+			{
+				scene.Enter(Context);
+			}
+			catch
+			{
+				_scenes.RemoveAt(_scenes.Count - 1);
+				throw;
+			}
+
+			EventBus.Publish(new SceneChangedEvent(kind, previous, scene));
 		}
-		catch
+
+		private void Exit()
 		{
-			_scenes.RemoveAt(_scenes.Count - 1);
-			throw;
+			var scene = _scenes[^1];
+			_scenes.Remove(scene);
+			scene.Exit();
 		}
 
-		EventBus.Publish(new SceneChangedEvent(kind, previous, scene));
+		private readonly record struct SceneCommand(SceneChangeKind Kind, IScene? Scene);
 	}
-
-	private void Exit()
-	{
-		var scene = _scenes[^1];
-		_scenes.Remove(scene);
-		scene.Exit();
-	}
-
-	private readonly record struct SceneCommand(SceneChangeKind Kind, IScene? Scene);
 }

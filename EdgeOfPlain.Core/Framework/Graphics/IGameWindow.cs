@@ -1,29 +1,30 @@
 using System;
 using System.Drawing;
 
-namespace EdgeOfPlain.Core.Framework.Graphics;
-
-public interface IGameWindow
+namespace EdgeOfPlain.Core.Framework.Graphics
 {
-	bool IsOpen { get; }
+	public interface IGameWindow
+	{
+		bool IsOpen { get; }
 
-	Size Size { get; }
+		Size Size { get; }
 
-	Rectangle Viewport { get; set; }
+		Rectangle Viewport { get; set; }
 
-	Camera2D Camera { get; set; }
+		Camera2D Camera { get; set; }
 
-	void ResetCamera();
+		void ResetCamera();
 
-	void PollEvents();
+		void PollEvents();
 
-	void WaitForEvents(TimeSpan timeout);
+		void WaitForEvents(TimeSpan timeout);
 
-	void ActivateContext();
+		void ActivateContext();
 
-	void DeactivateContext();
+		void DeactivateContext();
 
-	void Clear(ColorF color);
+		void Clear(ColorF color);
 
-	void Present();
+		void Present();
+	}
 }

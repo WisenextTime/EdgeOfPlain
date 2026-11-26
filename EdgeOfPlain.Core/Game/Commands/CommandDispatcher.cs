@@ -4,71 +4,72 @@ using Arch.Core;
 using EdgeOfPlain.Core.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace EdgeOfPlain.Core.Game.Commands;
-
-public interface ICommandApplier<TCommand> where TCommand : struct, ICommand
+namespace EdgeOfPlain.Core.Game.Commands
 {
-	void Apply(World world, in TCommand command);
-}
-
-public sealed class CommandDispatcher(CommandBus bus)
-{
-	private const int MaxPasses = 8;
-
-	private readonly Dictionary<Type, Action<World, CommandBus>> _appliers = new();
-	private readonly List<Type> _types = [];
-
-	public void Register<TCommand>(ICommandApplier<TCommand> applier) where TCommand : struct, ICommand
+	public interface ICommandApplier<TCommand> where TCommand : struct, ICommand
 	{
-		_appliers[typeof(TCommand)] = (world, commands) =>
-		{
-			var pending = commands.Pending<TCommand>();
-			var count = pending.Count;
-
-			for (var i = 0; i < count; i++)
-			{
-				var command = pending[i];
-				applier.Apply(world, in command);
-			}
-
-			commands.Clear<TCommand>(count);
-		};
+		void Apply(World world, in TCommand command);
 	}
 
-	public int ApplyAll(World world)
+	public sealed class CommandDispatcher(CommandBus bus)
 	{
-		var applied = 0;
+		private const int MaxPasses = 8;
 
-		for (var pass = 0; pass < MaxPasses; pass++)
+		private readonly Dictionary<Type, Action<World, CommandBus>> _appliers = new();
+		private readonly List<Type> _types = [];
+
+		public void Register<TCommand>(ICommandApplier<TCommand> applier) where TCommand : struct, ICommand
 		{
-			if (bus.PendingTypes.Count == 0) break;
-
-			_types.Clear();
-			_types.AddRange(bus.PendingTypes);
-
-			foreach (var type in _types)
+			_appliers[typeof(TCommand)] = (world, commands) =>
 			{
-				if (_appliers.TryGetValue(type, out var apply))
+				var pending = commands.Pending<TCommand>();
+				var count = pending.Count;
+
+				for (var i = 0; i < count; i++)
 				{
-					applied += bus.CountType(type);
-					apply(world, bus);
+					var command = pending[i];
+					applier.Apply(world, in command);
 				}
-				else if (CommandRegistry.FindApplier(type) is { } entry)
-				{
-					applied += bus.CountType(type);
-					entry.Apply(world, bus);
-				}
-				else
-				{
-					LogUtils.Logger<CommandDispatcher>()
-						.LogWarning("no applier registered for command type '{TypeFullName}'", type.FullName);
-					bus.ClearType(type);
-				}
-			}
+
+				commands.Clear<TCommand>(count);
+			};
 		}
 
-		return applied;
-	}
+		public int ApplyAll(World world)
+		{
+			var applied = 0;
 
-	public void Clear() => bus.Clear();
+			for (var pass = 0; pass < MaxPasses; pass++)
+			{
+				if (bus.PendingTypes.Count == 0) break;
+
+				_types.Clear();
+				_types.AddRange(bus.PendingTypes);
+
+				foreach (var type in _types)
+				{
+					if (_appliers.TryGetValue(type, out var apply))
+					{
+						applied += bus.CountType(type);
+						apply(world, bus);
+					}
+					else if (CommandRegistry.FindApplier(type) is { } entry)
+					{
+						applied += bus.CountType(type);
+						entry.Apply(world, bus);
+					}
+					else
+					{
+						LogUtils.Logger<CommandDispatcher>()
+							.LogWarning("no applier registered for command type '{TypeFullName}'", type.FullName);
+						bus.ClearType(type);
+					}
+				}
+			}
+
+			return applied;
+		}
+
+		public void Clear() => bus.Clear();
+	}
 }

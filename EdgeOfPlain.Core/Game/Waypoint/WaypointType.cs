@@ -1,9 +1,10 @@
-namespace EdgeOfPlain.Core.Game.Waypoint;
-
-public enum WaypointType
+namespace EdgeOfPlain.Core.Game.Waypoint
 {
-	Move,
-	Attack,
-	Guard,
-	Patrol,
+	public enum WaypointType
+	{
+		Move,
+		Attack,
+		Guard,
+		Patrol,
+	}
 }

@@ -1,22 +1,23 @@
 using System.Collections.Generic;
 using EdgeOfPlain.Core.Definitions.Worlds;
 
-namespace EdgeOfPlain.Core.Definitions;
-
-[ContentTypeName("terrain")]
-public class TerrainDef(string id) : ContentDef(id)
+namespace EdgeOfPlain.Core.Definitions
 {
-
-	public PassageMask Passage { get; set; } = PassageMask.None;
-	public int MoveCost { get; set; } = 1;
-	public Dictionary<string, int> MoveCosts { get; set; } = [];
-
-	public int GetMoveCost(PassageMask passage)
+	[ContentTypeName("terrain")]
+	public class TerrainDef(string id) : ContentDef(id)
 	{
-		if (MoveCosts.TryGetValue(passage.ToString(), out var cost)) return cost;
 
-		return (Passage & passage) != PassageMask.None ? MoveCost : 0;
+		public PassageMask Passage { get; set; } = PassageMask.None;
+		public int MoveCost { get; set; } = 1;
+		public Dictionary<string, int> MoveCosts { get; set; } = [];
+
+		public int GetMoveCost(PassageMask passage)
+		{
+			if (MoveCosts.TryGetValue(passage.ToString(), out var cost)) return cost;
+
+			return (Passage & passage) != PassageMask.None ? MoveCost : 0;
+		}
+
+		public bool Allows(PassageMask required) => (Passage & required) != PassageMask.None;
 	}
-
-	public bool Allows(PassageMask required) => (Passage & required) != PassageMask.None;
 }

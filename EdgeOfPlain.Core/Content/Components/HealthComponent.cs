@@ -1,15 +1,16 @@
 using EdgeOfPlain.Core.Definitions;
 
-namespace EdgeOfPlain.Core.Content.Components;
-
-public struct HealthComponent
+namespace EdgeOfPlain.Core.Content.Components
 {
-	public int MaxHealth;
-	public int Health;
-
-	public static HealthComponent CreateComponent(EntityDef def) => new()
+	public struct HealthComponent
 	{
-		MaxHealth = def.MaxHealth,
-		Health = (int)(def.MaxHealth * def.InitHealth),
-	};
+		public int MaxHealth;
+		public int Health;
+
+		public static HealthComponent CreateComponent(EntityDef def) => new()
+		{
+			MaxHealth = def.MaxHealth,
+			Health = (int)(def.MaxHealth * def.InitHealth),
+		};
+	}
 }

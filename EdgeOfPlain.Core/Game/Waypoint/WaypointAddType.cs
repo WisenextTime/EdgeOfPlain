@@ -1,7 +1,8 @@
-namespace EdgeOfPlain.Core.Game.Waypoint;
-
-public enum WaypointAddType
+namespace EdgeOfPlain.Core.Game.Waypoint
 {
-	Pending,
-	Replace,
+	public enum WaypointAddType
+	{
+		Pending,
+		Replace,
+	}
 }
