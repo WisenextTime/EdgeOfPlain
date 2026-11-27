@@ -59,7 +59,7 @@ namespace EdgeOfPlain.Client
 		protected override IScene CreateInitialScene()
 			=> new LoadingScene(
 				LoadContent,
-				static () => new TestMapScene(),
+				static () => new TestMultiplayerScene(),
 				GameContext.Fonts,
 				GameContext.RenderTarget,
 				TimeSpan.FromSeconds(1));

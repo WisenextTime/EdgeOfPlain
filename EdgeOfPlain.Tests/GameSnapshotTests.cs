@@ -64,5 +64,20 @@ namespace EdgeOfPlain.Tests
 			core.CreateWorld(WorldKey.Primary, GameMap.Build(new Map(1, 1)));
 			await Assert.ThrowsAsync<InvalidOperationException>(() => GameSnapshot.CaptureAsync(core, TestContext.Current.CancellationToken));
 		}
+
+		[Fact]
+		public void StateHashIsStableAndChangesWithTheWorld()
+		{
+			using var core = new GameCore();
+			var world = core.CreateWorld(WorldKey.Primary, GameMap.Build(new Map(2, 2)));
+			world.World.Create(new TransformComponent { Position = Vector2d.Zero });
+			var before = GameSnapshot.ComputeStateHash(core);
+			Assert.Equal(32, before.Length);
+			Assert.Equal(before, GameSnapshot.ComputeStateHash(core));
+
+			world.World.Create(new TransformComponent { Position = Vector2d.One });
+			var after = GameSnapshot.ComputeStateHash(core);
+			Assert.NotEqual(before, after);
+		}
 	}
 }

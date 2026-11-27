@@ -9,6 +9,7 @@ using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Net;
+using EdgeOfPlain.Core.Net.Ai;
 using EdgeOfPlain.Core.Net.Client;
 using EdgeOfPlain.Core.Net.Server;
 using LiteNetLib.Utils;
@@ -25,6 +26,7 @@ namespace EdgeOfPlain.Tests
 		{
 			CommandRegistry.Reset();
 			CommandRegistry.RegisterApplier(new BytesApplier());
+			CommandRegistry.RegisterApplier(new TeamProbeApplier());
 			CommandRegistry.Seal();
 		}
 
@@ -50,7 +52,7 @@ namespace EdgeOfPlain.Tests
 		}
 
 		[Fact]
-		public void ServerWaitsForEveryPlayerAndBroadcastsIdenticalOrderedFrames()
+		public void ServerBroadcastsTimerDrivenFramesAndFillsMissingSubmissions()
 		{
 			using var server = new ServerNetNode(0, checksum: _checksum);
 			var port = server.LocalPort;
@@ -63,7 +65,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Contains(server.Room.Players, player => player.Name == "Alice");
 			Assert.Contains(server.Room.Players, player => player.Name == "Bob");
 			PumpUntil(() => first.Room.Players.Count == 2 && second.Room.Players.Count == 2, server, first, second);
-			Assert.Equal("Alice", first.Room.Players[first.PlayerId!.Value].Name);
+			Assert.Equal("Alice", first.Room.Players.Single(player => player.Id == first.PlayerId).Name);
 
 			server.StartMatch(new Map(1, 1));
 			PumpUntil(() => first.PendingMap is not null && second.PendingMap is not null, server, first, second);
@@ -78,10 +80,6 @@ namespace EdgeOfPlain.Tests
 
 			first.Submit(1, Encode(1, 2));
 			Assert.Throws<InvalidOperationException>(() => first.Submit(2, [9]));
-			PumpFor(TimeSpan.FromMilliseconds(60), server, first, second);
-			Assert.False(first.TryDequeueFrame(out _));
-
-			second.Submit(1, Encode(3));
 			PumpUntil(() => first.AvailableFrames == 1 && second.AvailableFrames == 1, server, first, second);
 			Assert.True(first.TryDequeueFrame(out var a));
 			Assert.True(second.TryDequeueFrame(out var b));
@@ -91,7 +89,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Equal(0, a.Players[0].PlayerId);
 			Assert.Equal(1, a.Players[1].PlayerId);
 			Assert.Equal(Encode(1, 2), a.Players[first.PlayerId!.Value].Payload);
-			Assert.Equal(Encode(3), a.Players[second.PlayerId!.Value].Payload);
+			Assert.Equal(new byte[] { 0, 0 }, a.Players[second.PlayerId!.Value].Payload);
 			Assert.Equal(a.Players[0].Payload, b.Players[0].Payload);
 			Assert.Equal(a.Players[1].Payload, b.Players[1].Payload);
 			Assert.Throws<ArgumentOutOfRangeException>(() => first.Submit(1, [9]));
@@ -125,7 +123,7 @@ namespace EdgeOfPlain.Tests
 		}
 
 		[Fact]
-		public void DisconnectStopsTheRoomInsteadOfChangingPlayerIds()
+		public void DisconnectKeepsOtherPlayersInTheRoom()
 		{
 			using var server = new ServerNetNode(0, checksum: _checksum);
 			var port = server.LocalPort;
@@ -143,9 +141,14 @@ namespace EdgeOfPlain.Tests
 			PumpUntil(() => first.IsStarted && second.IsStarted, server, first, second);
 
 			second.Dispose();
-			PumpUntil(() => server.PlayerCount == 0 && !first.IsStarted, server, first);
-			Assert.Null(first.PlayerId);
-			Assert.False(server.IsStarted);
+			PumpUntil(() => server.PlayerCount == 1, server, first);
+			PumpUntil(() => first.Room.Players.Count == 1, server, first);
+			Assert.True(first.IsStarted);
+			Assert.True(first.PlayerId is not null);
+			PumpUntil(() => first.AvailableFrames > 0, server, first);
+			Assert.True(first.TryDequeueFrame(out var frame));
+			Assert.Single(frame.Players);
+			Assert.Equal(first.PlayerId, frame.Players[0].PlayerId);
 		}
 
 		[Fact]
@@ -274,6 +277,119 @@ namespace EdgeOfPlain.Tests
 				PumpUntil(() => server.PlayerCount == 0, server);
 				Assert.Equal(1, server.NextTick);
 				Assert.Equal(BattleRoomState.Lobby, server.Room.State);
+			}
+		}
+
+		[Fact]
+		public void AdministratorDrivesAiSlotsThroughTheirOwnSubmissions()
+		{
+			using var server = new ServerNetNode(0, checksum: _checksum);
+			using var admin = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice");
+			PumpUntil(() => admin.Room.Players.Count == 1, server, admin);
+			Assert.Equal(admin.PlayerId, admin.Room.AdministratorId);
+			Assert.Equal(new byte[] { 0, 0 }, EmptyAiClient.Instance.BuildCommands(1));
+
+			admin.RequestAddAi("Bot");
+			PumpUntil(() => admin.Room.Players.Count == 2, server, admin);
+			var bot = admin.Room.Players.Single(player => player.Kind == RoomPlayerKind.Ai);
+			Assert.Equal("Bot", bot.Name);
+
+			server.StartMatch(new Map(1, 1));
+			PumpUntil(() => admin.PendingMap is not null, server, admin);
+			using var world = new GameWorld(GameMap.Build(admin.PendingMap!.Value));
+			admin.MarkWorldReady(world);
+			PumpUntil(() => admin.IsStarted, server, admin);
+
+			admin.Submit(1, Encode(1));
+			admin.SubmitAi(bot.Id, 1, Encode(2));
+			PumpUntil(() => admin.AvailableFrames == 1, server, admin);
+
+			Assert.True(admin.TryDequeueFrame(out var frame));
+			Assert.Equal(2, frame.Players.Count);
+			Assert.Equal(admin.PlayerId, frame.Players[0].PlayerId);
+			Assert.Equal(Encode(1), frame.Players[0].Payload);
+			Assert.Equal(bot.Id, frame.Players[1].PlayerId);
+			Assert.Equal(Encode(2), frame.Players[1].Payload);
+		}
+
+		[Fact]
+		public void FrameTeamsAreAssignedToTeamCommands()
+		{
+			var time = new ManualNetworkTime();
+			var options = new NetworkOptions { TimeProvider = time };
+			using var server = new ServerNetNode(0, checksum: _checksum, networkOptions: options);
+			using var first = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice", options);
+			using var second = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Bob", options);
+			PumpUntil(() => first.Room.Players.Count == 2 && second.Room.Players.Count == 2, server, first, second);
+			Assert.True((first.Team, second.Team) is (0, 1) or (1, 0));
+
+			server.StartMatch(new Map(1, 1));
+			PumpUntil(() => first.PendingMap is not null && second.PendingMap is not null, server, first, second);
+			using var firstWorld = new GameWorld(GameMap.Build(first.PendingMap!.Value));
+			using var secondWorld = new GameWorld(GameMap.Build(second.PendingMap!.Value));
+			first.MarkWorldReady(firstWorld);
+			second.MarkWorldReady(secondWorld);
+			PumpUntil(() => first.IsStarted && second.IsStarted, server, first, second);
+
+			var input = new NetworkCommandInput();
+			input.Add(new TeamProbeCommand());
+			var payload = input.Flush(ushort.MaxValue);
+			first.Submit(1, payload);
+			second.Submit(1, payload);
+			NetworkTestSession.PumpFor(TimeSpan.FromMilliseconds(40), server, first, second);
+			time.Advance(TimeSpan.FromMilliseconds(150));
+			PumpUntil(() => first.AvailableFrames > 0 && second.AvailableFrames > 0, server, first, second);
+
+			Assert.True(first.TryDequeueFrame(out var frame));
+			var sink = new CapturingSink();
+			NetworkCommands.Enqueue(frame, sink);
+			Assert.Equal(2, sink.Commands.Count);
+			Assert.Equal(frame.Players[0].Team, ((TeamProbeCommand)sink.Commands[0]).Team);
+			Assert.Equal(frame.Players[1].Team, ((TeamProbeCommand)sink.Commands[1]).Team);
+		}
+
+		[Fact]
+		public void MapCacheSuppliesMapsWithoutTransfer()
+		{
+			using var server = new ServerNetNode(0, checksum: _checksum);
+			using var client = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice")
+			{
+				MapCache = new StubMapCache(new Map(3, 2)),
+			};
+			PumpUntil(() => client.PlayerId is not null, server, client);
+			server.StartMatch(new Map(1, 1));
+			PumpUntil(() => client.PendingMap is not null, server, client);
+			Assert.NotNull(client.PendingMap);
+			Assert.Equal(3, client.PendingMap!.Value.Width);
+			Assert.Equal(2, client.PendingMap.Value.Height);
+		}
+
+		private struct TeamProbeCommand : ICommand, INetSerializable, ITeamCommand
+		{
+			public int Team { get; set; }
+			public void Serialize(NetDataWriter writer) { }
+			public void Deserialize(NetDataReader reader) { }
+		}
+
+		private sealed class TeamProbeApplier : ICommandApplier<TeamProbeCommand>
+		{
+			public void Apply(World world, in TeamProbeCommand command) { }
+		}
+
+		private sealed class CapturingSink : ICommandSink
+		{
+			public List<ICommand> Commands { get; } = [];
+
+			public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand
+				=> Commands.Add(command);
+		}
+
+		private sealed class StubMapCache(Map source) : IMapCache
+		{
+			public bool TryGet(WorldKey key, string mapId, string checksum, out Map map)
+			{
+				map = source;
+				return true;
 			}
 		}
 

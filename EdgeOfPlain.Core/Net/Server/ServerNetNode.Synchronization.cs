@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using EdgeOfPlain.Core.Net.Synchronization;
@@ -13,14 +14,19 @@ namespace EdgeOfPlain.Core.Net.Server
 		private long _synchronizationSequence;
 		private SynchronizationSession? _synchronization;
 
+		private int SynchronizingPlayerCount
+			=> _slots.Count(slot => slot.Active && slot.IsHuman && slot.Peer is not null);
+
 		public Task SynchronizeAsync(CancellationToken cancellationToken = default)
 		{
 			ThrowIfDisposed();
 			cancellationToken.ThrowIfCancellationRequested();
 			if (!IsStarted || _synchronization is not null || Room.AdministratorId is not { } administrator)
 				throw new InvalidOperationException("A running room with an administrator is required.");
+			var slot = _slots.Find(candidate => candidate.Active && candidate.Id == administrator && candidate.Peer is not null)
+				?? throw new InvalidOperationException("The administrator is not connected.");
 			var session = new SynchronizationSession(++_synchronizationSequence, NextTick - 1,
-				_players[administrator], _options.TimeProvider.GetTimestamp(), cancellationToken);
+				slot.Peer!, _options.TimeProvider.GetTimestamp(), cancellationToken);
 			_synchronization = session;
 			Room.State = BattleRoomState.Synchronizing;
 			var writer = SynchronizationProtocol.Control(TurnMessage.Pause, session.Id);
@@ -38,14 +44,14 @@ namespace EdgeOfPlain.Core.Net.Server
 			if (message is not (TurnMessage.Paused or TurnMessage.SnapshotBegin or TurnMessage.SnapshotChunk
 			    or TurnMessage.SnapshotApplied or TurnMessage.SynchronizationFailed)) return false;
 			var id = SynchronizationProtocol.ReadId(reader);
-			TurnProtocol.Require(_synchronization is not null && _players.Contains(peer) && id == _synchronization.Id);
+			TurnProtocol.Require(_synchronization is not null && _byPeer.ContainsKey(peer) && id == _synchronization.Id);
 			var session = _synchronization!;
 			switch (message)
 			{
 				case TurnMessage.Paused:
 					TurnProtocol.RequireEnd(reader);
 					TurnProtocol.Require(session.Phase == SynchronizationPhase.Pausing && session.Paused.Add(peer));
-					if (session.Paused.Count == _players.Count)
+					if (session.Paused.Count == SynchronizingPlayerCount)
 					{
 						session.Phase = SynchronizationPhase.Receiving;
 						session.Administrator.Send(SynchronizationProtocol.Control(TurnMessage.RequestSnapshot, id),
@@ -67,7 +73,7 @@ namespace EdgeOfPlain.Core.Net.Server
 					TurnProtocol.RequireEnd(reader);
 					TurnProtocol.Require(session is { Phase: SynchronizationPhase.Applying, Outgoing: null } &&
 					                     session.Applied.Add(peer));
-					if (session.Applied.Count == _players.Count) ResumeSynchronizedRoom(session);
+					if (session.Applied.Count == SynchronizingPlayerCount) ResumeSynchronizedRoom(session);
 					break;
 				case TurnMessage.SynchronizationFailed:
 					TurnProtocol.RequireEnd(reader);
@@ -116,10 +122,10 @@ namespace EdgeOfPlain.Core.Net.Server
 			Broadcast(writer);
 			Room.State = BattleRoomState.Running;
 			_phaseStarted = _options.TimeProvider.GetTimestamp();
+			_nextTurnAt = _phaseStarted;
 			_synchronization = null;
 			session.Completion.TrySetResult();
 			session.Cancellation.Dispose();
-			if (_submissions.Count == _players.Count) BroadcastFrame();
 		}
 
 		private void EndSynchronization(Exception failure)

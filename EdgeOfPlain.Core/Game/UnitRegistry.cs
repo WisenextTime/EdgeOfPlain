@@ -10,14 +10,13 @@ namespace EdgeOfPlain.Core.Game
 
 		private readonly Dictionary<UnitId, Entity> _entityById = [];
 		private readonly Dictionary<Entity, UnitId> _idByEntity = [];
-		private int _nextId = UnitId.None;
 
 		private UnitRegistry()
 		{
 		}
 
 		public int Count => _entityById.Count;
-		internal int LastIssuedId => _nextId;
+		internal int LastIssuedId { get; private set; } = UnitId.None;
 
 		internal void Restore(IReadOnlyDictionary<UnitId, Entity> units, int lastIssuedId)
 		{
@@ -28,7 +27,7 @@ namespace EdgeOfPlain.Core.Game
 				_entityById.Add(id, entity);
 				_idByEntity.Add(entity, id);
 			}
-			_nextId = lastIssuedId;
+			LastIssuedId = lastIssuedId;
 		}
 
 		public static UnitRegistry Create(World world)
@@ -49,7 +48,7 @@ namespace EdgeOfPlain.Core.Game
 		{
 			if (_idByEntity.TryGetValue(entity, out var existing)) return existing;
 
-			var id = new UnitId(++_nextId);
+			var id = new UnitId(++LastIssuedId);
 			_entityById.Add(id, entity);
 			_idByEntity.Add(entity, id);
 			return id;
@@ -79,7 +78,7 @@ namespace EdgeOfPlain.Core.Game
 		{
 			_entityById.Clear();
 			_idByEntity.Clear();
-			_nextId = UnitId.None;
+			LastIssuedId = UnitId.None;
 		}
 	}
 }

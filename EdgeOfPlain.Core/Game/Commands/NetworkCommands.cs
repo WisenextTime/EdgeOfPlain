@@ -51,14 +51,15 @@ namespace EdgeOfPlain.Core.Game.Commands
 			ArgumentNullException.ThrowIfNull(sink);
 			var batch = new CommandBatch();
 			foreach (var player in frame.Players)
-				Decode(player.Payload, batch);
+				Decode(player.Payload, batch, player.Team);
 			batch.Apply(sink);
 		}
 
 		public static void Validate(byte[] payload) => Decode(payload, new CommandBatch());
 
-		private static void Decode(byte[] payload, CommandBatch batch)
+		private static void Decode(byte[] payload, CommandBatch batch, int team = 0)
 		{
+			batch.Team = team;
 			try
 			{
 				var reader = new NetDataReader(payload);
@@ -88,8 +89,18 @@ namespace EdgeOfPlain.Core.Game.Commands
 		{
 			private readonly List<IPendingCommand> _pending = [];
 
+			public int Team { get; set; }
+
 			public void Enqueue<TCommand>(in TCommand command) where TCommand : struct, ICommand
-				=> _pending.Add(new PendingCommand<TCommand>(command));
+			{
+				var value = command;
+				if (value is ITeamCommand team)
+				{
+					team.Team = Team;
+					value = (TCommand)team;
+				}
+				_pending.Add(new PendingCommand<TCommand>(value));
+			}
 
 			public void Apply(ICommandSink sink)
 			{

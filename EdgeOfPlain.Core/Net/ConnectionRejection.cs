@@ -17,6 +17,7 @@ namespace EdgeOfPlain.Core.Net
 		SynchronizationTimeout = 12,
 		SynchronizationFailed = 13,
 		RoomClosed = 14,
+		TooManyBadPackets = 15,
 	}
 
 	public enum ClientConnectionStatus { Connecting, Joining, Connected, Disconnected, Disposed }

@@ -1,10 +1,10 @@
 using System;
-using System.Net;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Arch.Core;
 using Arch.Core.Extensions;
+using EdgeOfPlain.Client.Net;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
 using EdgeOfPlain.Core;
@@ -25,7 +25,6 @@ using EdgeOfPlain.Core.Game.Waypoint;
 using EdgeOfPlain.Core.MathLib;
 using EdgeOfPlain.Core.Net;
 using EdgeOfPlain.Core.Net.Client;
-using EdgeOfPlain.Core.Net.Server;
 using FixedMathSharp;
 using SFML.Graphics;
 using SFML.System;
@@ -61,8 +60,8 @@ namespace EdgeOfPlain.Client.Scenes
 		private GameCore? _core;
 		private GameWorld? _gameWorld;
 		private WorldKey _currentWorld = WorldKey.Invalid;
-		private ServerNetNode? _server;
-		private ClientNetNode? _client;
+		private readonly MatchSession _session;
+		private SceneContext? _context;
 		private readonly NetworkCommandInput _pendingInput = new();
 		private long _simulationTick;
 		private bool _waitingFrame;
@@ -77,19 +76,35 @@ namespace EdgeOfPlain.Client.Scenes
 
 		public GameMap? GameMap { get; private set; }
 
+		public TestMapScene(MatchSession session)
+		{
+			_session = session ?? throw new ArgumentNullException(nameof(session));
+		}
+
 		public Task SynchronizeAsync(CancellationToken cancellationToken = default)
-			=> (_server ?? throw new InvalidOperationException("The scene has no room.")).SynchronizeAsync(cancellationToken);
+			=> (_session.Server ?? throw new InvalidOperationException("The scene has no room."))
+				.SynchronizeAsync(cancellationToken);
 
 		public override void Enter(SceneContext context)
 		{
-			Map = AssetsManager.LoadResource<Map>(MapPath);
+			_context = context;
+			Map = _session.Map ?? throw new InvalidOperationException("The scene requires a loaded world map.");
 			_unitDef = FindUnitDefinition();
 			_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture);
-			if (Globals.ModChecksum is null || !CommandRegistry.IsSealed)
-				throw new InvalidOperationException("Mods and commands must be loaded before starting the local room.");
-			_server = new ServerNetNode(0, new BattleRoomOptions { MaxPlayers = 1 });
-			_client = new ClientNetNode(IPAddress.Loopback.ToString(), _server.LocalPort);
-			_client.Synchronized += OnSynchronized;
+			_session.Client.Synchronized += OnSynchronized;
+
+			_core = _session.Core;
+			_gameWorld = _session.World;
+			_simulationTick = _session.Client.AppliedTick;
+			_waitingFrame = _session.Client.HasPendingSubmission;
+			if (_gameWorld is not null && _session.GameMap is { } gameMap)
+			{
+				_currentWorld = _gameWorld.Key;
+				GameMap = gameMap;
+				_pipeline = new MapRenderPipeline(gameMap);
+				var center = new Vector2(gameMap.Bounds.Width / 2f, gameMap.Bounds.Height / 2f);
+				GameContext.WorldCamera.Reset(new Camera2D(center));
+			}
 
 			_uiSprites = new SpriteBatch(GameContext.RenderTarget);
 			_unitSprites = new SpriteBatch(GameContext.RenderTarget);
@@ -109,7 +124,7 @@ namespace EdgeOfPlain.Client.Scenes
 		{
 			_ui?.Update(input);
 
-			if (_gameWorld is null || _client is not { IsStarted: true }) return false;
+			if (_gameWorld is null || _core is null) return false;
 
 			var overUi = _ui?.PointerOverUi ?? false;
 
@@ -121,54 +136,62 @@ namespace EdgeOfPlain.Client.Scenes
 
 		public override void Update(LogicTime time, IInputState input)
 		{
-			if (_server is null || _client is null) return;
-			PollNetwork();
+			_session.Poll();
 
-			if (_server.Room.State == BattleRoomState.Lobby &&
-			    _server.PlayerCount == _server.Room.Options.MaxPlayers && _client.PlayerId is not null)
-				_server.StartMatch(Map);
-
-			if (_client.PendingMap is { } receivedMap && _gameWorld is null)
+			if (_session.Client.Status == ClientConnectionStatus.Disconnected)
 			{
-				GameMap = GameMap.Build(receivedMap);
-				_pipeline = new MapRenderPipeline(GameMap);
-				_core = new GameCore();
-				_gameWorld = _core.CreateWorld(WorldKey.Primary, GameMap);
-				_currentWorld = _gameWorld.Key;
-				_client.BindGameCore(_core, time.Delta);
-				var center = new Vector2(GameMap.Bounds.Width / 2f, GameMap.Bounds.Height / 2f);
-				GameContext.WorldCamera.Reset(new Camera2D(center));
-				_client.MarkWorldReady(_gameWorld);
+				var reason = _session.Client.RejectionReason ?? "连接已断开";
+				_context?.Scenes.Replace(new TestMultiplayerScene($"对局连接已断开：{reason}"));
+				return;
 			}
 
-			if (!_client.IsStarted || _gameWorld is null || _core is null) return;
+			if (_gameWorld is null && _session.World is { } world)
+			{
+				_gameWorld = world;
+				_core = _session.Core;
+				_currentWorld = world.Key;
+				if (_session.GameMap is { } gameMap)
+				{
+					GameMap = gameMap;
+					_pipeline ??= new MapRenderPipeline(gameMap);
+				}
+			}
 
-			if (_waitingFrame && _client.TryStepWorld(_simulationTick + 1, _core, time.Delta))
+			if (!_session.IsStarted || _gameWorld is null || _core is null) return;
+
+			var advanced = false;
+			for (var steps = 0; steps < 4 && _session.TryStep(_simulationTick + 1, time.Delta); steps++)
 			{
 				_simulationTick++;
+				advanced = true;
+			}
+
+			if (advanced)
+			{
 				_waitingFrame = false;
 				_stepTimer = Fixed64.Zero;
 			}
 
-			if (!_waitingFrame)
+			if (_waitingFrame) return;
+
+			var tick = _simulationTick + 1;
+			_session.Client.Submit(tick, _pendingInput);
+			_session.SubmitAi(tick);
+			_waitingFrame = true;
+
+			_session.Poll();
+
+			if (_session.TryStep(tick, time.Delta))
 			{
-				_client.Submit(_simulationTick + 1, _pendingInput);
-				_waitingFrame = true;
-
-				PollNetwork();
-
-				if (_client.TryStepWorld(_simulationTick + 1, _core, time.Delta))
-				{
-					_simulationTick++;
-					_waitingFrame = false;
-					_stepTimer = Fixed64.Zero;
-				}
+				_simulationTick = tick;
+				_waitingFrame = false;
+				_stepTimer = Fixed64.Zero;
 			}
 		}
 
 		public override void Draw(RenderTime time)
 		{
-			PollNetwork();
+			_session.Poll();
 
 			_stepTimer += time.FrameDelta;
 			var alpha = FixedMath.Clamp(_stepTimer / _stepDuration, Fixed64.Zero, Fixed64.One);
@@ -211,12 +234,10 @@ namespace EdgeOfPlain.Client.Scenes
 
 			_gameWorld = null;
 			_currentWorld = WorldKey.Invalid;
-			_core?.Dispose();
 			_core = null;
-			_client?.Dispose();
-			_client = null;
-			_server?.Dispose();
-			_server = null;
+			_context = null;
+			_session.Client.Synchronized -= OnSynchronized;
+			_session.Dispose();
 
 			_pipeline?.Dispose();
 			_pipeline = null;
@@ -277,14 +298,8 @@ namespace EdgeOfPlain.Client.Scenes
 
 			var selected = Math.Min(count, handles.Length);
 			if (selected == 0) return;
-			_pendingInput.Add(new WaypointCommand(_gameWorld.Select(handles.AsSpan(0, selected).ToArray()),
+			_pendingInput.Add(new WaypointCommand(_gameWorld.Select([.. handles.AsSpan(0, selected)]),
 				WaypointType.Move, WaypointAddType.Replace, new GroundTarget(point)) { WorldKey = _gameWorld.Key, });
-		}
-
-		private void PollNetwork()
-		{
-			_server?.PollEvents();
-			_client?.PollEvents();
 		}
 
 		private void OnSynchronized()
@@ -300,8 +315,8 @@ namespace EdgeOfPlain.Client.Scenes
 			Map = GameMap.Export();
 			_pipeline?.Dispose();
 			_pipeline = new MapRenderPipeline(GameMap);
-			_simulationTick = _client!.AppliedTick;
-			_waitingFrame = _client.HasPendingSubmission;
+			_simulationTick = _session.Client.AppliedTick;
+			_waitingFrame = _session.Client.HasPendingSubmission;
 			_stepTimer = Fixed64.Zero;
 		}
 

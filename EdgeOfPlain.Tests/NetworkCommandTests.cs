@@ -48,7 +48,7 @@ namespace EdgeOfPlain.Tests
 			var input = new NetworkCommandInput();
 			input.Add(new NumberCommand { Value = 42 });
 			var malformed = input.Flush().Concat(new byte[] { 255 }).ToArray();
-			var frame = new TurnFrame(1, [new PlayerCommands(0, malformed)]);
+			var frame = new TurnFrame(1, [new PlayerCommands(0, 0, malformed)]);
 			var bus = new CommandBus();
 			for (var attempt = 0; attempt < 2; attempt++)
 			{
@@ -64,7 +64,7 @@ namespace EdgeOfPlain.Tests
 			CommandRegistry.Seal();
 			var input = new NetworkCommandInput();
 			input.Add(new NumberCommand { Value = 42 });
-			var frame = new TurnFrame(1, [new PlayerCommands(0, input.Flush()), new PlayerCommands(1, [])]);
+			var frame = new TurnFrame(1, [new PlayerCommands(0, 0, input.Flush()), new PlayerCommands(1, 0, [])]);
 			var bus = new CommandBus();
 			Assert.Throws<InvalidDataException>(() => NetworkCommands.Enqueue(frame, bus));
 			Assert.Equal(0, bus.PendingCount);
@@ -81,7 +81,7 @@ namespace EdgeOfPlain.Tests
 			var payload = input.Flush();
 			Assert.True(payload.Length < BattleRoomOptions.DefaultMaxPayloadBytes);
 			var bus = new CommandBus();
-			NetworkCommands.Enqueue(new TurnFrame(1, [new PlayerCommands(0, payload)]), bus);
+			NetworkCommands.Enqueue(new TurnFrame(1, [new PlayerCommands(0, 0, payload)]), bus);
 			Assert.Equal(512, Assert.Single(bus.Pending<WaypointCommand>()).Units.Count);
 		}
 
@@ -99,7 +99,7 @@ namespace EdgeOfPlain.Tests
 			Assert.True(payload.Length > BattleRoomOptions.DefaultMaxPayloadBytes);
 			Assert.Equal(0, input.Count);
 			var bus = new CommandBus();
-			NetworkCommands.Enqueue(new TurnFrame(1, [new PlayerCommands(0, payload)]), bus);
+			NetworkCommands.Enqueue(new TurnFrame(1, [new PlayerCommands(0, 0, payload)]), bus);
 			Assert.Equal(600, bus.Count<NumberCommand>());
 			Assert.Equal(599, bus.Pending<NumberCommand>()[599].Value);
 		}
@@ -129,7 +129,7 @@ namespace EdgeOfPlain.Tests
 			first.Add(new NumberCommand { Value = 9 });
 			var second = new NetworkCommandInput();
 			second.Add(new NumberCommand { Value = 11 });
-			var frame = new TurnFrame(1, [new PlayerCommands(0, first.Flush()), new PlayerCommands(1, second.Flush())]);
+			var frame = new TurnFrame(1, [new PlayerCommands(0, 0, first.Flush()), new PlayerCommands(1, 0, second.Flush())]);
 			var bus = new CommandBus();
 			NetworkCommands.Enqueue(frame, bus);
 			Assert.Equal([7, 9, 11], new[]

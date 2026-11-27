@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -138,58 +139,71 @@ namespace EdgeOfPlain.Core.Game.Snapshots
 				world.Pathfinding.Occupancy.Version, saved, paths, occupancy);
 		}
 
+		public static byte[] ComputeStateHash(GameCore core)
+		{
+			ArgumentNullException.ThrowIfNull(core);
+			var worlds = core.Worlds.Select(CaptureWorld).ToArray();
+			using var output = new MemoryStream();
+			using (var writer = new BinaryWriter(output, Encoding.UTF8, true))
+				WriteCanonical(writer, worlds, CancellationToken.None);
+			return SHA256.HashData(output.ToArray());
+		}
+
+		private static void WriteCanonical(BinaryWriter writer, WorldState[] worlds, CancellationToken cancellationToken)
+		{
+			writer.Write(FormatVersion);
+			writer.Write(worlds.Length);
+			foreach (var world in worlds)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				writer.Write(world.Key);
+				writer.Write(TomlSerializer.Serialize(world.Map));
+				writer.Write(world.ChunkSize);
+				writer.Write(world.LastUnitId);
+				writer.Write(world.OccupancyVersion);
+				writer.Write(world.Entities.Length);
+				foreach (var entity in world.Entities)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					writer.Write(entity.UnitId);
+					writer.Write(entity.Components.Length);
+					foreach (var component in entity.Components)
+					{
+						writer.Write(component.Type);
+						writer.Write(component.Bytes.Length);
+						writer.Write(component.Bytes);
+					}
+				}
+				writer.Write(world.Paths.Length);
+				foreach (var path in world.Paths)
+				{
+					writer.Write(path.Entity);
+					writer.Write(path.Target);
+					writer.Write(path.Index);
+					writer.Write(path.Attempts);
+					writer.Write(path.Points.Length);
+					foreach (var point in path.Points)
+					{
+						writer.Write(long.Parse(point.X.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
+						writer.Write(long.Parse(point.Y.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
+					}
+				}
+				writer.Write(world.Occupancy.Length);
+				foreach (var building in world.Occupancy)
+				{
+					writer.Write(building.Entity);
+					writer.Write(building.Tiles.Length);
+					foreach (var tile in building.Tiles) writer.Write(tile);
+				}
+			}
+		}
+
 		private byte[] Encode(CancellationToken cancellationToken)
 		{
 			using var output = new MemoryStream();
 			using (var compressed = new DeflateStream(output, CompressionLevel.Fastest, true))
 			using (var writer = new BinaryWriter(compressed, Encoding.UTF8, true))
-			{
-				writer.Write(FormatVersion);
-				writer.Write(_worlds.Length);
-				foreach (var world in _worlds)
-				{
-					cancellationToken.ThrowIfCancellationRequested();
-					writer.Write(world.Key);
-					writer.Write(TomlSerializer.Serialize(world.Map));
-					writer.Write(world.ChunkSize);
-					writer.Write(world.LastUnitId);
-					writer.Write(world.OccupancyVersion);
-					writer.Write(world.Entities.Length);
-					foreach (var entity in world.Entities)
-					{
-						cancellationToken.ThrowIfCancellationRequested();
-						writer.Write(entity.UnitId);
-						writer.Write(entity.Components.Length);
-						foreach (var component in entity.Components)
-						{
-							writer.Write(component.Type);
-							writer.Write(component.Bytes.Length);
-							writer.Write(component.Bytes);
-						}
-					}
-					writer.Write(world.Paths.Length);
-					foreach (var path in world.Paths)
-					{
-						writer.Write(path.Entity);
-						writer.Write(path.Target);
-						writer.Write(path.Index);
-						writer.Write(path.Attempts);
-						writer.Write(path.Points.Length);
-						foreach (var point in path.Points)
-						{
-							writer.Write(long.Parse(point.X.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
-							writer.Write(long.Parse(point.Y.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
-						}
-					}
-					writer.Write(world.Occupancy.Length);
-					foreach (var building in world.Occupancy)
-					{
-						writer.Write(building.Entity);
-						writer.Write(building.Tiles.Length);
-						foreach (var tile in building.Tiles) writer.Write(tile);
-					}
-				}
-			}
+				WriteCanonical(writer, _worlds, cancellationToken);
 			return output.ToArray();
 		}
 

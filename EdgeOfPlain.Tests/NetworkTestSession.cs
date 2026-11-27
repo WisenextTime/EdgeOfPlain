@@ -115,6 +115,16 @@ namespace EdgeOfPlain.Tests
 			Assert.Fail("Timed out waiting for the network state.");
 		}
 
+		public static void PumpFor(TimeSpan duration, params INetNode[] nodes)
+		{
+			var watch = Stopwatch.StartNew();
+			while (watch.Elapsed < duration)
+			{
+				foreach (var node in nodes) node.PollEvents();
+				Thread.Sleep(1);
+			}
+		}
+
 		public void Dispose()
 		{
 			First.Dispose();

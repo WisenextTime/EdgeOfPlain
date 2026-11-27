@@ -132,7 +132,7 @@ namespace EdgeOfPlain.Tests
 				var position = new Vector2d((Fixed64)3, (Fixed64)4);
 				input.Add(new SpawnEntityCommand(def,
 					new TransformComponent { Position = position, Rotation = (Fixed64)1.25 }, 0));
-				var spawn = new TurnFrame(1, [new PlayerCommands(0, input.Flush())]);
+				var spawn = new TurnFrame(1, [new PlayerCommands(0, 0, input.Flush())]);
 				NetworkCommands.Enqueue(spawn, first.Commands);
 				NetworkCommands.Enqueue(spawn, second.Commands);
 				first.Step((Fixed64)0.1);
@@ -141,7 +141,7 @@ namespace EdgeOfPlain.Tests
 				Assert.Equal((Fixed64)1.25, SingleEntity(second.World).Get<TransformComponent>().Rotation);
 
 				input.Add(new DeleteEntityCommand(UnitIdFor(first, SingleEntity(first.World))));
-				var delete = new TurnFrame(2, [new PlayerCommands(0, input.Flush())]);
+				var delete = new TurnFrame(2, [new PlayerCommands(0, 0, input.Flush())]);
 				NetworkCommands.Enqueue(delete, first.Commands);
 				NetworkCommands.Enqueue(delete, second.Commands);
 				first.Step((Fixed64)0.1);

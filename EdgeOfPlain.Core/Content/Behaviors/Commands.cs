@@ -13,7 +13,7 @@ using LiteNetLib.Utils;
 namespace EdgeOfPlain.Core.Content.Behaviors
 {
 	public record struct SpawnEntityCommand(EntityDef Definition, TransformComponent Transform, int Team)
-		: ICommand, INetSerializable, IWorldScopedCommand
+		: ICommand, INetSerializable, IWorldScopedCommand, ITeamCommand
 	{
 		public WorldKey WorldKey { get; set; }
 
@@ -24,7 +24,6 @@ namespace EdgeOfPlain.Core.Content.Behaviors
 			NetSerilizeUtils.PutFixed(writer, Transform.Position.X);
 			NetSerilizeUtils.PutFixed(writer, Transform.Position.Y);
 			NetSerilizeUtils.PutFixed(writer, Transform.Rotation);
-			writer.Put(Team);
 		}
 
 		public void Deserialize(NetDataReader reader)
@@ -41,7 +40,7 @@ namespace EdgeOfPlain.Core.Content.Behaviors
 				PreviousPosition = position,
 				Rotation = rotation,
 				PreviousRotation = rotation,
-			}, reader.GetInt())
+			}, 0)
 			{
 				WorldKey = world,
 			};

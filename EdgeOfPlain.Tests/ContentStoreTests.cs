@@ -14,7 +14,7 @@ namespace EdgeOfPlain.Tests
 
 	internal abstract class AbstractProbeDef(string id) : ContentDef(id);
 
-	internal sealed class GenericProbeDef(string id) : ContentDef(id);
+	internal sealed class GenericProbeDef<T>(string id) : ContentDef(id);
 
 	public sealed class ContentStoreTests : IDisposable
 	{
@@ -151,7 +151,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(ContentDef)));
 			Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(string)));
 			Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(AbstractProbeDef)));
-			Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(GenericProbeDef)));
+			Assert.Throws<ArgumentException>(() => ContentTypeRegistry.RegisterType(typeof(GenericProbeDef<>)));
 		}
 
 		[Fact]

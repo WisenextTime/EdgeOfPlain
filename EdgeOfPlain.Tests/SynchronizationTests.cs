@@ -103,7 +103,8 @@ namespace EdgeOfPlain.Tests
 		[Fact]
 		public async Task InFlightSubmissionSurvivesPauseAndIsAppliedExactlyOnce()
 		{
-			using var room = new NetworkTestSession();
+			var time = new ManualNetworkTime();
+			using var room = new NetworkTestSession(new NetworkOptions { TimeProvider = time });
 			var id = AddValue(room.FirstCore, 0);
 			AddValue(room.SecondCore, 90);
 			room.First.Submit(1, Input(5));
@@ -113,6 +114,8 @@ namespace EdgeOfPlain.Tests
 			Assert.True(room.First.HasPendingSubmission);
 			Assert.False(room.Second.HasPendingSubmission);
 			room.Second.Submit(1, Input(2));
+			PumpFor(TimeSpan.FromMilliseconds(50), room.Nodes);
+			time.Advance(TimeSpan.FromMilliseconds(250));
 			room.Step(1);
 			Assert.Equal(7, ReadValue(room.FirstCore, id));
 			Assert.Equal(7, ReadValue(room.SecondCore, id));

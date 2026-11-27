@@ -101,19 +101,18 @@ namespace EdgeOfPlain.Tests
 		}
 
 		[Fact]
-		public void TurnTimeoutClosesTheRoomInsteadOfWaitingForever()
+		public void TimerKeepsBroadcastingFramesWhilePlayersAreSilent()
 		{
 			var time = new ManualNetworkTime();
 			using var room = new NetworkTestSession(new NetworkOptions
 			{
 				TimeProvider = time, TurnTimeout = TimeSpan.FromSeconds(2),
 			});
-			room.First.Submit(1, new NetworkCommandInput());
-			time.Advance(TimeSpan.FromSeconds(3));
-			PumpUntil(() => room.First.Status == ClientConnectionStatus.Disconnected &&
-			                room.Second.Status == ClientConnectionStatus.Disconnected, room.Nodes);
-			Assert.Equal(ConnectionRejection.TurnTimeout, room.First.Rejection);
-			Assert.Equal(0, room.First.AvailableFrames);
+			time.Advance(TimeSpan.FromMilliseconds(250));
+			PumpUntil(() => room.First.AvailableFrames == 1 && room.Second.AvailableFrames == 1, room.Nodes);
+			Assert.Equal(ClientConnectionStatus.Connected, room.First.Status);
+			Assert.Equal(ClientConnectionStatus.Connected, room.Second.Status);
+			Assert.Equal(2, room.Server.NextTick);
 		}
 
 		[Fact]
@@ -130,7 +129,38 @@ namespace EdgeOfPlain.Tests
 		}
 
 		[Fact]
-		public void MalformedSubmissionIsRejectedBeforeBroadcast()
+		public void LateSubmissionsAreDroppedInsteadOfKickingTheSender()
+		{
+			var time = new ManualNetworkTime();
+			var options = new NetworkOptions { TimeProvider = time };
+			using var server = new ServerNetNode(0, 2, Checksum, options);
+			using var client = new ClientNetNode("127.0.0.1", server.LocalPort, Checksum, "Alice", options);
+			using var attacker = new RawClient(server.LocalPort, true);
+			PumpUntil(() => client.PlayerId is not null && attacker.Joined, server, client, attacker);
+			server.StartMatch(new Map(1, 1));
+			PumpUntil(() => client.PendingMap is not null, server, client, attacker);
+			using var world = new GameWorld(GameMap.Build(client.PendingMap!.Value));
+			client.MarkWorldReady(world);
+			PumpUntil(() => client.IsStarted && attacker.Started, server, client, attacker);
+
+			var target = server.NextTick + 3;
+			while (server.NextTick < target)
+			{
+				var before = server.NextTick;
+				time.Advance(TimeSpan.FromMilliseconds(150));
+				PumpUntil(() => server.NextTick > before, server, client, attacker);
+			}
+
+			for (var i = 0; i < 6; i++) attacker.Send(TurnProtocol.Submit(1, new byte[] { 0, 0 }));
+			NetworkTestSession.PumpFor(TimeSpan.FromMilliseconds(50), server, client, attacker);
+
+			Assert.Equal(ConnectionRejection.None, attacker.Rejection);
+			Assert.Equal(2, server.PlayerCount);
+			Assert.Equal(ClientConnectionStatus.Connected, client.Status);
+		}
+
+		[Fact]
+		public void BadPacketsKickOnlyTheSenderAfterTheThreshold()
 		{
 			using var server = new ServerNetNode(0, 2, Checksum);
 			using var client = new ClientNetNode("127.0.0.1", server.LocalPort, Checksum, "Alice");
@@ -141,12 +171,12 @@ namespace EdgeOfPlain.Tests
 			using var world = new GameWorld(GameMap.Build(client.PendingMap!.Value));
 			client.MarkWorldReady(world);
 			PumpUntil(() => client.IsStarted && attacker.Started, server, client, attacker);
-			client.Submit(1, new NetworkCommandInput());
-			attacker.Send(TurnProtocol.Submit(1, new byte[] { 255 }));
-			PumpUntil(() => client.Status == ClientConnectionStatus.Disconnected, server, client, attacker);
-			Assert.Equal(ConnectionRejection.InvalidPacket, client.Rejection);
-			Assert.Equal(0, attacker.Frames);
-			Assert.Equal(0, client.AvailableFrames);
+
+			for (var i = 0; i < 5; i++) attacker.Send(TurnProtocol.Submit(1, new byte[] { 255 }));
+			PumpUntil(() => attacker.Rejection == ConnectionRejection.TooManyBadPackets, server, client, attacker);
+			Assert.Equal(1, server.PlayerCount);
+			Assert.Equal(ClientConnectionStatus.Connected, client.Status);
+			PumpUntil(() => client.AvailableFrames > 0, server, client);
 		}
 
 		[Fact]
@@ -203,7 +233,7 @@ namespace EdgeOfPlain.Tests
 						switch ((TurnMessage)reader.GetByte())
 						{
 							case TurnMessage.Welcome: Joined = true; break;
-							case TurnMessage.Map: Send(TurnProtocol.Create(TurnMessage.Ready)); break;
+							case TurnMessage.MapInfo: Send(TurnProtocol.Create(TurnMessage.Ready)); break;
 							case TurnMessage.Start: Started = true; break;
 							case TurnMessage.Frame: Frames++; break;
 						}

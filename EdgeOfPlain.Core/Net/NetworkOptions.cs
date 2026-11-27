@@ -16,6 +16,8 @@ namespace EdgeOfPlain.Core.Net
 		public TimeSpan LoadingTimeout { get; init; } = TimeSpan.FromSeconds(60);
 		public TimeSpan TurnTimeout { get; init; } = TimeSpan.FromSeconds(15);
 		public TimeSpan SynchronizationTimeout { get; init; } = TimeSpan.FromSeconds(60);
+		public TimeSpan TurnInterval { get; init; } = TimeSpan.FromMilliseconds(100);
+		public int StateHashInterval { get; init; } = 10;
 		public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
 		internal NetManager CreateManager(EventBasedNetListener listener)
@@ -30,6 +32,8 @@ namespace EdgeOfPlain.Core.Net
 			ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(LoadingTimeout, TimeSpan.Zero);
 			ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(TurnTimeout, TimeSpan.Zero);
 			ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(SynchronizationTimeout, TimeSpan.Zero);
+			ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(TurnInterval, TimeSpan.Zero);
+			ArgumentOutOfRangeException.ThrowIfLessThan(StateHashInterval, 1);
 
 			var manager = new NetManager(listener);
 			if (DisconnectTimeoutMs is { } timeout) manager.DisconnectTimeout = timeout;

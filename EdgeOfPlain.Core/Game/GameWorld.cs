@@ -8,8 +8,6 @@ namespace EdgeOfPlain.Core.Game
 {
 	public class GameWorld : IDisposable
 	{
-		private World _world = World.Create();
-		private UnitRegistry _units;
 		private bool _ownsWorld = true;
 
 		public GameWorld(GameMap map) : this(map, WorldKey.Primary)
@@ -22,8 +20,8 @@ namespace EdgeOfPlain.Core.Game
 			if (!key.IsValid) throw new ArgumentOutOfRangeException(nameof(key), key, "World key must be positive.");
 
 			Key = key;
-			WorldPathfinding.Create(_world, Map);
-			_units = UnitRegistry.Create(_world);
+			WorldPathfinding.Create(World, Map);
+			Units = UnitRegistry.Create(World);
 			Dispatcher = new CommandDispatcher(Commands);
 		}
 
@@ -32,15 +30,15 @@ namespace EdgeOfPlain.Core.Game
 		public GameMap Map { get; private set; }
 		public bool IsPaused { get; internal set; }
 
-		public World World => _world;
+		public World World { get; private set; } = World.Create();
 
-		public UnitRegistry Units => _units;
+		public UnitRegistry Units { get; private set; }
 
 		public CommandBus Commands { get; } = new();
 
 		public CommandDispatcher Dispatcher { get; }
 
-		public WorldPathfinding Pathfinding => WorldPathfinding.TryGet(_world)
+		public WorldPathfinding Pathfinding => WorldPathfinding.TryGet(World)
 		                                       ?? throw new InvalidOperationException(
 			                                       "World pathfinding is not registered for this world.");
 
@@ -50,20 +48,20 @@ namespace EdgeOfPlain.Core.Game
 			var systems = CommandRegistry.FrameSystems;
 			if (systems.Count == 0) return 0;
 
-			foreach (var system in systems) system.Operation(_world, delta);
+			foreach (var system in systems) system.Operation(World, delta);
 
 			return systems.Count;
 		}
 
-		public int ApplyCommands() => IsPaused ? 0 : Dispatcher.ApplyAll(_world);
+		public int ApplyCommands() => IsPaused ? 0 : Dispatcher.ApplyAll(World);
 
-		public UnitId IdOf(EntityHandle handle) => _units.Register(handle.Value);
+		public UnitId IdOf(EntityHandle handle) => Units.Register(handle.Value);
 
-		public bool TryGetId(EntityHandle handle, out UnitId id) => _units.TryGet(handle.Value, out id);
+		public bool TryGetId(EntityHandle handle, out UnitId id) => Units.TryGet(handle.Value, out id);
 
 		public bool TryResolve(UnitId id, out EntityHandle handle)
 		{
-			if (_units.TryResolve(_world, id, out var entity))
+			if (Units.TryResolve(World, id, out var entity))
 			{
 				handle = new EntityHandle(entity);
 				return true;
@@ -76,17 +74,17 @@ namespace EdgeOfPlain.Core.Game
 		public UnitGroup Select(params EntityHandle[] handles)
 		{
 			var ids = new UnitId[handles.Length];
-			for (var i = 0; i < handles.Length; i++) ids[i] = _units.Register(handles[i].Value);
+			for (var i = 0; i < handles.Length; i++) ids[i] = Units.Register(handles[i].Value);
 			return new UnitGroup(ids);
 		}
 
 		public int CollectEntities(in QueryDescription description, Span<EntityHandle> destination)
 		{
-			var count = _world.CountEntities(in description);
+			var count = World.CountEntities(in description);
 			if (count == 0) return 0;
 
 			var entities = count <= 256 ? stackalloc Entity[count] : new Entity[count];
-			_world.GetEntities(in description, entities);
+			World.GetEntities(in description, entities);
 
 			var copy = Math.Min(count, destination.Length);
 			for (var i = 0; i < copy; i++)
@@ -108,8 +106,8 @@ namespace EdgeOfPlain.Core.Game
 		internal void Adopt(GameWorld state)
 		{
 			Dispose();
-			_world = state._world;
-			_units = state._units;
+			World = state.World;
+			Units = state.Units;
 			Map = state.Map;
 			Commands.Clear();
 			_ownsWorld = true;
@@ -120,9 +118,9 @@ namespace EdgeOfPlain.Core.Game
 		{
 			if (!_ownsWorld) return;
 			_ownsWorld = false;
-			WorldPathfinding.Dispose(_world);
-			UnitRegistry.Dispose(_world);
-			_world.Dispose();
+			WorldPathfinding.Dispose(World);
+			UnitRegistry.Dispose(World);
+			World.Dispose();
 			GC.SuppressFinalize(this);
 		}
 	}

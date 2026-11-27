@@ -4,6 +4,7 @@ using System.Net;
 using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Game;
 using EdgeOfPlain.Core.Game.Commands;
+using EdgeOfPlain.Core.Game.Snapshots;
 using FixedMathSharp;
 using LiteNetLib;
 
@@ -23,6 +24,7 @@ namespace EdgeOfPlain.Core.Net.Client
 		private long _joinStarted;
 		private long _loadingStarted;
 		private long _submissionStarted;
+		private (WorldKey Key, string MapId, string Checksum) _pendingMapInfo;
 
 		public ClientNetNode(string host, int port, string? checksum = null, string? playerName = null,
 			NetworkOptions? networkOptions = null)
@@ -60,7 +62,8 @@ namespace EdgeOfPlain.Core.Net.Client
 		}
 
 		public int? PlayerId { get; private set; }
-		public int PlayerCount { get; private set; }
+		public int Team { get; private set; }
+		public int PlayerCount => Room.Players.Count;
 		public BattleRoom Room { get; }
 		public ConnectionRejection Rejection { get; private set; }
 		public ClientConnectionStatus Status { get; private set; } = ClientConnectionStatus.Connecting;
@@ -83,11 +86,27 @@ namespace EdgeOfPlain.Core.Net.Client
 			ConnectionRejection.SynchronizationTimeout => "World synchronization timed out",
 			ConnectionRejection.SynchronizationFailed => "World synchronization failed",
 			ConnectionRejection.RoomClosed => "The room was closed",
+			ConnectionRejection.TooManyBadPackets => "Too many invalid packets were received from this client",
 			_ => "Invalid server packet",
 		};
+
+		public WorldKey? PendingMapKey { get; private set; }
+
+		public (WorldKey Key, string MapId, string Checksum)? PendingMapInfo
+			=> PendingMapKey is null ? null : _pendingMapInfo;
+		public IMapCache? MapCache { get; set; }
 		public Map? PendingMap { get; private set; }
 		public bool IsStarted => Room.State == BattleRoomState.Running;
 		public int AvailableFrames => _frames.Count;
+
+		public void RequestMapData(WorldKey key)
+		{
+			ThrowIfDisposed();
+			if (_server is null) throw new InvalidOperationException("The client is not connected.");
+			if (Room.State != BattleRoomState.Loading) throw new InvalidOperationException("The room is not loading a world.");
+			if (PendingMapKey != key) throw new ArgumentOutOfRangeException(nameof(key), "This world is not waiting for a map.");
+			_server.Send(TurnProtocol.MapDataRequest(key), TurnProtocol.Channel, TurnProtocol.Delivery);
+		}
 
 		public void MarkWorldReady(GameWorld world)
 		{
@@ -95,6 +114,8 @@ namespace EdgeOfPlain.Core.Net.Client
 			ArgumentNullException.ThrowIfNull(world);
 			if (Room.State != BattleRoomState.Loading || PendingMap is not { } map || _server is null)
 				throw new InvalidOperationException("No map is waiting for world creation.");
+			if (world.Key != PendingMapKey)
+				throw new ArgumentException("World key does not match the requested map.", nameof(world));
 			if (world.Map.Width != map.Width || world.Map.Height != map.Height)
 				throw new ArgumentException("World dimensions do not match the received map.", nameof(world));
 			for (var y = 0; y < map.Height; y++)
@@ -102,8 +123,35 @@ namespace EdgeOfPlain.Core.Net.Client
 				if (world.Map.GetTileId(x, y) != map.Tiles[x, y])
 					throw new ArgumentException("World tiles do not match the received map.", nameof(world));
 
+			PendingMapKey = null;
+			_pendingMapInfo = default;
 			PendingMap = null;
 			_server.Send(TurnProtocol.Create(TurnMessage.Ready), TurnProtocol.Channel, TurnProtocol.Delivery);
+		}
+
+		public void RequestAssignTeam(int playerId, int team)
+		{
+			ThrowIfDisposed();
+			if (_server is null || Room.State != BattleRoomState.Lobby)
+				throw new InvalidOperationException("Teams can only be assigned in the lobby.");
+			if (Room.AdministratorId != PlayerId)
+				throw new InvalidOperationException("Only the administrator can assign teams.");
+			ArgumentOutOfRangeException.ThrowIfNegative(playerId);
+			ArgumentOutOfRangeException.ThrowIfNegative(team);
+			ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(team, Room.Options.MaxPlayers);
+			_server.Send(TurnProtocol.AssignTeam(playerId, team), TurnProtocol.Channel, TurnProtocol.Delivery);
+		}
+
+		public void RequestAddAi(string name)
+		{
+			ThrowIfDisposed();
+			if (_server is null || Room.State != BattleRoomState.Lobby)
+				throw new InvalidOperationException("AI players can only be added in the lobby.");
+			if (Room.AdministratorId != PlayerId)
+				throw new InvalidOperationException("Only the administrator can add AI players.");
+			if (!BattleRoomOptions.IsValidPlayerName(name, Room.Options.MaxPlayerNameLength))
+				throw new ArgumentException("AI name is empty or too large to send.", nameof(name));
+			_server.Send(TurnProtocol.AddAi(name), TurnProtocol.Channel, TurnProtocol.Delivery);
 		}
 
 		public void PollEvents()
@@ -116,9 +164,6 @@ namespace EdgeOfPlain.Core.Net.Client
 			else if (Room.State == BattleRoomState.Loading &&
 			         _options.TimeProvider.GetElapsedTime(_loadingStarted) >= _options.LoadingTimeout)
 				FailConnection(ConnectionRejection.LoadingTimeout);
-			else if (IsStarted && _nextSubmitTick > _nextFrameTick &&
-			         _options.TimeProvider.GetElapsedTime(_submissionStarted) >= _options.TurnTimeout)
-				FailConnection(ConnectionRejection.TurnTimeout);
 			PollSynchronization();
 		}
 
@@ -126,25 +171,49 @@ namespace EdgeOfPlain.Core.Net.Client
 		{
 			ThrowIfDisposed();
 			if (!IsStarted || _server is null) throw new InvalidOperationException("The match has not started.");
-			if (tick != _nextSubmitTick)
-				throw new ArgumentOutOfRangeException(nameof(tick), "Submit each tick exactly once, in order.");
+			if (tick < _nextSubmitTick)
+				throw new ArgumentOutOfRangeException(nameof(tick), "Submit each tick at most once, in order.");
 			if (tick != _nextFrameTick)
 				throw new InvalidOperationException("Wait for the preceding frame before submitting the next tick.");
 			if (payload.Length > Room.Options.MaxPayloadBytes) throw new ArgumentOutOfRangeException(nameof(payload));
-			NetworkCommands.Validate(payload.ToArray());
+			var bytes = payload.ToArray();
+			NetworkCommands.Validate(bytes);
 
-			_server.Send(TurnProtocol.Submit(tick, payload), TurnProtocol.Channel, TurnProtocol.Delivery);
-			_nextSubmitTick++;
-			_submissionStarted = _options.TimeProvider.GetTimestamp();
+			_server.Send(TurnProtocol.Submit(tick, bytes), TurnProtocol.Channel, TurnProtocol.Delivery);
+			_nextSubmitTick = tick + 1;
 		}
 
 		public void Submit(long tick, NetworkCommandInput input)
 		{
 			ThrowIfDisposed();
 			ArgumentNullException.ThrowIfNull(input);
-			if (!IsStarted || tick != _nextSubmitTick || tick != _nextFrameTick)
+			if (!IsStarted || tick != _nextFrameTick || tick < _nextSubmitTick)
 				throw new InvalidOperationException("The match is not ready for this tick.");
 			Submit(tick, input.Flush(Room.Options.MaxPayloadBytes));
+		}
+
+		public void SubmitAi(int playerId, long tick, NetworkCommandInput input)
+		{
+			ThrowIfDisposed();
+			ArgumentNullException.ThrowIfNull(input);
+			if (!IsStarted || Room.AdministratorId != PlayerId)
+				throw new InvalidOperationException("Only the administrator can submit AI commands.");
+			if (tick != _nextFrameTick)
+				throw new InvalidOperationException("Wait for the preceding frame before submitting the next tick.");
+			SubmitAi(playerId, tick, input.Flush(Room.Options.MaxPayloadBytes));
+		}
+
+		public void SubmitAi(int playerId, long tick, byte[] payload)
+		{
+			ThrowIfDisposed();
+			ArgumentNullException.ThrowIfNull(payload);
+			if (!IsStarted || _server is null || Room.AdministratorId != PlayerId)
+				throw new InvalidOperationException("Only the administrator can submit AI commands.");
+			if (tick != _nextFrameTick)
+				throw new InvalidOperationException("Wait for the preceding frame before submitting the next tick.");
+			if (payload.Length > Room.Options.MaxPayloadBytes) throw new ArgumentOutOfRangeException(nameof(payload));
+			NetworkCommands.Validate(payload);
+			_server.Send(TurnProtocol.AiInput(playerId, tick, payload), TurnProtocol.Channel, TurnProtocol.Delivery);
 		}
 
 		public bool TryDequeueFrame(out TurnFrame frame)
@@ -187,6 +256,12 @@ namespace EdgeOfPlain.Core.Net.Client
 			if (!IsStarted || !TryEnqueueCommands(expectedTick, core)) return false;
 			core.Step(delta);
 			AppliedTick = expectedTick;
+			if (_server is not null && _boundCore is not null &&
+			    AppliedTick % _options.StateHashInterval == 0)
+			{
+				var hash = GameSnapshot.ComputeStateHash(core);
+				_server.Send(TurnProtocol.StateHash(AppliedTick, hash), TurnProtocol.Channel, TurnProtocol.Delivery);
+			}
 			return true;
 		}
 
@@ -211,30 +286,51 @@ namespace EdgeOfPlain.Core.Net.Client
 						Room.Options = welcome.Options;
 						Status = ClientConnectionStatus.Connected;
 						break;
-					case TurnMessage.Roster when Room.State == BattleRoomState.Lobby && PlayerId is not null:
+					case TurnMessage.Roster when PlayerId is not null:
 						var roster = TurnProtocol.ReadRoster(reader, Room.Options);
-						TurnProtocol.Require(PlayerId.Value < roster.Players.Length && roster.Players[PlayerId.Value].Name == _name);
+						var me = Array.FindIndex(roster.Players, player => player.Id == PlayerId.Value);
+						TurnProtocol.Require(me >= 0 && roster.Players[me].Name == _name);
+						Team = roster.Players[me].Team;
 						Room.SetPlayers(roster.Players);
 						Room.AdministratorId = roster.AdministratorId;
 						break;
-					case TurnMessage.Map when Room.State == BattleRoomState.Lobby && PlayerId is not null:
-						PendingMap = TurnProtocol.ReadMap(reader, Room.Options);
+					case TurnMessage.MapInfo when Room.State == BattleRoomState.Lobby && PlayerId is not null:
+						var info = TurnProtocol.ReadMapInfo(reader);
+						PendingMapKey = info.Key;
+						_pendingMapInfo = info;
+						PendingMap = null;
 						Room.State = BattleRoomState.Loading;
 						_loadingStarted = _options.TimeProvider.GetTimestamp();
+						if (MapCache is { } cache && cache.TryGet(info.Key, info.MapId, info.Checksum, out var cached))
+						{
+							PendingMap = cached;
+						}
+						else
+						{
+							_server!.Send(TurnProtocol.MapDataRequest(info.Key), TurnProtocol.Channel, TurnProtocol.Delivery);
+						}
+						break;
+					case TurnMessage.MapData when Room.State == BattleRoomState.Loading && PendingMapKey is { } key:
+						var data = TurnProtocol.ReadMapData(reader, Room.Options);
+						TurnProtocol.Require(data.Key == key);
+						PendingMap = data.Map;
 						break;
 					case TurnMessage.Start when PlayerId is not null &&
-					                            Room.State == BattleRoomState.Loading && PendingMap is null:
+					                            Room.State == BattleRoomState.Loading && PendingMapKey is null:
 						var count = TurnProtocol.ReadStart(reader, Room.Options);
-						TurnProtocol.Require(count > PlayerId.Value && count == Room.Players.Count);
-						PlayerCount = count;
+						TurnProtocol.Require(count == Room.Players.Count);
 						Room.State = BattleRoomState.Running;
 						break;
 					case TurnMessage.Frame when IsStarted:
 						var frame = TurnProtocol.ReadFrame(reader, Room.Options);
-						TurnProtocol.Require(frame.Tick == _nextFrameTick && frame.Players.Count == PlayerCount);
+						TurnProtocol.Require(frame.Tick == _nextFrameTick);
 						foreach (var player in frame.Players) NetworkCommands.Validate(player.Payload);
 						_frames.Enqueue(frame);
 						_nextFrameTick++;
+						break;
+					case TurnMessage.PlayerRemoved when PlayerId is not null:
+						var removed = TurnProtocol.ReadPlayerRemoved(reader);
+						Room.RemovePlayer(removed.PlayerId);
 						break;
 					default:
 						TurnProtocol.Require(ReceiveSynchronization(message, reader));
@@ -292,8 +388,10 @@ namespace EdgeOfPlain.Core.Net.Client
 			Status = _isDisposed ? ClientConnectionStatus.Disposed : ClientConnectionStatus.Disconnected;
 			_server = null;
 			PlayerId = null;
-			PlayerCount = 0;
+			Team = 0;
 			Room.Reset();
+			PendingMapKey = null;
+			_pendingMapInfo = default;
 			PendingMap = null;
 			_frames.Clear();
 			_nextFrameTick = TurnProtocol.FirstTick;
