@@ -92,7 +92,6 @@ namespace EdgeOfPlain.Core.Net.Client
 						CancelSynchronization();
 						_boundCore!.Resume();
 						Room.State = BattleRoomState.Running;
-						_submissionStarted = _options.TimeProvider.GetTimestamp();
 						Synchronized?.Invoke();
 						break;
 				}

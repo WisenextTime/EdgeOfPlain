@@ -20,7 +20,7 @@ namespace EdgeOfPlain.Core.Net.Server
 	{
 		private const int BadPacketWindow = 10;
 		private const int BadPacketsToKick = 5;
-		private static readonly byte[] EmptyPayload = [0, 0];
+		private static readonly byte[] _emptyPayload = [.. "\0\0"u8];
 
 		private sealed class Slot(int id, string name, int team, RoomPlayerKind kind)
 		{
@@ -251,7 +251,7 @@ namespace EdgeOfPlain.Core.Net.Server
 
 		private void TryBeginTurns()
 		{
-			var humans = _slots.Where(slot => slot.Active && slot.IsHuman).ToArray();
+			var humans = _slots.Where(slot => slot is { Active: true, IsHuman: true }).ToArray();
 			if (humans.Length == 0 || humans.Any(slot => !_ready.Contains(slot.Id))) return;
 			BeginTurns();
 		}
@@ -379,10 +379,10 @@ namespace EdgeOfPlain.Core.Net.Server
 			Broadcast(TurnProtocol.PlayerRemoved(slot.Id, reason));
 			if (Room.AdministratorId == slot.Id)
 			{
-				Room.AdministratorId = _slots.FirstOrDefault(candidate => candidate.Active && candidate.IsHuman)?.Id;
+				Room.AdministratorId = _slots.FirstOrDefault(candidate => candidate is { Active: true, IsHuman: true })?.Id;
 			}
 			BroadcastRoster();
-			if (!_slots.Any(candidate => candidate.Active && candidate.IsHuman))
+			if (!_slots.Any(candidate => candidate is { Active: true, IsHuman: true }))
 				CloseRoom(ConnectionRejection.RoomClosed, new InvalidOperationException("No players remain."));
 		}
 
@@ -459,7 +459,7 @@ namespace EdgeOfPlain.Core.Net.Server
 			var commands = new PlayerCommands[active.Length];
 			for (var i = 0; i < active.Length; i++)
 				commands[i] = new PlayerCommands(active[i].Id, active[i].Team,
-					_submissions.GetValueOrDefault(active[i].Id) ?? EmptyPayload);
+					_submissions.GetValueOrDefault(active[i].Id) ?? _emptyPayload);
 			Broadcast(TurnProtocol.Frame(new TurnFrame(NextTick, commands)));
 			_submissions.Clear();
 			NextTick++;
@@ -469,7 +469,7 @@ namespace EdgeOfPlain.Core.Net.Server
 		private void Broadcast(NetDataWriter writer)
 		{
 			foreach (var slot in _slots)
-				if (slot.Active && slot.Peer is { } peer)
+				if (slot is { Active: true, Peer: { } peer })
 					peer.Send(writer, TurnProtocol.Channel, TurnProtocol.Delivery);
 		}
 

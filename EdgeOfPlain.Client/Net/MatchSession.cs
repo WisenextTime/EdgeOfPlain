@@ -16,16 +16,14 @@ public sealed class MatchSession : IDisposable
 {
 	private const int DefaultPort = 27015;
 
-	private readonly ServerNetNode? _server;
-	private readonly ClientNetNode _client;
 	private readonly Dictionary<int, IAiClient> _aiClients = [];
 	private readonly MemoryMapCache _mapCache = new();
 	private bool _disposed;
 
 	private MatchSession(ServerNetNode? server, ClientNetNode client)
 	{
-		_server = server;
-		_client = client;
+		Server = server;
+		Client = client;
 		client.MapCache = _mapCache;
 	}
 
@@ -47,87 +45,83 @@ public sealed class MatchSession : IDisposable
 	public static MatchSession Join(string playerName, string host, int port = DefaultPort)
 		=> new(null, new ClientNetNode(host, port, playerName: playerName));
 
-	public ClientNetNode Client => _client;
+	public ClientNetNode Client { get; }
 
-	public ServerNetNode? Server => _server;
+	public ServerNetNode? Server { get; }
 
 	public GameCore? Core { get; private set; }
 
-	public GameWorld? World { get; private set; }
+	public WorldKey? MapKey { get; private set; }
 
 	public GameMap? GameMap { get; private set; }
 
-	public Map? Map { get; private set; }
+	public bool IsHost => Server is not null;
 
-	public bool IsHost => _server is not null;
+	public bool IsAdministrator => Client.PlayerId is { } id && Client.Room.AdministratorId == id;
 
-	public bool IsAdministrator => _client.PlayerId is { } id && _client.Room.AdministratorId == id;
-
-	public bool IsStarted => _client.IsStarted;
+	public bool IsStarted => Client.IsStarted;
 
 	public void StartMatch(Map map)
 	{
-		if (_server is null) throw new InvalidOperationException("Only the room creator can start the match.");
-		Map = map;
-		_server.StartMatch(map);
+		if (Server is null) throw new InvalidOperationException("Only the room creator can start the match.");
+		Server.StartMatch(map);
 	}
 
 	public void Poll()
 	{
 		ThrowIfDisposed();
-		_server?.PollEvents();
-		_client.PollEvents();
+		Server?.PollEvents();
+		Client.PollEvents();
 
-		if (World is null && _client.PendingMap is { } map)
+		if (Core is null && Client.PendingMap is { } map)
 		{
 			GameMap ??= GameMap.Build(map);
-			Map ??= map;
 			Core = new GameCore();
-			World = Core.CreateWorld(_client.PendingMapKey ?? WorldKey.Primary, GameMap);
-			_client.BindGameCore(Core, GameLoop.DefaultFixedStep);
-			_client.MarkWorldReady(World);
+			MapKey = Client.PendingMapKey ?? WorldKey.Primary;
+			var world = Core.CreateWorld(MapKey.Value, GameMap);
+			Client.BindGameCore(Core, GameLoop.DefaultFixedStep);
+			Client.MarkWorldReady(world);
 		}
 
-		if (IsAdministrator)
-			foreach (var player in _client.Room.Players)
-				if (player.Kind == RoomPlayerKind.Ai)
-					_aiClients.TryAdd(player.Id, EmptyAiClient.Instance);
+		if (!IsAdministrator) return;
+		foreach (var player in Client.Room.Players)
+			if (player.Kind == RoomPlayerKind.Ai)
+				_aiClients.TryAdd(player.Id, EmptyAiClient.Instance);
 	}
 
-	public void AssignTeam(int playerId, int team) => _client.RequestAssignTeam(playerId, team);
+	public void AssignTeam(int playerId, int team) => Client.RequestAssignTeam(playerId, team);
 
-	public void AddAi(string name) => _client.RequestAddAi(name);
+	public void AddAi(string name) => Client.RequestAddAi(name);
 
 	public void SubmitAi(long tick)
 	{
 		if (!IsAdministrator) return;
-		foreach (var player in _client.Room.Players)
+		foreach (var player in Client.Room.Players)
 		{
 			if (player.Kind != RoomPlayerKind.Ai) continue;
 			var ai = _aiClients.TryGetValue(player.Id, out var client) ? client : EmptyAiClient.Instance;
-			_client.SubmitAi(player.Id, tick, ai.BuildCommands(tick));
+			Client.SubmitAi(player.Id, tick, ai.BuildCommands(tick));
 		}
 	}
 
 	public bool TryStep(long tick, Fixed64 delta)
 	{
 		ThrowIfDisposed();
-		if (Core is null) return false;
-		return _client.TryStepWorld(tick, Core, delta);
+		return Core is not null && Client.TryStepWorld(tick, Core, delta);
 	}
 
 	public void CacheMap(WorldKey key, in Map map)
 	{
-		if (_client.PendingMapInfo is { } info) _mapCache.Set(key, info.MapId, info.Checksum, map);
+		if (Client.PendingMapInfo is { } info) _mapCache.Set(key, info.MapId, info.Checksum, map);
 	}
 
 	public void Dispose()
 	{
 		if (_disposed) return;
 		_disposed = true;
-		_client.Dispose();
-		_server?.Dispose();
-		World = null;
+		Client.Dispose();
+		Server?.Dispose();
+		MapKey = null;
 		GameMap = null;
 		Core?.Dispose();
 		Core = null;

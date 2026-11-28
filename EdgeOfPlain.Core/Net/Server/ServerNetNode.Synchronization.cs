@@ -15,7 +15,7 @@ namespace EdgeOfPlain.Core.Net.Server
 		private SynchronizationSession? _synchronization;
 
 		private int SynchronizingPlayerCount
-			=> _slots.Count(slot => slot.Active && slot.IsHuman && slot.Peer is not null);
+			=> _slots.Count(slot => slot is { Active: true, IsHuman: true, Peer: not null });
 
 		public Task SynchronizeAsync(CancellationToken cancellationToken = default)
 		{

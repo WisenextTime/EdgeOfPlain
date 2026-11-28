@@ -7,12 +7,14 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Net;
 using Xunit;
 using static EdgeOfPlain.Tests.NetworkTestSession;
+// ReSharper disable AccessToDisposedClosure
 
 namespace EdgeOfPlain.Tests
 {
 	[Collection("ComponentManager")]
 	public sealed class SynchronizationTests
 	{
+		// ReSharper disable once NotAccessedField.Local
 		private struct LocalEntityLink { public Arch.Core.Entity Target; }
 
 		[Fact]
@@ -150,7 +152,7 @@ namespace EdgeOfPlain.Tests
 			using var room = new NetworkTestSession();
 			using var cancellation = new CancellationTokenSource();
 			var sync = room.Server.SynchronizeAsync(cancellation.Token);
-			cancellation.Cancel();
+			await cancellation.CancelAsync();
 			PumpUntil(() => sync.IsCompleted && room.First.Status == ClientConnectionStatus.Disconnected, room.Nodes);
 			await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sync);
 			Assert.Equal(0, room.Server.PlayerCount);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using EdgeOfPlain.Core.Game.Commands;
 using FixedMathSharp;
 
@@ -46,7 +47,7 @@ namespace EdgeOfPlain.Core.Game
 			return world;
 		}
 
-		public bool TryGetWorld(WorldKey key, out GameWorld? world) => _byKey.TryGetValue(key, out world);
+		public bool TryGetWorld(WorldKey key, [NotNullWhen(true)]out GameWorld? world) => _byKey.TryGetValue(key, out world);
 
 		public GameWorld GetWorld(WorldKey key)
 		{

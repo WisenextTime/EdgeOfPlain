@@ -239,7 +239,7 @@ public sealed class TestMultiplayerScene : Scene
 			_status = $"连接断开：{reason}";
 		else if (_session.Client.IsStarted)
 			_status = "对局开始，正在进入地图…";
-		else if (_session.World is not null)
+		else if (_session.Core is not null)
 			_status = $"世界已就绪，等待管理员开始（{_session.Client.Room.State}）。";
 	}
 

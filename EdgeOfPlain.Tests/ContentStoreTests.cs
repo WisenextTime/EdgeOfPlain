@@ -14,6 +14,7 @@ namespace EdgeOfPlain.Tests
 
 	internal abstract class AbstractProbeDef(string id) : ContentDef(id);
 
+	// ReSharper disable once UnusedTypeParameter
 	internal sealed class GenericProbeDef<T>(string id) : ContentDef(id);
 
 	public sealed class ContentStoreTests : IDisposable

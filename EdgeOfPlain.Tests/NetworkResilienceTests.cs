@@ -16,6 +16,7 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using Xunit;
 using static EdgeOfPlain.Tests.NetworkTestSession;
+// ReSharper disable AccessToDisposedClosure
 
 namespace EdgeOfPlain.Tests
 {
@@ -151,8 +152,8 @@ namespace EdgeOfPlain.Tests
 				PumpUntil(() => server.NextTick > before, server, client, attacker);
 			}
 
-			for (var i = 0; i < 6; i++) attacker.Send(TurnProtocol.Submit(1, new byte[] { 0, 0 }));
-			NetworkTestSession.PumpFor(TimeSpan.FromMilliseconds(50), server, client, attacker);
+			for (var i = 0; i < 6; i++) attacker.Send(TurnProtocol.Submit(1, "\0\0"u8));
+			PumpFor(TimeSpan.FromMilliseconds(50), server, client, attacker);
 
 			Assert.Equal(ConnectionRejection.None, attacker.Rejection);
 			Assert.Equal(2, server.PlayerCount);
@@ -172,7 +173,7 @@ namespace EdgeOfPlain.Tests
 			client.MarkWorldReady(world);
 			PumpUntil(() => client.IsStarted && attacker.Started, server, client, attacker);
 
-			for (var i = 0; i < 5; i++) attacker.Send(TurnProtocol.Submit(1, new byte[] { 255 }));
+			for (var i = 0; i < 5; i++) attacker.Send(TurnProtocol.Submit(1, [255]));
 			PumpUntil(() => attacker.Rejection == ConnectionRejection.TooManyBadPackets, server, client, attacker);
 			Assert.Equal(1, server.PlayerCount);
 			Assert.Equal(ClientConnectionStatus.Connected, client.Status);
@@ -193,7 +194,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Throws<InvalidDataException>(() => reception.Append(new NetDataReader(wrongOffset.Data, 0, wrongOffset.Length)));
 			var corrupted = new NetDataWriter();
 			corrupted.Put(0);
-			TurnProtocol.WritePayload(corrupted, new byte[] { 1, 2, 3, 5 });
+			TurnProtocol.WritePayload(corrupted, [1, 2, 3, 5]);
 			Assert.True(reception.Append(new NetDataReader(corrupted.Data, 0, corrupted.Length)));
 			await Assert.ThrowsAsync<InvalidDataException>(() => reception.CompleteAsync(CancellationToken.None));
 		}

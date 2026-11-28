@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -184,8 +185,10 @@ namespace EdgeOfPlain.Core.Game.Snapshots
 					writer.Write(path.Points.Length);
 					foreach (var point in path.Points)
 					{
-						writer.Write(long.Parse(point.X.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
-						writer.Write(long.Parse(point.Y.ToRawString(), System.Globalization.CultureInfo.InvariantCulture));
+						writer.Write(long.Parse(point.X.m_rawValue.ToString(CultureInfo.InvariantCulture),
+							CultureInfo.InvariantCulture));
+						writer.Write(long.Parse(point.Y.m_rawValue.ToString(CultureInfo.InvariantCulture),
+							CultureInfo.InvariantCulture));
 					}
 				}
 				writer.Write(world.Occupancy.Length);

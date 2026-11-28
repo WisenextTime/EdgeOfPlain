@@ -14,6 +14,7 @@ using EdgeOfPlain.Core.Net.Client;
 using EdgeOfPlain.Core.Net.Server;
 using LiteNetLib.Utils;
 using Xunit;
+// ReSharper disable AccessToDisposedClosure
 
 namespace EdgeOfPlain.Tests
 {
@@ -89,7 +90,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Equal(0, a.Players[0].PlayerId);
 			Assert.Equal(1, a.Players[1].PlayerId);
 			Assert.Equal(Encode(1, 2), a.Players[first.PlayerId!.Value].Payload);
-			Assert.Equal(new byte[] { 0, 0 }, a.Players[second.PlayerId!.Value].Payload);
+			Assert.Equal("\0\0"u8.ToArray(), a.Players[second.PlayerId!.Value].Payload);
 			Assert.Equal(a.Players[0].Payload, b.Players[0].Payload);
 			Assert.Equal(a.Players[1].Payload, b.Players[1].Payload);
 			Assert.Throws<ArgumentOutOfRangeException>(() => first.Submit(1, [9]));
@@ -99,7 +100,7 @@ namespace EdgeOfPlain.Tests
 			PumpUntil(() => first.AvailableFrames == 1 && second.AvailableFrames == 1, server, first, second);
 			Assert.True(first.TryDequeueFrame(out var next));
 			Assert.Equal(2, next.Tick);
-			Assert.Equal(new byte[] { 0, 0 }, next.Players[first.PlayerId!.Value].Payload);
+			Assert.Equal("\0\0"u8.ToArray(), next.Players[first.PlayerId!.Value].Payload);
 			Assert.Equal(Encode(4, 5), next.Players[second.PlayerId!.Value].Payload);
 			Assert.Equal(3, server.NextTick);
 		}
@@ -139,7 +140,7 @@ namespace EdgeOfPlain.Tests
 			first.MarkWorldReady(firstWorld);
 			second.MarkWorldReady(secondWorld);
 			PumpUntil(() => first.IsStarted && second.IsStarted, server, first, second);
-
+			// ReSharper disable once DisposeOnUsingVariable
 			second.Dispose();
 			PumpUntil(() => server.PlayerCount == 1, server, first);
 			PumpUntil(() => first.Room.Players.Count == 1, server, first);
@@ -270,6 +271,7 @@ namespace EdgeOfPlain.Tests
 				client.Submit(1, new NetworkCommandInput());
 				PumpUntil(() => client.AvailableFrames == 1, server, client);
 				Assert.Equal(2, server.NextTick);
+				// ReSharper disable once DisposeOnUsingVariable
 				client.Dispose();
 				Assert.False(client.IsStarted);
 				Assert.Null(client.PlayerId);
@@ -287,7 +289,7 @@ namespace EdgeOfPlain.Tests
 			using var admin = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice");
 			PumpUntil(() => admin.Room.Players.Count == 1, server, admin);
 			Assert.Equal(admin.PlayerId, admin.Room.AdministratorId);
-			Assert.Equal(new byte[] { 0, 0 }, EmptyAiClient.Instance.BuildCommands(1));
+			Assert.Equal("\0\0"u8.ToArray(), EmptyAiClient.Instance.BuildCommands(1));
 
 			admin.RequestAddAi("Bot");
 			PumpUntil(() => admin.Room.Players.Count == 2, server, admin);
@@ -352,10 +354,8 @@ namespace EdgeOfPlain.Tests
 		public void MapCacheSuppliesMapsWithoutTransfer()
 		{
 			using var server = new ServerNetNode(0, checksum: _checksum);
-			using var client = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice")
-			{
-				MapCache = new StubMapCache(new Map(3, 2)),
-			};
+			using var client = new ClientNetNode("127.0.0.1", server.LocalPort, _checksum, "Alice");
+			client.MapCache = new StubMapCache(new Map(3, 2));
 			PumpUntil(() => client.PlayerId is not null, server, client);
 			server.StartMatch(new Map(1, 1));
 			PumpUntil(() => client.PendingMap is not null, server, client);
@@ -364,7 +364,7 @@ namespace EdgeOfPlain.Tests
 			Assert.Equal(2, client.PendingMap.Value.Height);
 		}
 
-		private struct TeamProbeCommand : ICommand, INetSerializable, ITeamCommand
+		private struct TeamProbeCommand : INetSerializable, ITeamCommand
 		{
 			public int Team { get; set; }
 			public void Serialize(NetDataWriter writer) { }

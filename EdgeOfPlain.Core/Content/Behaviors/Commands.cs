@@ -13,7 +13,7 @@ using LiteNetLib.Utils;
 namespace EdgeOfPlain.Core.Content.Behaviors
 {
 	public record struct SpawnEntityCommand(EntityDef Definition, TransformComponent Transform, int Team)
-		: ICommand, INetSerializable, IWorldScopedCommand, ITeamCommand
+		: INetSerializable, IWorldScopedCommand, ITeamCommand
 	{
 		public WorldKey WorldKey { get; set; }
 

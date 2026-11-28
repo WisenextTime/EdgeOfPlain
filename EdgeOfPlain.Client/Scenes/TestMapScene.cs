@@ -7,16 +7,13 @@ using Arch.Core.Extensions;
 using EdgeOfPlain.Client.Net;
 using EdgeOfPlain.Client.Rendering;
 using EdgeOfPlain.Client.UI;
-using EdgeOfPlain.Core;
 using EdgeOfPlain.Core.Content.Behaviors;
 using EdgeOfPlain.Core.Content.Components;
 using EdgeOfPlain.Core.Definitions;
-using EdgeOfPlain.Core.Definitions.Worlds;
 using EdgeOfPlain.Core.Framework.Events;
 using EdgeOfPlain.Core.Framework.Graphics;
 using EdgeOfPlain.Core.Framework.Input;
 using EdgeOfPlain.Core.Framework.Mods;
-using EdgeOfPlain.Core.Framework.Resource;
 using EdgeOfPlain.Core.Framework.Scenes;
 using EdgeOfPlain.Core.Framework.Time;
 using EdgeOfPlain.Core.Game;
@@ -24,7 +21,6 @@ using EdgeOfPlain.Core.Game.Commands;
 using EdgeOfPlain.Core.Game.Waypoint;
 using EdgeOfPlain.Core.MathLib;
 using EdgeOfPlain.Core.Net;
-using EdgeOfPlain.Core.Net.Client;
 using FixedMathSharp;
 using SFML.Graphics;
 using SFML.System;
@@ -33,7 +29,7 @@ using SfColor = SFML.Graphics.Color;
 
 namespace EdgeOfPlain.Client.Scenes
 {
-	public sealed class TestMapScene : Scene
+	public sealed class TestMapScene(MatchSession session) : Scene
 	{
 		public const string MapPath = "/assets/base/Map/testMap.toml";
 
@@ -60,7 +56,7 @@ namespace EdgeOfPlain.Client.Scenes
 		private GameCore? _core;
 		private GameWorld? _gameWorld;
 		private WorldKey _currentWorld = WorldKey.Invalid;
-		private readonly MatchSession _session;
+		private readonly MatchSession _session = session ?? throw new ArgumentNullException(nameof(session));
 		private SceneContext? _context;
 		private readonly NetworkCommandInput _pendingInput = new();
 		private long _simulationTick;
@@ -72,14 +68,7 @@ namespace EdgeOfPlain.Client.Scenes
 		private EventSubscription _resizeSubscription;
 		private Vector2 _viewport;
 
-		public Map Map { get; private set; }
-
 		public GameMap? GameMap { get; private set; }
-
-		public TestMapScene(MatchSession session)
-		{
-			_session = session ?? throw new ArgumentNullException(nameof(session));
-		}
 
 		public Task SynchronizeAsync(CancellationToken cancellationToken = default)
 			=> (_session.Server ?? throw new InvalidOperationException("The scene has no room."))
@@ -88,13 +77,14 @@ namespace EdgeOfPlain.Client.Scenes
 		public override void Enter(SceneContext context)
 		{
 			_context = context;
-			Map = _session.Map ?? throw new InvalidOperationException("The scene requires a loaded world map.");
 			_unitDef = FindUnitDefinition();
 			_unitTexture = _unitDef?.ResolveResourcePath(_unitDef.Texture);
 			_session.Client.Synchronized += OnSynchronized;
 
 			_core = _session.Core;
-			_gameWorld = _session.World;
+			_gameWorld = null;
+			if (_core is not null && _session.MapKey is { } loadedKey && _core.TryGetWorld(loadedKey, out var loadedWorld))
+				_gameWorld = loadedWorld;
 			_simulationTick = _session.Client.AppliedTick;
 			_waitingFrame = _session.Client.HasPendingSubmission;
 			if (_gameWorld is not null && _session.GameMap is { } gameMap)
@@ -145,10 +135,11 @@ namespace EdgeOfPlain.Client.Scenes
 				return;
 			}
 
-			if (_gameWorld is null && _session.World is { } world)
+			_core ??= _session.Core;
+			if (_gameWorld is null && _core is not null && _session.MapKey is { } mapKey &&
+			    _core.TryGetWorld(mapKey, out var world))
 			{
 				_gameWorld = world;
-				_core = _session.Core;
 				_currentWorld = world.Key;
 				if (_session.GameMap is { } gameMap)
 				{
@@ -312,7 +303,6 @@ namespace EdgeOfPlain.Client.Scenes
 
 			_currentWorld = _gameWorld.Key;
 			GameMap = _gameWorld.Map;
-			Map = GameMap.Export();
 			_pipeline?.Dispose();
 			_pipeline = new MapRenderPipeline(GameMap);
 			_simulationTick = _session.Client.AppliedTick;

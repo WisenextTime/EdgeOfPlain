@@ -23,7 +23,6 @@ namespace EdgeOfPlain.Core.Net.Client
 		private readonly NetworkOptions _options;
 		private long _joinStarted;
 		private long _loadingStarted;
-		private long _submissionStarted;
 		private (WorldKey Key, string MapId, string Checksum) _pendingMapInfo;
 
 		public ClientNetNode(string host, int port, string? checksum = null, string? playerName = null,
